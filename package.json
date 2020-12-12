@@ -1,0 +1,23 @@
+{
+  "name": "solana-options",
+  "version": "1.0.0",
+  "description": "Exploring architectures for options trading on Serum",
+  "main": "index.js",
+  "testnetDefaultChannel": "v1.4.4",
+  "scripts": {
+    "localnet:down": "solana-localnet down",
+    "localnet:logs": "solana-localnet logs -f",
+    "localnet:update": "solana-localnet update",
+    "localnet:up": "solana-localnet up",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com-mithraiclabs:mithraiclabs/solana-options.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@solana/web3.js": "^0.87.1"
+  }
+}
