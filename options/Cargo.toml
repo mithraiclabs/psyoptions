@@ -1,0 +1,14 @@
+[package]
+name = "options"
+version = "0.1.0"
+authors = ["Taylor123", "tommyjohnson1028"]
+edition = "2018"
+
+[features]
+no-entrypoint = []
+
+[dependencies]
+solana-program = "1.4.4"
+
+[lib]
+crate-type = ["cdylib", "lib"]
