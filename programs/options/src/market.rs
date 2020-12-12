@@ -50,14 +50,15 @@ impl Pack for OptionMarket {
     }
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let dest = array_mut_ref![dst, 0, OptionMarket::LEN];
-        let (mut uaa, mut qaa, mut apc, mut eut, mut csl, mut apa) = 
+        let (uaa, qaa, apc, eut, csl, apa) = 
             mut_array_refs![dest, PUBLIC_KEY_LEN, PUBLIC_KEY_LEN, 8, 8, 8, PUBLIC_KEY_LEN];
-        uaa = &mut self.underlying_asset_address.to_bytes();
-        qaa = &mut self.quote_asset_address.to_bytes();
-        apc = &mut self.amount_per_contract.to_le_bytes();
-        eut = &mut self.expiration_unix_timestamp.to_le_bytes();
-        csl = &mut self.contract_supply_limit.to_le_bytes();
-        apa = &mut self.asset_pool_address.to_bytes();
+        uaa.copy_from_slice(&self.underlying_asset_address.to_bytes());
+        qaa.copy_from_slice(&self.quote_asset_address.to_bytes());
+        apc.copy_from_slice(&self.amount_per_contract.to_le_bytes());
+        eut.copy_from_slice(&self.expiration_unix_timestamp.to_le_bytes());
+        csl.copy_from_slice(&self.contract_supply_limit.to_le_bytes());
+        apa.copy_from_slice(&self.asset_pool_address.to_bytes());
+
     }
   }
 
