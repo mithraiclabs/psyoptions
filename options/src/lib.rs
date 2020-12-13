@@ -1,28 +1,5 @@
-use solana_program::{
-    account_info::AccountInfo,
-    entrypoint,
-    entrypoint::ProgramResult,
-    pubkey::Pubkey
-};
+pub mod instruction;
+pub mod processor;
 
-pub mod market;
-
-// Declare and export the program's entrypoint
-entrypoint!(process_instruction);
-
-fn process_instruction(
-    program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    instruction_data: &[u8],
-) -> ProgramResult {
-
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+#[cfg(not(feature = "no-entrypoint"))]
+mod entrypoint;
