@@ -9,6 +9,50 @@ const PUBLIC_KEY_LEN: usize = 32;
 
 #[repr(C)]
 #[derive(Clone, Debug, PartialEq)]
+/// Data strucutre that contains all the addresses that would be needed to transfer
+///  the various SPL tokens related to the option market to and from the Option Writer. 
+pub struct OptionWriter {
+    /// The address of an SPL Token account for the Underlying Asset
+    underlying_asset_acct_address: Pubkey,
+    /// The address of an SPL Token account for the Quote Asset
+    quote_asset_acct_address: Pubkey,
+    /// The address of an SPL Token account for the Contract Token(s)
+    contract_token_acct_address: Pubkey
+}
+impl IsInitialized for OptionWriter {
+    fn is_initialized(&self) -> bool {
+      true
+    }
+  }
+impl Sealed for OptionWriter {}
+impl Pack for OptionWriter {
+    const LEN: usize = PUBLIC_KEY_LEN + PUBLIC_KEY_LEN + PUBLIC_KEY_LEN;
+    
+    fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
+        let src = array_ref![src, 0, OptionWriter::LEN];
+        let (
+            uaaa, qaaa, ctaa
+        ) = array_refs![src, PUBLIC_KEY_LEN, PUBLIC_KEY_LEN, PUBLIC_KEY_LEN];
+        Ok(OptionWriter {
+            underlying_asset_acct_address: Pubkey::new(uaaa),
+            quote_asset_acct_address: Pubkey::new(qaaa),
+            contract_token_acct_address: Pubkey::new(ctaa), 
+        })
+    }
+    fn pack_into_slice(&self, dst: &mut [u8]) {
+        let dest = array_mut_ref![dst, 0, OptionWriter::LEN];
+        let (uaaa, qaaa, ctaa) = 
+            mut_array_refs![dest, PUBLIC_KEY_LEN, PUBLIC_KEY_LEN, PUBLIC_KEY_LEN];
+        uaaa.copy_from_slice(&self.underlying_asset_acct_address.to_bytes());
+        qaaa.copy_from_slice(&self.quote_asset_acct_address.to_bytes());
+        ctaa.copy_from_slice(&self.contract_token_acct_address.to_bytes());
+
+    }
+}
+
+
+#[repr(C)]
+#[derive(Clone, Debug, PartialEq)]
 /// Data structure that contains all the information needed to maintain an open
 /// option market.
 pub struct OptionMarket {
@@ -60,12 +104,48 @@ impl Pack for OptionMarket {
         apa.copy_from_slice(&self.asset_pool_address.to_bytes());
 
     }
-  }
+}
 
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_pack_unpack_option_writer() {
+        let underlying_asset_acct_address = Pubkey::new_unique();
+        let quote_asset_acct_address = Pubkey::new_unique();
+        let contract_token_acct_address = Pubkey::new_unique();
+
+        let option_writer = OptionWriter {
+            underlying_asset_acct_address,
+            quote_asset_acct_address,
+            contract_token_acct_address
+        };
+
+
+        let mut serialized_option_writer = [0 as u8; OptionWriter::LEN];
+        OptionWriter::pack(option_writer, &mut serialized_option_writer).unwrap();
+        let serialized_ref = array_ref![serialized_option_writer, 0, OptionWriter::LEN]; 
+        let (
+            uaaa, qaaa, ctaa
+        ) = array_refs![serialized_ref, PUBLIC_KEY_LEN, PUBLIC_KEY_LEN, PUBLIC_KEY_LEN];
+        assert_eq!(uaaa, &underlying_asset_acct_address.to_bytes());
+        assert_eq!(qaaa, &quote_asset_acct_address.to_bytes());
+        assert_eq!(ctaa, &contract_token_acct_address.to_bytes());
+
+        let deserialized_option_wrtier: OptionWriter = 
+        OptionWriter::unpack(&serialized_option_writer).unwrap();
+
+        // Create another option_writer var because the first was moved
+        let option_writer = OptionWriter {
+            underlying_asset_acct_address,
+            quote_asset_acct_address,
+            contract_token_acct_address
+        };
+
+        assert_eq!(deserialized_option_wrtier, option_writer);
+    }
 
     #[test]
     fn test_pack_unpck_option_market() {
