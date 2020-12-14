@@ -7,7 +7,7 @@ use solana_program::{
 use arrayref::{ array_ref, array_refs, array_mut_ref, mut_array_refs };
 
 const PUBLIC_KEY_LEN: usize = 32;
-const MAX_CONTRACTS: usize = 20_000;
+const MAX_CONTRACTS: usize = 10;
 const REGISTRY_LEN: usize = MAX_CONTRACTS * OptionWriter::LEN;
 
 #[repr(C)]
@@ -89,7 +89,7 @@ impl Pack for OptionMarket {
             uaa, qaa, apc, eut, apa, rl, owr
         ) = array_refs![src, PUBLIC_KEY_LEN, PUBLIC_KEY_LEN, 8, 8, PUBLIC_KEY_LEN, 2, REGISTRY_LEN];
         let registry_length = u16::from_le_bytes(*rl);
-        let mut option_writer_registry: Vec<OptionWriter> = Vec::with_capacity(registry_length.into());
+        let mut option_writer_registry: Vec<OptionWriter> = Vec::with_capacity(registry_length as usize);
         let mut offset = 0;
         for _i in 0..registry_length {
             let option_writer_buff = array_ref![owr, offset, OptionWriter::LEN];
