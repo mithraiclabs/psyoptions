@@ -31,7 +31,7 @@ impl OptionsInstruction {
         Ok(match tag {
             0 => {
                 let (amount_per_contract, rest) = Self::unpack_u64(rest)?;
-                let (expiration_unix_timestamp, rest) = Self::unpack_u64(rest)?;
+                let (expiration_unix_timestamp, _rest) = Self::unpack_u64(rest)?;
                 Self::CreateMarket {
                     amount_per_contract,
                     expiration_unix_timestamp
