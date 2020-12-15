@@ -125,7 +125,6 @@ impl Pack for OptionMarket {
             option_writer.pack_into_slice(&mut owr[offset..offset+OptionWriter::LEN]);
             offset += OptionWriter::LEN;
         }
-        // owr.copy_from_slice(&self.option_writer_registry.as_slice());
     }
 }
 
