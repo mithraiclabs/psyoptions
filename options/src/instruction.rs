@@ -1,6 +1,6 @@
 use std::mem::size_of;
 use solana_program::program_error::ProgramError;
-use arrayref::{ array_ref, array_refs, array_mut_ref, mut_array_refs };
+use arrayref::{ array_ref };
 /// Instructions supported by the Options program
 #[repr(C, u16)]
 #[derive(Debug, PartialEq)]
