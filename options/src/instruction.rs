@@ -5,7 +5,7 @@ use arrayref::{ array_ref };
 #[repr(C, u16)]
 #[derive(Debug, PartialEq)]
 pub enum OptionsInstruction {
-    /// Creates a new OptionMarket
+    /// Initializes a new OptionMarket
     ///
     ///
     /// Accounts expected by this instruction:
@@ -15,9 +15,11 @@ pub enum OptionsInstruction {
     ///   2. `[writeable]` SPL Program address for contract token 
     ///     (the client must create a new SPL Token prior to creating a market)
     ///   3. `[writeable]` Account with space for the option market we are creating 
-    CreateMarket {
+    InitializeMarket {
         /// The amount of the **underlying asset** that derives a single contract
         amount_per_contract: u64,
+        /// The strike price for the new market
+        strike_price: u64,
         /// The Unix timestamp at which the contracts in this market expire
         expiration_unix_timestamp: u64,
     }
@@ -31,10 +33,12 @@ impl OptionsInstruction {
         Ok(match tag {
             0 => {
                 let (amount_per_contract, rest) = Self::unpack_u64(rest)?;
+                let (strike_price, rest) = Self::unpack_u64(rest)?;
                 let (expiration_unix_timestamp, _rest) = Self::unpack_u64(rest)?;
-                Self::CreateMarket {
+                Self::InitializeMarket {
                     amount_per_contract,
-                    expiration_unix_timestamp
+                    strike_price,
+                    expiration_unix_timestamp,
                 }
             }
             _ => return Err(ProgramError::InvalidInstructionData.into()),
@@ -45,12 +49,14 @@ impl OptionsInstruction {
     pub fn pack(&self) -> Vec<u8> {
         let mut buf = Vec::with_capacity(size_of::<Self>());
         match self {
-            &Self::CreateMarket {
+            &Self::InitializeMarket {
                 ref amount_per_contract,
+                ref strike_price,
                 ref expiration_unix_timestamp,
             } => {
                 buf.push(0);
                 buf.extend_from_slice(&amount_per_contract.to_le_bytes());
+                buf.extend_from_slice(&strike_price.to_le_bytes());
                 buf.extend_from_slice(&expiration_unix_timestamp.to_le_bytes());
             } 
         };
@@ -76,16 +82,19 @@ mod tests {
     #[test]
     fn test_pack_unpack_options_instructions() {
         let amount_per_contract: u64 = 100;
+        let strike_price: u64 = 5;
         let expiration_unix_timestamp: u64 = 1607743435;
-        let check = OptionsInstruction::CreateMarket {
+        let check = OptionsInstruction::InitializeMarket {
             amount_per_contract,
-            expiration_unix_timestamp
+            strike_price,
+            expiration_unix_timestamp,
         };
         let packed = check.pack();
         // add the tag to the expected buffer
         let mut expect = Vec::from([0u8]);
         // add the other instruction inputs to expected buffer
         expect.extend_from_slice(&amount_per_contract.to_le_bytes());
+        expect.extend_from_slice(&strike_price.to_le_bytes());
         expect.extend_from_slice(&expiration_unix_timestamp.to_le_bytes());
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
