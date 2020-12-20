@@ -28,12 +28,13 @@ use std::{
     path::PathBuf,
 };
 
+
 const DATA_CHUNK_SIZE: usize = 229;
 
 /// Copy/Pasta'd from `send_and_confirm_transactions_with_spinner` in solana/cli/src/cli.rs
 //////////////////////////////////
 
-pub fn new_spinner_progress_bar() -> ProgressBar {
+fn new_spinner_progress_bar() -> ProgressBar {
     let progress_bar = ProgressBar::new(42);
     progress_bar
         .set_style(ProgressStyle::default_spinner().template("{spinner:.green} {wide_msg}"));
@@ -41,7 +42,7 @@ pub fn new_spinner_progress_bar() -> ProgressBar {
     progress_bar
 }
 
-pub fn get_leader_tpu(
+fn get_leader_tpu(
     slot_index: u64,
     leader_schedule: Option<&RpcLeaderSchedule>,
     cluster_nodes: Option<&Vec<RpcContactInfo>>,
@@ -57,7 +58,7 @@ pub fn get_leader_tpu(
         })
 }
 
-pub fn send_transaction_tpu(
+fn send_transaction_tpu(
     send_socket: &UdpSocket,
     tpu_address: &SocketAddr,
     wire_transaction: &[u8],
@@ -196,7 +197,7 @@ pub fn send_and_confirm_transactions_with_spinner<T: Signers>(
 
 /////////////////////////////////
 
-pub fn create_bpf_path(name: &str) -> PathBuf {
+fn create_bpf_path(name: &str) -> PathBuf {
     let mut pathbuf = {
         let current_exe = env::current_exe().unwrap();
         PathBuf::from(
@@ -215,7 +216,7 @@ pub fn create_bpf_path(name: &str) -> PathBuf {
     pathbuf
 }
 
-pub fn read_bpf_program(name: &str) -> Vec<u8> {
+fn read_bpf_program(name: &str) -> Vec<u8> {
     let path = create_bpf_path(name);
     let mut file = File::open(&path).unwrap_or_else(|err| {
         panic!("Failed to open {}: {}", path.display(), err);
