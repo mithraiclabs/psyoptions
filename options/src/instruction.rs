@@ -1,6 +1,12 @@
+use arrayref::array_ref;
+use solana_program::{
+    instruction::{AccountMeta, Instruction},
+    program_error::ProgramError,
+    pubkey::Pubkey,
+    sysvar,
+};
+use spl_token;
 use std::mem::size_of;
-use solana_program::program_error::ProgramError;
-use arrayref::{ array_ref };
 /// Instructions supported by the Options program
 #[repr(C, u16)]
 #[derive(Debug, PartialEq)]
@@ -9,12 +15,16 @@ pub enum OptionsInstruction {
     ///
     ///
     /// Accounts expected by this instruction:
-    /// 
-    ///   0. SPL Program address of Underlying Asset
-    ///   1. SPL Program address of Quote Asset
-    ///   2. `[writeable]` SPL Program address for contract token 
+    ///
+    ///   0. `[]` SPL Program address of Underlying Asset
+    ///   1. `[]` SPL Program address of Quote Asset
+    ///   2. `[writeable]` SPL Program address for contract token
     ///     (the client must create a new SPL Token prior to creating a market)
-    ///   3. `[writeable]` Account with space for the option market we are creating 
+    ///   3. `[writeable]` Account with space for the option market we are creating
+    ///   3. `[]` Account with space for the option market we are creating
+    ///   4. `[writeable]` Pool for underlying asset deposits - Uninitialized
+    ///   5. `[]` Rent Sysvar
+    ///   6. `[]` Spl Token Program
     InitializeMarket {
         /// The amount of the **underlying asset** that derives a single contract
         amount_per_contract: u64,
@@ -22,14 +32,15 @@ pub enum OptionsInstruction {
         strike_price: u64,
         /// The Unix timestamp at which the contracts in this market expire
         expiration_unix_timestamp: u64,
-    }
+    },
 }
 
 impl OptionsInstruction {
     /// Unpacks a byte buffer into a [TokenInstruction](enum.TokenInstruction.html).
     pub fn unpack(input: &[u8]) -> Result<Self, ProgramError> {
-
-        let (&tag, rest) = input.split_first().ok_or(ProgramError::InvalidInstructionData)?;
+        let (&tag, rest) = input
+            .split_first()
+            .ok_or(ProgramError::InvalidInstructionData)?;
         Ok(match tag {
             0 => {
                 let (amount_per_contract, rest) = Self::unpack_u64(rest)?;
@@ -58,7 +69,7 @@ impl OptionsInstruction {
                 buf.extend_from_slice(&amount_per_contract.to_le_bytes());
                 buf.extend_from_slice(&strike_price.to_le_bytes());
                 buf.extend_from_slice(&expiration_unix_timestamp.to_le_bytes());
-            } 
+            }
         };
         buf
     }
@@ -73,6 +84,46 @@ impl OptionsInstruction {
             Err(ProgramError::InvalidInstructionData)
         }
     }
+}
+
+/// Creates an `InitializeMarket` instruction
+pub fn initiailize_market(
+    options_program_id: &Pubkey,
+    underlying_asset_pubkey: &Pubkey,
+    quote_asset_pubkey: &Pubkey,
+    contract_spl_token_pubkey: &Pubkey,
+    option_market_data_pubkey: &Pubkey,
+    underlying_asset_pool_pubkey: &Pubkey,
+    amount_per_contract: u64,
+    strike_price: u64,
+    expiration_unix_timestamp: u64,
+) -> Result<Instruction, ProgramError> {
+    let (options_spl_authority_pubkey, _bump_seed) = Pubkey::find_program_address(
+        &[&contract_spl_token_pubkey.to_bytes()[..32]],
+        &options_program_id,
+    );
+    let data = OptionsInstruction::InitializeMarket {
+        amount_per_contract,
+        strike_price,
+        expiration_unix_timestamp,
+    }
+    .pack();
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*underlying_asset_pubkey, false),
+        AccountMeta::new_readonly(*quote_asset_pubkey, false),
+        AccountMeta::new(*contract_spl_token_pubkey, false),
+        AccountMeta::new(*option_market_data_pubkey, false),
+        AccountMeta::new_readonly(options_spl_authority_pubkey, false),
+        AccountMeta::new(*underlying_asset_pool_pubkey, false),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(spl_token::id(), false),
+    ];
+    Ok(Instruction {
+        program_id: *options_program_id,
+        accounts,
+        data,
+    })
 }
 
 #[cfg(test)]

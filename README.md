@@ -8,7 +8,7 @@ Exploring architectures for options trading on Serum
 1. [Docker](https://docs.docker.com/get-docker/)
 
 ## Running Unit tests
-1. `cargo test --features program --manifest-path options/Cargo.toml`
+1. `cargo test --features program --lib --manifest-path options/Cargo.toml`
 
 ## Running Integration tests
 1. Make sure the local test net is running `yarn localnet:up`

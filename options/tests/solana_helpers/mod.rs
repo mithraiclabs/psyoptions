@@ -1,3 +1,5 @@
+use solana_sdk::instruction::Instruction;
+use solana_client::client_error::ClientError;
 use bincode::serialize;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
@@ -364,4 +366,21 @@ pub fn load_bpf_program(client: &RpcClient, name: &str) -> Pubkey {
     println!("Loaded program {}", account_to_init.pubkey());
 
     account_to_init.pubkey()
+}
+
+pub fn send_and_confirm_transaction(client: &RpcClient, instruction: Instruction, payer_key: &Pubkey, signers: Vec<&Keypair>) -> Result<(), ClientError> {
+    let message = Message::new(&[instruction], Some(&payer_key));
+
+    let (blockhash, _, _) = client
+        .get_recent_blockhash_with_commitment(CommitmentConfig::recent())?
+        .value;
+
+    let mut transaction = Transaction::new_unsigned(message.clone());
+    transaction.try_sign(&signers, blockhash)?;
+
+    client.send_and_confirm_transaction_with_spinner_and_commitment(
+        &transaction,
+        CommitmentConfig::recent(),
+    )?;
+    Ok(())
 }

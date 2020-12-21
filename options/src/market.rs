@@ -69,7 +69,7 @@ pub struct OptionMarket {
     pub strike_price: u64,
     /// The Unix timestamp at which the contracts in this market expire
     pub expiration_unix_timestamp: u64,
-    /// Program Derived Address for the liquidity pool that contains the underlying assset
+    /// Address for the liquidity pool that contains the underlying assset
     pub asset_pool_address: Pubkey,
     /// Keeps track of the length of the option_writer_registry (number of outstanding contracts)
     pub registry_length: u16,
