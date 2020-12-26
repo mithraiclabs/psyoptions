@@ -16,8 +16,8 @@ pub enum OptionsInstruction {
     ///
     /// Accounts expected by this instruction:
     ///
-    ///   0. `[]` SPL Program address of Underlying Asset
-    ///   1. `[]` SPL Program address of Quote Asset
+    ///   0. `[]` Underlying Asset Mint
+    ///   1. `[]` Quote Asset Mint
     ///   2. `[writeable]` SPL Program address for contract token
     ///     (the client must create a new SPL Token prior to creating a market)
     ///   3. `[writeable]` Account with space for the option market we are creating
@@ -33,6 +33,17 @@ pub enum OptionsInstruction {
         /// The Unix timestamp at which the contracts in this market expire
         expiration_unix_timestamp: u64,
     },
+    /// Mints an Options token to represent a Covered Call
+    ///
+    ///   0. `[]` Option Mint
+    ///   1. `[]` Underlying Asser Mint
+    ///   2. `[writeable]` Destination account for minted Option
+    ///   3. `[writeable]` Source account for underlying asset
+    ///   4. `[writeable]` Destination account for underlying asset pool
+    ///   5. `[]` Destination account for quote asset
+    ///     (this is stored in the mint registry to be used in the even of option exerciese)
+    ///   
+    MintCoveredCall {},
 }
 
 impl OptionsInstruction {
@@ -52,6 +63,7 @@ impl OptionsInstruction {
                     expiration_unix_timestamp,
                 }
             }
+            1 => Self::MintCoveredCall {},
             _ => return Err(ProgramError::InvalidInstructionData.into()),
         })
     }
@@ -69,6 +81,9 @@ impl OptionsInstruction {
                 buf.extend_from_slice(&amount_per_contract.to_le_bytes());
                 buf.extend_from_slice(&strike_price.to_le_bytes());
                 buf.extend_from_slice(&expiration_unix_timestamp.to_le_bytes());
+            }
+            &Self::MintCoveredCall {} => {
+                buf.push(1);
             }
         };
         buf
@@ -131,7 +146,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_pack_unpack_options_instructions() {
+    fn test_pack_unpack_init_market() {
         let amount_per_contract: u64 = 100;
         let strike_price: u64 = 5;
         let expiration_unix_timestamp: u64 = 1607743435;
@@ -147,6 +162,17 @@ mod tests {
         expect.extend_from_slice(&amount_per_contract.to_le_bytes());
         expect.extend_from_slice(&strike_price.to_le_bytes());
         expect.extend_from_slice(&expiration_unix_timestamp.to_le_bytes());
+        assert_eq!(packed, expect);
+        let unpacked = OptionsInstruction::unpack(&expect).unwrap();
+        assert_eq!(unpacked, check);
+    }
+
+    #[test]
+    fn test_pack_unpack_mint_covered_call() {
+        let check = OptionsInstruction::MintCoveredCall {};
+        let packed = check.pack();
+        // add the tag to the expected buffer
+        let expect = Vec::from([1u8]);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);

@@ -77,6 +77,11 @@ impl Processor {
         )?;
         Ok(())
     }
+
+    pub fn process_mint_covered_call() -> ProgramResult {
+        Ok(())
+    }
+
     pub fn process(program_id: &Pubkey, accounts: &[AccountInfo], input: &[u8]) -> ProgramResult {
         let instruction = OptionsInstruction::unpack(input)?;
         match instruction {
@@ -91,6 +96,7 @@ impl Processor {
                 strike_price,
                 expiration_unix_timestamp,
             ),
+            OptionsInstruction::MintCoveredCall {} => Self::process_mint_covered_call(),
         }
     }
 }
