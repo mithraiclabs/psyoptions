@@ -1,33 +1,35 @@
 use bincode::serialize;
-use indicatif::ProgressBar;
-use indicatif::ProgressStyle;
-use solana_client::rpc_config::RpcSendTransactionConfig;
-use solana_client::rpc_response::RpcContactInfo;
-use solana_client::rpc_response::RpcLeaderSchedule;
-use solana_client::{rpc_client::RpcClient, rpc_request::MAX_GET_SIGNATURE_STATUSES_QUERY_ITEMS};
+use indicatif::{ProgressBar, ProgressStyle};
+use solana_client::{
+    client_error::ClientError,
+    rpc_client::RpcClient,
+    rpc_config::RpcSendTransactionConfig,
+    rpc_request::MAX_GET_SIGNATURE_STATUSES_QUERY_ITEMS,
+    rpc_response::{RpcContactInfo, RpcLeaderSchedule},
+};
 use solana_faucet::faucet::request_airdrop_transaction;
 use solana_program::{loader_instruction, message::Message, system_instruction};
-use solana_sdk::slot_history::Slot;
-use solana_sdk::transaction::Transaction;
 use solana_sdk::{
     bpf_loader,
     commitment_config::CommitmentConfig,
+    instruction::Instruction,
     pubkey::Pubkey,
     signature::{Keypair, Signer},
     signers::Signers,
+    slot_history::Slot,
+    transaction::Transaction,
 };
-use std::thread::sleep;
-use std::time::Duration;
-use std::{cmp::min, net::UdpSocket};
 use std::{
+    cmp::min,
     collections::HashMap,
     env,
     fs::File,
     io::Read,
-    net::{IpAddr, Ipv4Addr, SocketAddr},
+    net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket},
     path::PathBuf,
+    thread::sleep,
+    time::Duration,
 };
-
 
 const DATA_CHUNK_SIZE: usize = 229;
 
@@ -364,4 +366,26 @@ pub fn load_bpf_program(client: &RpcClient, name: &str) -> Pubkey {
     println!("Loaded program {}", account_to_init.pubkey());
 
     account_to_init.pubkey()
+}
+
+pub fn send_and_confirm_transaction(
+    client: &RpcClient,
+    instruction: Instruction,
+    payer_key: &Pubkey,
+    signers: Vec<&Keypair>,
+) -> Result<(), ClientError> {
+    let message = Message::new(&[instruction], Some(&payer_key));
+
+    let (blockhash, _, _) = client
+        .get_recent_blockhash_with_commitment(CommitmentConfig::recent())?
+        .value;
+
+    let mut transaction = Transaction::new_unsigned(message.clone());
+    transaction.try_sign(&signers, blockhash)?;
+
+    client.send_and_confirm_transaction_with_spinner_and_commitment(
+        &transaction,
+        CommitmentConfig::recent(),
+    )?;
+    Ok(())
 }
