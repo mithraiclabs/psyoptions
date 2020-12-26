@@ -21,10 +21,10 @@ pub enum OptionsInstruction {
     ///   2. `[writeable]` SPL Program address for contract token
     ///     (the client must create a new SPL Token prior to creating a market)
     ///   3. `[writeable]` Account with space for the option market we are creating
-    ///   3. `[]` Account with space for the option market we are creating
-    ///   4. `[writeable]` Pool for underlying asset deposits - Uninitialized
-    ///   5. `[]` Rent Sysvar
-    ///   6. `[]` Spl Token Program
+    ///   4. `[]` Account with space for the option market we are creating
+    ///   5. `[writeable]` Pool for underlying asset deposits - Uninitialized
+    ///   6. `[]` Rent Sysvar
+    ///   7. `[]` Spl Token Program
     InitializeMarket {
         /// The amount of the **underlying asset** that derives a single contract
         amount_per_contract: u64,
