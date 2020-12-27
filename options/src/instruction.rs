@@ -141,6 +141,7 @@ pub fn initiailize_market(
     })
 }
 
+// TODO add support for Multisignature owner/delegate
 /// Creates a `MintCoveredCall` instruction
 pub fn mint_covered_call(
     program_id: &Pubkey,
@@ -150,15 +151,20 @@ pub fn mint_covered_call(
     underyling_asset_src: &Pubkey,
     underlying_asset_pool: &Pubkey,
     quote_asset_dest: &Pubkey,
+    option_market: &Pubkey,
+    authority_pubkey: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
-    let accounts = vec![
-        AccountMeta::new(*option_mint, false),
-        AccountMeta::new_readonly(*underlying_asset_mint, false),
-        AccountMeta::new(*minted_option_dest, false),
-        AccountMeta::new(*underyling_asset_src, false),
-        AccountMeta::new(*underlying_asset_pool, false),
-        AccountMeta::new_readonly(*quote_asset_dest, false),
-    ];
+    let mut accounts = Vec::with_capacity(9);
+    accounts.push(AccountMeta::new(*option_mint, false));
+    accounts.push(AccountMeta::new_readonly(*underlying_asset_mint, false));
+    accounts.push(AccountMeta::new(*minted_option_dest, false));
+    accounts.push(AccountMeta::new(*underyling_asset_src, false));
+    accounts.push(AccountMeta::new(*underlying_asset_pool, false));
+    accounts.push(AccountMeta::new_readonly(*quote_asset_dest, false));
+    accounts.push(AccountMeta::new_readonly(*option_market, false));
+    accounts.push(AccountMeta::new_readonly(*authority_pubkey, true));
+    accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
+
     let data = OptionsInstruction::MintCoveredCall {}.pack();
     Ok(Instruction {
         program_id: *program_id,

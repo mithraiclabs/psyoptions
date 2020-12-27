@@ -78,7 +78,42 @@ impl Processor {
         Ok(())
     }
 
-    pub fn process_mint_covered_call(_accounts: &[AccountInfo]) -> ProgramResult {
+    pub fn process_mint_covered_call(accounts: &[AccountInfo]) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let _option_mint_acct = next_account_info(account_info_iter)?;
+        let underlying_asset_mint_acct = next_account_info(account_info_iter)?;
+        let _minted_option_dest_acct = next_account_info(account_info_iter)?;
+        let underyling_asset_src_acct = next_account_info(account_info_iter)?;
+        let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
+        let _quote_asset_dest_acct = next_account_info(account_info_iter)?;
+        let option_market_acct = next_account_info(account_info_iter)?;
+        let authority_acct = next_account_info(account_info_iter)?;
+        let spl_program_acct = next_account_info(account_info_iter)?;
+        
+        // Get the amount of underlying asset for transfer
+        let option_market_data = option_market_acct.try_borrow_data()?;
+        let option_market = OptionMarket::unpack(&option_market_data)?;
+
+        // TODO transfer the amount per contract of underlying asset from the src to the pool
+        let transfer_tokens_ix = token_instruction::transfer(
+            &spl_token::id(), 
+            &underyling_asset_src_acct.key, 
+            &underlying_asset_pool_acct.key, 
+            &authority_acct.key, 
+            &[], 
+            option_market.amount_per_contract
+        )?;
+        invoke(
+            &transfer_tokens_ix,
+            &[
+                underyling_asset_src_acct.clone(),
+                underlying_asset_pool_acct.clone(),
+                authority_acct.clone(),
+                spl_program_acct.clone()
+            ],
+        )?;
+
+
         Ok(())
     }
 

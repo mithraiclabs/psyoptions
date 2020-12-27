@@ -201,3 +201,27 @@ fn send_and_confirm_transaction(
     )?;
     Ok(())
 }
+
+pub fn mint_tokens_to_account(
+    client: &RpcClient,
+    token_program_id: &Pubkey,
+    mint_pubkey: &Pubkey,
+    destination_pubkey: &Pubkey,
+    authority_pubkey: &Pubkey,
+    signers: Vec<&Keypair>,
+    amount: u64,
+) -> Result<(), ClientError> {
+    let mint_to_ix = token_instruction::mint_to(
+        token_program_id, 
+        mint_pubkey, 
+        destination_pubkey, 
+        authority_pubkey, 
+        &[], 
+        amount
+    )
+    .unwrap();
+    send_and_confirm_transaction(client, mint_to_ix, authority_pubkey, signers)?;
+    println!("Sent {} {} tokens to {}", amount, mint_pubkey, destination_pubkey);
+
+    Ok(())
+}

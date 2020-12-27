@@ -20,7 +20,7 @@ struct InitializeOptionMarket {
 }
 
 fn create_and_init_mint(client: &RpcClient, options_program_id: &Pubkey) -> InitializeOptionMarket {
-  let payer_keys = solana_helpers::create_account_with_lamports(&client, 10000000000);
+  let payer_keys = solana_helpers::create_account_with_lamports(&client, 10_000_000_000);
   let options_spl_mint = Keypair::new();
   let options_market_keys = Keypair::new();
 
@@ -96,7 +96,7 @@ fn test_mint_covered_call_integration() {
     underlying_asset_pool_key,
   } = initialized_option_market;
 
-  let option_writer_keys = solana_helpers::create_account_with_lamports(&client, 10000000);
+  let option_writer_keys = solana_helpers::create_account_with_lamports(&client, 1_000_000_000_000_000);
   let option_writer_underlying_asset_keys = Keypair::new();
   let _option_writer_underlying_asset_acct = option_helpers::create_spl_account(
     &client,
@@ -105,6 +105,16 @@ fn test_mint_covered_call_integration() {
     &underlying_asset_mint,
     &option_writer_keys,
   );
+  // add >= amount_per_contract of underlying asset to the src account
+  let _mint_to_res = option_helpers::mint_tokens_to_account(
+    &client, 
+    &spl_token::id(), 
+    &option_mint_key, 
+    &option_writer_underlying_asset_keys.pubkey(), 
+    &option_writer_keys.pubkey(), 
+    vec![&option_writer_keys], 
+    amount_per_contract
+  ).unwrap();
   let option_writer_quote_asset_keys = Keypair::new();
   let _option_writer_quote_asset_acct = option_helpers::create_spl_account(
     &client,
@@ -125,12 +135,14 @@ fn test_mint_covered_call_integration() {
   // send TX to mint a covered call
   let mint_covered_call_ix = solana_options::instruction::mint_covered_call(
     &options_program_id, 
-    &initialized_option_market.option_mint_key, 
-    &initialized_option_market.underlying_asset_mint,
+    &option_mint_key, 
+    &underlying_asset_mint,
     &option_writer_option_keys.pubkey(),
     &option_writer_underlying_asset_keys.pubkey(),
-    &initialized_option_market.underlying_asset_pool_key,
-    &option_writer_quote_asset_keys.pubkey()
+    &underlying_asset_pool_key,
+    &option_writer_quote_asset_keys.pubkey(),
+    &option_market_key,
+    &option_writer_keys.pubkey()
   )
   .unwrap();
   let signers = vec![&option_writer_keys];
@@ -141,14 +153,6 @@ fn test_mint_covered_call_integration() {
       signers,
   )
   .unwrap();
-
-  // assert option writer's Option account has balance of 1
-  let option_writer_option_acct_data = client
-    .get_account_data(&option_writer_option_keys.pubkey())
-    .unwrap();
-  let option_writer_option_acct = Account::unpack(&option_writer_option_acct_data[..]).unwrap();
-  assert_eq!(option_writer_option_acct.mint, option_mint_key);
-  assert_eq!(option_writer_option_acct.amount, 1);
 
   // assert option market underlying asset pool has increased by the amount per option contract
   let underlying_asset_pool_acct_data =
@@ -161,6 +165,14 @@ fn test_mint_covered_call_integration() {
   let option_mint_data = client.get_account_data(&option_mint_key).unwrap();
   let option_mint = Mint::unpack(&option_mint_data[..]).unwrap();
   assert_eq!(option_mint.supply, 1);
+
+  // assert option writer's Option account has balance of 1
+  let option_writer_option_acct_data = client
+    .get_account_data(&option_writer_option_keys.pubkey())
+    .unwrap();
+  let option_writer_option_acct = Account::unpack(&option_writer_option_acct_data[..]).unwrap();
+  assert_eq!(option_writer_option_acct.mint, option_mint_key);
+  assert_eq!(option_writer_option_acct.amount, 1);
 
   // assert that the option market registry contains the proper entry
   let option_market_data = client.get_account_data(&option_market_key).unwrap();
