@@ -35,7 +35,7 @@ pub enum OptionsInstruction {
     },
     /// Mints an Options token to represent a Covered Call
     ///
-    ///   0. `[]` Option Mint
+    ///   0. `[writeable]` Option Mint
     ///   1. `[]` Underlying Asser Mint
     ///   2. `[writeable]` Destination account for minted Option
     ///   3. `[writeable]` Source account for underlying asset
@@ -138,6 +138,32 @@ pub fn initiailize_market(
         program_id: *options_program_id,
         accounts,
         data,
+    })
+}
+
+/// Creates a `MintCoveredCall` instruction
+pub fn mint_covered_call(
+    program_id: &Pubkey,
+    option_mint: &Pubkey,
+    underlying_asset_mint: &Pubkey,
+    minted_option_dest: &Pubkey,
+    underyling_asset_src: &Pubkey,
+    underlying_asset_pool: &Pubkey,
+    quote_asset_dest: &Pubkey,
+) -> Result<Instruction, ProgramError> {
+    let accounts = vec![
+        AccountMeta::new(*option_mint, false),
+        AccountMeta::new_readonly(*underlying_asset_mint, false),
+        AccountMeta::new(*minted_option_dest, false),
+        AccountMeta::new(*underyling_asset_src, false),
+        AccountMeta::new(*underlying_asset_pool, false),
+        AccountMeta::new_readonly(*quote_asset_dest, false),
+    ];
+    let data = OptionsInstruction::MintCoveredCall {}.pack();
+    Ok(Instruction {
+        program_id: *program_id,
+        data,
+        accounts,
     })
 }
 

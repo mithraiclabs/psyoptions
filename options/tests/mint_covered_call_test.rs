@@ -124,6 +124,7 @@ fn test_mint_covered_call_integration() {
   );
 
   // TODO send TX to mint a covered call
+  // let mint_covered_call_ix = solana_options::instruction::mint_covered_call()
 
   // assert option writer's Option account has balance of 1
   let option_writer_option_acct_data = client
@@ -157,4 +158,8 @@ fn test_mint_covered_call_integration() {
       contract_token_acct_address: option_writer_option_keys.pubkey(),
     }
   )
+}
+
+fn test_mint_covered_call_fail_post_expiry() {
+  assert!(false);
 }
