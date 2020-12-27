@@ -8,6 +8,7 @@ use solana_program::{
     program::{invoke, invoke_signed},
     program_pack::Pack,
     pubkey::Pubkey,
+    msg
 };
 use spl_token::instruction as token_instruction;
 
@@ -94,7 +95,7 @@ impl Processor {
         let spl_program_acct = next_account_info(account_info_iter)?;
         let option_mint_authority_acct = next_account_info(account_info_iter)?;
         // Get the amount of underlying asset for transfer
-        let option_market_data = option_market_acct.try_borrow_mut_data()?;
+        let mut option_market_data = option_market_acct.try_borrow_mut_data()?;
         let mut option_market = OptionMarket::unpack(&option_market_data)?;
 
         // transfer the amount per contract of underlying asset from the src to the pool
@@ -140,14 +141,14 @@ impl Processor {
         let option_writer = OptionWriter {
             underlying_asset_acct_address: *underyling_asset_src_acct.key,
             quote_asset_acct_address: *quote_asset_dest_acct.key,
-            contract_token_acct_address: *option_mint_acct.key
+            contract_token_acct_address: *minted_option_dest_acct.key
         };
         option_market.option_writer_registry.push(option_writer);
         // increment registry_length
         option_market.registry_length += 1;
         OptionMarket::pack(
             option_market,
-            &mut option_market_acct.data.borrow_mut(),
+            &mut option_market_data,
         )?;
 
         Ok(())

@@ -182,7 +182,7 @@ pub fn mint_covered_call(
     accounts.push(AccountMeta::new(*underyling_asset_src, false));
     accounts.push(AccountMeta::new(*underlying_asset_pool, false));
     accounts.push(AccountMeta::new_readonly(*quote_asset_dest, false));
-    accounts.push(AccountMeta::new_readonly(*option_market, false));
+    accounts.push(AccountMeta::new(*option_market, false));
     accounts.push(AccountMeta::new_readonly(*authority_pubkey, true));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
 
