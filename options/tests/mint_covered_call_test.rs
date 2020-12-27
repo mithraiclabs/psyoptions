@@ -15,10 +15,9 @@ struct InitializedOptionMarket {
   option_market_key: Pubkey,
   option_mint_key: Pubkey,
   quote_asset_mint: Pubkey,
-  quote_asset_mint_authority: Pubkey,
   underlying_asset_mint: Pubkey,
   underlying_asset_pool_key: Pubkey,
-  underlying_asset_mint_authority: Pubkey,
+  underlying_asset_mint_authority: Keypair,
 }
 
 fn create_and_init_mint(client: &RpcClient, options_program_id: &Pubkey) -> InitializedOptionMarket {
@@ -76,10 +75,9 @@ fn create_and_init_mint(client: &RpcClient, options_program_id: &Pubkey) -> Init
     option_market_key: options_market_keys.pubkey(),
     option_mint_key: options_spl_mint.pubkey(),
     quote_asset_mint: quote_spl.pubkey(),
-    quote_asset_mint_authority: payer_keys.pubkey(),
     underlying_asset_mint: underlying_spl.pubkey(),
     underlying_asset_pool_key: underlying_spl_pool.pubkey(),
-    underlying_asset_mint_authority: payer_keys.pubkey()
+    underlying_asset_mint_authority: payer_keys
   }
 }
 
@@ -96,7 +94,6 @@ fn test_mint_covered_call_integration() {
     option_market_key,
     option_mint_key,
     quote_asset_mint,
-    quote_asset_mint_authority,
     underlying_asset_mint,
     underlying_asset_pool_key,
     underlying_asset_mint_authority
@@ -117,8 +114,8 @@ fn test_mint_covered_call_integration() {
     &spl_token::id(), 
     &underlying_asset_mint, 
     &option_writer_underlying_asset_keys.pubkey(), 
-    &option_writer_keys.pubkey(), 
-    vec![&option_writer_keys], 
+    &underlying_asset_mint_authority.pubkey(), 
+    vec![&underlying_asset_mint_authority], 
     amount_per_contract
   ).unwrap();
 
