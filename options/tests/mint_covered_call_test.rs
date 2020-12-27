@@ -10,16 +10,18 @@ use spl_token::state::{Account, Mint};
 mod option_helpers;
 mod solana_helpers;
 
-struct InitializeOptionMarket {
+struct InitializedOptionMarket {
   amount_per_contract: u64,
   option_market_key: Pubkey,
   option_mint_key: Pubkey,
   quote_asset_mint: Pubkey,
+  quote_asset_mint_authority: Pubkey,
   underlying_asset_mint: Pubkey,
   underlying_asset_pool_key: Pubkey,
+  underlying_asset_mint_authority: Pubkey,
 }
 
-fn create_and_init_mint(client: &RpcClient, options_program_id: &Pubkey) -> InitializeOptionMarket {
+fn create_and_init_mint(client: &RpcClient, options_program_id: &Pubkey) -> InitializedOptionMarket {
   let payer_keys = solana_helpers::create_account_with_lamports(&client, 10_000_000_000);
   let options_spl_mint = Keypair::new();
   let options_market_keys = Keypair::new();
@@ -69,13 +71,15 @@ fn create_and_init_mint(client: &RpcClient, options_program_id: &Pubkey) -> Init
   )
   .unwrap();
 
-  InitializeOptionMarket {
+  InitializedOptionMarket {
     amount_per_contract,
     option_market_key: options_market_keys.pubkey(),
     option_mint_key: options_spl_mint.pubkey(),
     quote_asset_mint: quote_spl.pubkey(),
+    quote_asset_mint_authority: payer_keys.pubkey(),
     underlying_asset_mint: underlying_spl.pubkey(),
     underlying_asset_pool_key: underlying_spl_pool.pubkey(),
+    underlying_asset_mint_authority: payer_keys.pubkey()
   }
 }
 
@@ -87,13 +91,15 @@ fn test_mint_covered_call_integration() {
   );
   let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
   let initialized_option_market = create_and_init_mint(&client, &options_program_id);
-  let InitializeOptionMarket {
+  let InitializedOptionMarket {
     amount_per_contract,
     option_market_key,
     option_mint_key,
     quote_asset_mint,
+    quote_asset_mint_authority,
     underlying_asset_mint,
     underlying_asset_pool_key,
+    underlying_asset_mint_authority
   } = initialized_option_market;
 
   let option_writer_keys = solana_helpers::create_account_with_lamports(&client, 1_000_000_000_000_000);
@@ -109,12 +115,14 @@ fn test_mint_covered_call_integration() {
   let _mint_to_res = option_helpers::mint_tokens_to_account(
     &client, 
     &spl_token::id(), 
-    &option_mint_key, 
+    &underlying_asset_mint, 
     &option_writer_underlying_asset_keys.pubkey(), 
     &option_writer_keys.pubkey(), 
     vec![&option_writer_keys], 
     amount_per_contract
   ).unwrap();
+
+  // Set up the users quote asset accounts
   let option_writer_quote_asset_keys = Keypair::new();
   let _option_writer_quote_asset_acct = option_helpers::create_spl_account(
     &client,
