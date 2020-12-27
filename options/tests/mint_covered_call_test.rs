@@ -141,7 +141,6 @@ fn test_mint_covered_call_integration() {
   let mint_covered_call_ix = solana_options::instruction::mint_covered_call(
     &options_program_id, 
     &option_mint_key, 
-    &underlying_asset_mint,
     &option_writer_option_keys.pubkey(),
     &option_writer_underlying_asset_keys.pubkey(),
     &underlying_asset_pool_key,

@@ -85,7 +85,6 @@ impl Processor {
     pub fn process_mint_covered_call(accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let option_mint_acct = next_account_info(account_info_iter)?;
-        let underlying_asset_mint_acct = next_account_info(account_info_iter)?;
         let minted_option_dest_acct = next_account_info(account_info_iter)?;
         let underyling_asset_src_acct = next_account_info(account_info_iter)?;
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;

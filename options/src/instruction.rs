@@ -34,14 +34,19 @@ pub enum OptionsInstruction {
         expiration_unix_timestamp: u64,
     },
     /// Mints an Options token to represent a Covered Call
-    ///
+    /// 
+    /// 
     ///   0. `[writeable]` Option Mint
-    ///   1. `[]` Underlying Asset Mint
-    ///   2. `[writeable]` Destination account for minted Option
-    ///   3. `[writeable]` Source account for underlying asset
-    ///   4. `[writeable]` Destination account for underlying asset pool
+    ///   1. `[writeable]` Destination account for minted Option
+    ///   2. `[writeable]` Source account for `OptionWriter`'s underlying asset
+    ///   3. `[writeable]` Destination account for underlying asset pool
+    ///   4. `[writeable]` Destination account for `OptionWriter`'s quote asset
     ///   5. `[]` Destination account for quote asset
-    ///     (this is stored in the mint registry to be used in the even of option exerciese)
+    ///     (this is stored in the mint registry to be used in the event of option exerciese)
+    ///   6. `[writeable]` `OptionMarket` data account 
+    ///   7. `[]` Authority account for the various `OptionWriter` accounts
+    ///   8. `[]` SPL Token Program
+    ///   9. `[]` Program Derived Address for the authority over the Option Mint
     ///   
     MintCoveredCall {
         bump_seed: u8
@@ -167,7 +172,6 @@ pub fn initiailize_market(
 pub fn mint_covered_call(
     program_id: &Pubkey,
     option_mint: &Pubkey,
-    underlying_asset_mint: &Pubkey,
     minted_option_dest: &Pubkey,
     underyling_asset_src: &Pubkey,
     underlying_asset_pool: &Pubkey,
@@ -177,7 +181,6 @@ pub fn mint_covered_call(
 ) -> Result<Instruction, ProgramError> {
     let mut accounts = Vec::with_capacity(9);
     accounts.push(AccountMeta::new(*option_mint, false));
-    accounts.push(AccountMeta::new_readonly(*underlying_asset_mint, false));
     accounts.push(AccountMeta::new(*minted_option_dest, false));
     accounts.push(AccountMeta::new(*underyling_asset_src, false));
     accounts.push(AccountMeta::new(*underlying_asset_pool, false));
