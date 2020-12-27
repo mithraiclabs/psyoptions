@@ -143,6 +143,8 @@ impl Processor {
             contract_token_acct_address: *option_mint_acct.key
         };
         option_market.option_writer_registry.push(option_writer);
+        // increment registry_length
+        option_market.registry_length += 1;
         OptionMarket::pack(
             option_market,
             &mut option_market_acct.data.borrow_mut(),
