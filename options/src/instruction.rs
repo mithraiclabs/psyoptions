@@ -36,7 +36,7 @@ pub enum OptionsInstruction {
     /// Mints an Options token to represent a Covered Call
     ///
     ///   0. `[writeable]` Option Mint
-    ///   1. `[]` Underlying Asser Mint
+    ///   1. `[]` Underlying Asset Mint
     ///   2. `[writeable]` Destination account for minted Option
     ///   3. `[writeable]` Source account for underlying asset
     ///   4. `[writeable]` Destination account for underlying asset pool

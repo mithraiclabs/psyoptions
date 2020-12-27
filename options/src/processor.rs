@@ -78,7 +78,7 @@ impl Processor {
         Ok(())
     }
 
-    pub fn process_mint_covered_call() -> ProgramResult {
+    pub fn process_mint_covered_call(_accounts: &[AccountInfo]) -> ProgramResult {
         Ok(())
     }
 
@@ -96,7 +96,7 @@ impl Processor {
                 strike_price,
                 expiration_unix_timestamp,
             ),
-            OptionsInstruction::MintCoveredCall {} => Self::process_mint_covered_call(),
+            OptionsInstruction::MintCoveredCall {} => Self::process_mint_covered_call(accounts),
         }
     }
 }

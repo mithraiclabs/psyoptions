@@ -19,9 +19,7 @@ struct InitializeOptionMarket {
   underlying_asset_pool_key: Pubkey,
 }
 
-fn create_and_init_mint(client: &RpcClient) -> InitializeOptionMarket {
-  let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
-
+fn create_and_init_mint(client: &RpcClient, options_program_id: &Pubkey) -> InitializeOptionMarket {
   let payer_keys = solana_helpers::create_account_with_lamports(&client, 10000000000);
   let options_spl_mint = Keypair::new();
   let options_market_keys = Keypair::new();
@@ -87,7 +85,8 @@ fn test_mint_covered_call_integration() {
     "http://localhost:8899".to_string(),
     CommitmentConfig::recent(),
   );
-  let initialized_option_market = create_and_init_mint(&client);
+  let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
+  let initialized_option_market = create_and_init_mint(&client, &options_program_id);
   let InitializeOptionMarket {
     amount_per_contract,
     option_market_key,
@@ -123,8 +122,25 @@ fn test_mint_covered_call_integration() {
     &option_writer_keys,
   );
 
-  // TODO send TX to mint a covered call
-  // let mint_covered_call_ix = solana_options::instruction::mint_covered_call()
+  // send TX to mint a covered call
+  let mint_covered_call_ix = solana_options::instruction::mint_covered_call(
+    &options_program_id, 
+    &initialized_option_market.option_mint_key, 
+    &initialized_option_market.underlying_asset_mint,
+    &option_writer_option_keys.pubkey(),
+    &option_writer_underlying_asset_keys.pubkey(),
+    &initialized_option_market.underlying_asset_pool_key,
+    &option_writer_quote_asset_keys.pubkey()
+  )
+  .unwrap();
+  let signers = vec![&option_writer_keys];
+  solana_helpers::send_and_confirm_transaction(
+      &client,
+      mint_covered_call_ix,
+      &option_writer_keys.pubkey(),
+      signers,
+  )
+  .unwrap();
 
   // assert option writer's Option account has balance of 1
   let option_writer_option_acct_data = client
@@ -160,6 +176,12 @@ fn test_mint_covered_call_integration() {
   )
 }
 
+#[test]
 fn test_mint_covered_call_fail_post_expiry() {
+  assert!(false);
+}
+
+#[test]
+fn test_mint_covered_call_fail_with_lack_of_underlying_asset() {
   assert!(false);
 }
