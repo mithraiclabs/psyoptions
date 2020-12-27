@@ -43,7 +43,9 @@ pub enum OptionsInstruction {
     ///   5. `[]` Destination account for quote asset
     ///     (this is stored in the mint registry to be used in the even of option exerciese)
     ///   
-    MintCoveredCall {},
+    MintCoveredCall {
+        bump_seed: u8
+    },
 }
 
 impl OptionsInstruction {
@@ -63,7 +65,13 @@ impl OptionsInstruction {
                     expiration_unix_timestamp,
                 }
             }
-            1 => Self::MintCoveredCall {},
+            1 => {
+                let (bump_seed, rest) = Self::unpack_u8(rest)?;
+                Self::MintCoveredCall {
+                    bump_seed
+                }
+                
+            },
             _ => return Err(ProgramError::InvalidInstructionData.into()),
         })
     }
@@ -82,8 +90,11 @@ impl OptionsInstruction {
                 buf.extend_from_slice(&strike_price.to_le_bytes());
                 buf.extend_from_slice(&expiration_unix_timestamp.to_le_bytes());
             }
-            &Self::MintCoveredCall {} => {
+            &Self::MintCoveredCall {
+                ref bump_seed
+            } => {
                 buf.push(1);
+                buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
         };
         buf
@@ -94,6 +105,16 @@ impl OptionsInstruction {
             let (num_buf, rest) = input.split_at(8);
             let num_arr = array_ref![num_buf, 0, 8];
             let num = u64::from_le_bytes(*num_arr);
+            Ok((num, rest))
+        } else {
+            Err(ProgramError::InvalidInstructionData)
+        }
+    }
+    fn unpack_u8(input: &[u8]) -> Result<(u8, &[u8]), ProgramError> {
+        if input.len() >= 1 {
+            let (num_buf, rest) = input.split_at(1);
+            let num_arr = array_ref![num_buf, 0, 1];
+            let num = u8::from_le_bytes(*num_arr);
             Ok((num, rest))
         } else {
             Err(ProgramError::InvalidInstructionData)
@@ -165,7 +186,16 @@ pub fn mint_covered_call(
     accounts.push(AccountMeta::new_readonly(*authority_pubkey, true));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
 
-    let data = OptionsInstruction::MintCoveredCall {}.pack();
+    let (options_spl_authority_pubkey, bump_seed) = Pubkey::find_program_address(
+        &[&option_mint.to_bytes()[..32]],
+        &program_id,
+    );
+    accounts.push(AccountMeta::new_readonly(options_spl_authority_pubkey, false));
+
+    let data = OptionsInstruction::MintCoveredCall {
+        bump_seed
+    }
+    .pack();
     Ok(Instruction {
         program_id: *program_id,
         data,
@@ -201,10 +231,13 @@ mod tests {
 
     #[test]
     fn test_pack_unpack_mint_covered_call() {
-        let check = OptionsInstruction::MintCoveredCall {};
+        let bump_seed = 1;
+        let check = OptionsInstruction::MintCoveredCall {
+            bump_seed
+        };
         let packed = check.pack();
         // add the tag to the expected buffer
-        let expect = Vec::from([1u8]);
+        let expect = Vec::from([1u8, bump_seed]);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
