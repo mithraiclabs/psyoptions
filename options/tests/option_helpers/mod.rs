@@ -108,6 +108,29 @@ pub fn create_spl_account_uninitialized(
     Ok(())
 }
 
+pub fn create_spl_account(
+    client: &RpcClient,
+    new_account_keys: &Keypair,
+    owner: &Pubkey,
+    spl_mint: &Pubkey,
+    payer_keys: &Keypair,
+) -> Result<(), ClientError> {
+    create_spl_account_uninitialized(client, new_account_keys, payer_keys)?;
+    // TODO [rust] whats the best way easily handle multiple error types in a Result
+    let init_spl_account_ix = token_instruction::initialize_account(
+        &spl_token::id(),
+        &new_account_keys.pubkey(),
+        spl_mint,
+        owner,
+    )
+    .unwrap();
+
+    let signers = vec![payer_keys];
+    send_and_confirm_transaction(client, init_spl_account_ix, &payer_keys.pubkey(), signers)?;
+    println!("Initialized SPL account {}", new_account_keys.pubkey());
+    Ok(())
+}
+
 fn create_options_market(
     client: &RpcClient,
     options_program_id: &Pubkey,
@@ -176,5 +199,29 @@ fn send_and_confirm_transaction(
         &transaction,
         CommitmentConfig::recent(),
     )?;
+    Ok(())
+}
+
+pub fn mint_tokens_to_account(
+    client: &RpcClient,
+    token_program_id: &Pubkey,
+    mint_pubkey: &Pubkey,
+    destination_pubkey: &Pubkey,
+    authority_pubkey: &Pubkey,
+    signers: Vec<&Keypair>,
+    amount: u64,
+) -> Result<(), ClientError> {
+    let mint_to_ix = token_instruction::mint_to(
+        token_program_id, 
+        mint_pubkey, 
+        destination_pubkey, 
+        authority_pubkey, 
+        &[], 
+        amount
+    )
+    .unwrap();
+    send_and_confirm_transaction(client, mint_to_ix, authority_pubkey, signers)?;
+    println!("Sent {} {} tokens to {}", amount, mint_pubkey, destination_pubkey);
+
     Ok(())
 }

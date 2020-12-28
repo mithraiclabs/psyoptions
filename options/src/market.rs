@@ -16,11 +16,11 @@ const REGISTRY_LEN: usize = MAX_CONTRACTS * OptionWriter::LEN;
 ///  the various SPL tokens related to the option market to and from the Option Writer. 
 pub struct OptionWriter {
     /// The address of an SPL Token account for the Underlying Asset
-    underlying_asset_acct_address: Pubkey,
+    pub underlying_asset_acct_address: Pubkey,
     /// The address of an SPL Token account for the Quote Asset
-    quote_asset_acct_address: Pubkey,
+    pub quote_asset_acct_address: Pubkey,
     /// The address of an SPL Token account for the Contract Token(s)
-    contract_token_acct_address: Pubkey
+    pub contract_token_acct_address: Pubkey
 }
 impl IsInitialized for OptionWriter {
     fn is_initialized(&self) -> bool {
