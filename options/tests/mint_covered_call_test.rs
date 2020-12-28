@@ -198,6 +198,6 @@ fn test_mint_covered_call_fail_post_expiry() {
 }
 
 #[test]
-fn test_mint_covered_call_fail_with_lack_of_underlying_asset() {
+fn test_mint_covered_call_fails_when_asset_mints_dont_match_contract_market() {
   assert!(false);
 }
