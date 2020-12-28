@@ -1,3 +1,10 @@
+use crate::{
+  option_helpers, solana_helpers,
+  spl_helpers::{
+    create_spl_account, create_spl_account_uninitialized, create_spl_mint_account,
+    mint_tokens_to_account,
+  },
+};
 use solana_client::rpc_client::RpcClient;
 use solana_options::market::{OptionMarket, OptionWriter};
 use solana_program::program_pack::Pack;
@@ -7,8 +14,6 @@ use solana_sdk::{
   signature::{Keypair, Signer},
 };
 use spl_token::state::{Account, Mint};
-mod option_helpers;
-mod solana_helpers;
 
 struct InitializedOptionMarket {
   amount_per_contract: u64,
@@ -20,7 +25,10 @@ struct InitializedOptionMarket {
   underlying_asset_mint_authority: Keypair,
 }
 
-fn create_and_init_mint(client: &RpcClient, options_program_id: &Pubkey) -> InitializedOptionMarket {
+fn create_and_init_mint(
+  client: &RpcClient,
+  options_program_id: &Pubkey,
+) -> InitializedOptionMarket {
   let payer_keys = solana_helpers::create_account_with_lamports(&client, 10_000_000_000);
   let options_spl_mint = Keypair::new();
   let options_market_keys = Keypair::new();
@@ -30,10 +38,9 @@ fn create_and_init_mint(client: &RpcClient, options_program_id: &Pubkey) -> Init
   let underlying_spl_pool = Keypair::new();
 
   // create the spl mints to be used in the options market
-  option_helpers::create_spl_mint_account(&client, &underlying_spl, &payer_keys).unwrap();
-  option_helpers::create_spl_mint_account(&client, &quote_spl, &payer_keys).unwrap();
-  option_helpers::create_spl_account_uninitialized(&client, &underlying_spl_pool, &payer_keys)
-    .unwrap();
+  create_spl_mint_account(&client, &underlying_spl, &payer_keys).unwrap();
+  create_spl_mint_account(&client, &quote_spl, &payer_keys).unwrap();
+  create_spl_account_uninitialized(&client, &underlying_spl_pool, &payer_keys).unwrap();
 
   option_helpers::create_accounts_for_options_market(
     &client,
@@ -77,7 +84,7 @@ fn create_and_init_mint(client: &RpcClient, options_program_id: &Pubkey) -> Init
     quote_asset_mint: quote_spl.pubkey(),
     underlying_asset_mint: underlying_spl.pubkey(),
     underlying_asset_pool_key: underlying_spl_pool.pubkey(),
-    underlying_asset_mint_authority: payer_keys
+    underlying_asset_mint_authority: payer_keys,
   }
 }
 
@@ -96,12 +103,13 @@ fn test_mint_covered_call_integration() {
     quote_asset_mint,
     underlying_asset_mint,
     underlying_asset_pool_key,
-    underlying_asset_mint_authority
+    underlying_asset_mint_authority,
   } = initialized_option_market;
 
-  let option_writer_keys = solana_helpers::create_account_with_lamports(&client, 1_000_000_000_000_000);
+  let option_writer_keys =
+    solana_helpers::create_account_with_lamports(&client, 1_000_000_000_000_000);
   let option_writer_underlying_asset_keys = Keypair::new();
-  let _option_writer_underlying_asset_acct = option_helpers::create_spl_account(
+  let _option_writer_underlying_asset_acct = create_spl_account(
     &client,
     &option_writer_underlying_asset_keys,
     &option_writer_keys.pubkey(),
@@ -109,19 +117,20 @@ fn test_mint_covered_call_integration() {
     &option_writer_keys,
   );
   // add >= amount_per_contract of underlying asset to the src account
-  let _mint_to_res = option_helpers::mint_tokens_to_account(
-    &client, 
-    &spl_token::id(), 
-    &underlying_asset_mint, 
-    &option_writer_underlying_asset_keys.pubkey(), 
-    &underlying_asset_mint_authority.pubkey(), 
-    vec![&underlying_asset_mint_authority], 
-    amount_per_contract
-  ).unwrap();
+  let _mint_to_res = mint_tokens_to_account(
+    &client,
+    &spl_token::id(),
+    &underlying_asset_mint,
+    &option_writer_underlying_asset_keys.pubkey(),
+    &underlying_asset_mint_authority.pubkey(),
+    vec![&underlying_asset_mint_authority],
+    amount_per_contract,
+  )
+  .unwrap();
 
   // Set up the users quote asset accounts
   let option_writer_quote_asset_keys = Keypair::new();
-  let _option_writer_quote_asset_acct = option_helpers::create_spl_account(
+  let _option_writer_quote_asset_acct = create_spl_account(
     &client,
     &option_writer_quote_asset_keys,
     &option_writer_keys.pubkey(),
@@ -129,7 +138,7 @@ fn test_mint_covered_call_integration() {
     &option_writer_keys,
   );
   let option_writer_option_keys = Keypair::new();
-  let _option_writer_option_acct = option_helpers::create_spl_account(
+  let _option_writer_option_acct = create_spl_account(
     &client,
     &option_writer_option_keys,
     &option_writer_keys.pubkey(),
@@ -139,22 +148,22 @@ fn test_mint_covered_call_integration() {
 
   // send TX to mint a covered call
   let mint_covered_call_ix = solana_options::instruction::mint_covered_call(
-    &options_program_id, 
-    &option_mint_key, 
+    &options_program_id,
+    &option_mint_key,
     &option_writer_option_keys.pubkey(),
     &option_writer_underlying_asset_keys.pubkey(),
     &underlying_asset_pool_key,
     &option_writer_quote_asset_keys.pubkey(),
     &option_market_key,
-    &option_writer_keys.pubkey()
+    &option_writer_keys.pubkey(),
   )
   .unwrap();
   let signers = vec![&option_writer_keys];
   solana_helpers::send_and_confirm_transaction(
-      &client,
-      mint_covered_call_ix,
-      &option_writer_keys.pubkey(),
-      signers,
+    &client,
+    mint_covered_call_ix,
+    &option_writer_keys.pubkey(),
+    signers,
   )
   .unwrap();
 

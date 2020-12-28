@@ -1,3 +1,7 @@
+use crate::{
+    option_helpers, solana_helpers,
+    spl_helpers::{create_spl_account_uninitialized, create_spl_mint_account},
+};
 use solana_client::rpc_client::RpcClient;
 use solana_program::{program_option::COption, program_pack::Pack};
 use solana_sdk::{
@@ -6,8 +10,6 @@ use solana_sdk::{
     signature::{Keypair, Signer},
 };
 use spl_token::state::Mint;
-mod option_helpers;
-mod solana_helpers;
 
 #[test]
 
@@ -27,10 +29,9 @@ fn test_integration() {
     let underlying_spl_pool = Keypair::new();
 
     // create the spl mints to be used in the options market
-    option_helpers::create_spl_mint_account(&client, &underlying_spl, &payer_keys).unwrap();
-    option_helpers::create_spl_mint_account(&client, &quote_spl, &payer_keys).unwrap();
-    option_helpers::create_spl_account_uninitialized(&client, &underlying_spl_pool, &payer_keys)
-        .unwrap();
+    create_spl_mint_account(&client, &underlying_spl, &payer_keys).unwrap();
+    create_spl_mint_account(&client, &quote_spl, &payer_keys).unwrap();
+    create_spl_account_uninitialized(&client, &underlying_spl_pool, &payer_keys).unwrap();
 
     option_helpers::create_accounts_for_options_market(
         &client,
