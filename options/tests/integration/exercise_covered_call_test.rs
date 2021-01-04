@@ -138,3 +138,7 @@ fn test_exercise_covered_call_integration() {
   assert_eq!(option_market.registry_length, 0);
   assert!(option_market.option_writer_registry.is_empty())
 }
+
+fn test_should_fail_exercise_covered_call_post_expiry_integration() {
+  assert!(false);
+}
