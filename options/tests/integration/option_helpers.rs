@@ -1,14 +1,15 @@
-use solana_program::clock::UnixTimestamp;
 use crate::{
     solana_helpers::{create_account_with_lamports, send_and_confirm_transaction},
     spl_helpers::{
-        create_spl_account_uninitialized, create_spl_mint_account,
-        create_spl_mint_account_uninitialized, create_spl_account, mint_tokens_to_account,
+        create_spl_account, create_spl_account_uninitialized, create_spl_mint_account,
+        create_spl_mint_account_uninitialized, mint_tokens_to_account,
     },
 };
 use solana_client::{client_error::ClientError, rpc_client::RpcClient};
 use solana_options::market::OptionMarket;
-use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
+use solana_program::{
+    clock::UnixTimestamp, program_pack::Pack, pubkey::Pubkey, system_instruction,
+};
 use solana_sdk::{
     commitment_config::CommitmentConfig,
     message::Message,
@@ -63,6 +64,46 @@ pub fn create_accounts_for_options_market(
     create_options_market(client, options_program_id, options_market, payer_keys)?;
 
     Ok(())
+}
+
+/// Helper to create Underlying Asset, Quote Asset, and Option spl accounts
+/// for option writer
+pub fn create_option_writer_accounts(
+    client: &RpcClient,
+    underlying_asset_mint_key: &Pubkey,
+    quote_asset_mint_key: &Pubkey,
+    option_mint_key: &Pubkey,
+    option_writer_keys: &Keypair,
+) -> Result<(Keypair, Keypair, Keypair), ClientError> {
+    let option_writer_underlying_asset_keys = Keypair::new();
+    create_spl_account(
+        &client,
+        &option_writer_underlying_asset_keys,
+        &option_writer_keys.pubkey(),
+        underlying_asset_mint_key,
+        option_writer_keys,
+    )?;
+    let option_writer_quote_asset_keys = Keypair::new();
+    create_spl_account(
+        &client,
+        &option_writer_quote_asset_keys,
+        &option_writer_keys.pubkey(),
+        quote_asset_mint_key,
+        option_writer_keys,
+    )?;
+    let option_writer_option_keys = Keypair::new();
+    create_spl_account(
+        &client,
+        &option_writer_option_keys,
+        &option_writer_keys.pubkey(),
+        option_mint_key,
+        option_writer_keys,
+    )?;
+    Ok((
+        option_writer_underlying_asset_keys,
+        option_writer_quote_asset_keys,
+        option_writer_option_keys,
+    ))
 }
 
 /// Set up function to initialize an options market.
@@ -124,7 +165,6 @@ pub fn init_option_market(
         options_market_keys.pubkey(),
     ))
 }
-
 
 pub fn create_and_add_option_writer(
     client: &RpcClient,
@@ -251,4 +291,63 @@ pub fn create_exerciser(
         exerciser_quote_asset_keys,
         exerciser_underlying_asset_keys
     ))
+}
+
+/// Set up function to mint a covered call
+///
+/// Mints the amount per contract of the market to the underlying
+/// asset account owned by the option writer.
+/// Creates an account for the option writer for the option mint
+/// and quote asset mint.
+///
+/// Calls MintCoveredCall to transfer the underlying asset and receive the
+/// option token.
+pub fn mint_covered_call(
+    client: &RpcClient,
+    program_id: &Pubkey,
+    option_market_key: &Pubkey,
+    option_mint_key: &Pubkey,
+    quote_asset_mint_key: &Pubkey,
+    underlying_asset_mint_key: &Pubkey,
+    asset_authority_keys: &Keypair,
+    option_writer_keys: &Keypair,
+    option_writer_underlying_asset_key: &Pubkey,
+    option_writer_quote_asset_key: &Pubkey,
+    option_writer_option_key: &Pubkey,
+) -> Result<(), ClientError> {
+    let option_market_data = client.get_account_data(option_market_key).unwrap();
+    let option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
+
+    // add >= amount_per_contract of underlying asset to the src account
+    mint_tokens_to_account(
+        &client,
+        &spl_token::id(),
+        underlying_asset_mint_key,
+        option_writer_underlying_asset_key,
+        &asset_authority_keys.pubkey(),
+        vec![&asset_authority_keys],
+        option_market.amount_per_contract,
+    )?;
+
+    // send TX to mint a covered call
+    let mint_covered_call_ix = solana_options::instruction::mint_covered_call(
+        program_id,
+        option_mint_key,
+        option_writer_option_key,
+        option_writer_underlying_asset_key,
+        &option_market.asset_pool_address,
+        option_writer_quote_asset_key,
+        &option_market_key,
+        &option_writer_keys.pubkey(),
+    )
+    .unwrap();
+    let signers = vec![option_writer_keys];
+    send_and_confirm_transaction(
+        &client,
+        mint_covered_call_ix,
+        &option_writer_keys.pubkey(),
+        signers,
+    )
+    .unwrap();
+    Ok(())
 }
