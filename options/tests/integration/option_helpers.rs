@@ -3,7 +3,7 @@ use crate::{
     solana_helpers::{create_account_with_lamports, send_and_confirm_transaction},
     spl_helpers::{
         create_spl_account_uninitialized, create_spl_mint_account,
-        create_spl_mint_account_uninitialized, create_spl_account, mint_tokens_to_account
+        create_spl_mint_account_uninitialized, create_spl_account, mint_tokens_to_account,
     },
 };
 use solana_client::{client_error::ClientError, rpc_client::RpcClient};

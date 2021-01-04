@@ -165,16 +165,17 @@ impl Processor {
         let option_writer = OptionWriter {
             underlying_asset_acct_address: *underyling_asset_src_acct.key,
             quote_asset_acct_address: *quote_asset_dest_acct.key,
-            contract_token_acct_address: *minted_option_dest_acct.key
+            contract_token_acct_address: *minted_option_dest_acct.key,
         };
         option_market.option_writer_registry.push(option_writer);
         // increment registry_length
         option_market.registry_length += 1;
-        OptionMarket::pack(
-            option_market,
-            &mut option_market_data,
-        )?;
+        OptionMarket::pack(option_market, &mut option_market_data)?;
 
+        Ok(())
+    }
+
+    pub fn process_exercise_covered_call() -> ProgramResult {
         Ok(())
     }
 
@@ -270,6 +271,7 @@ impl Processor {
             OptionsInstruction::ExercisePostExpiration {option_writer, bump_seed} => {
                 Self::process_exercise_post_expiration(accounts, option_writer, bump_seed)
             }
+            OptionsInstruction::ExerciseCoveredCall {} => Self::process_exercise_covered_call(),
         }
     }
 }

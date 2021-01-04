@@ -64,6 +64,8 @@ pub enum OptionsInstruction {
     /// 5. `[writeable]` Option Market's underlying asset pool address
     /// 
     ExercisePostExpiration { option_writer: OptionWriter, bump_seed: u8 },
+    /// Exercise an Options token representing a Covered Call
+    ExerciseCoveredCall {},
 }
 
 impl OptionsInstruction {
@@ -93,6 +95,7 @@ impl OptionsInstruction {
                 let (bump_seed, _rest) = Self::unpack_u8(rest)?;
                 Self::ExercisePostExpiration { option_writer, bump_seed }
             }
+            3 => Self::ExerciseCoveredCall {},
             _ => return Err(ProgramError::InvalidInstructionData.into()),
         })
     }
@@ -121,6 +124,9 @@ impl OptionsInstruction {
                 option_writer.pack_into_slice(&mut option_writer_slice);
                 buf.extend_from_slice(&option_writer_slice);
                 buf.extend_from_slice(&bump_seed.to_le_bytes());
+            }
+            &Self::ExerciseCoveredCall {} => {
+                buf.push(2);
             }
         };
         buf
@@ -280,11 +286,21 @@ pub fn exercise_post_expiration(
     accounts.push(AccountMeta::new_readonly(options_spl_authority_pubkey, false));
     accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
 
-
     Ok(Instruction {
         program_id: *program_id,
         data,
         accounts,
+    })
+}
+
+/// Creates a `ExerciseCoveredCall` instruction
+pub fn exercise_covered_call(program_id: &Pubkey) -> Result<Instruction, ProgramError> {
+    let accounts = vec![];
+    let data = OptionsInstruction::ExerciseCoveredCall {}.pack();
+    Ok(Instruction {
+        program_id: *program_id,
+        accounts,
+        data,
     })
 }
 
@@ -321,6 +337,17 @@ mod tests {
         let packed = check.pack();
         // add the tag to the expected buffer
         let expect = Vec::from([1u8, bump_seed]);
+        assert_eq!(packed, expect);
+        let unpacked = OptionsInstruction::unpack(&expect).unwrap();
+        assert_eq!(unpacked, check);
+    }
+
+    #[test]
+    fn test_pack_unpack_exercise_covered_call() {
+        let check = OptionsInstruction::ExerciseCoveredCall {};
+        let packed = check.pack();
+        // add the tag to the expected buffer
+        let expect = Vec::from([2u8]);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
