@@ -4,6 +4,7 @@ use crate::{
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
+    clock::UnixTimestamp,
     entrypoint::ProgramResult,
     program::{invoke, invoke_signed},
     program_pack::Pack,
@@ -19,7 +20,7 @@ impl Processor {
         accounts: &[AccountInfo],
         amount_per_contract: u64,
         strike_price: u64,
-        expiration_unix_timestamp: u64,
+        expiration_unix_timestamp: UnixTimestamp,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let underlying_asset_acct = next_account_info(account_info_iter)?;

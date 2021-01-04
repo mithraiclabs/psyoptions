@@ -1,3 +1,4 @@
+use solana_program::clock::UnixTimestamp;
 use crate::{
     solana_helpers::{create_account_with_lamports, send_and_confirm_transaction},
     spl_helpers::{
@@ -77,7 +78,7 @@ pub fn init_option_market(
     program_id: &Pubkey,
     amount_per_contract: u64,
     strike_price: u64,
-    expiry: u64,
+    expiry: UnixTimestamp,
 ) -> Result<(Keypair, Keypair, Keypair, Keypair, Pubkey, Pubkey), ClientError> {
     let payer_keys = create_account_with_lamports(&client, 10000000000);
     let options_spl_mint = Keypair::new();

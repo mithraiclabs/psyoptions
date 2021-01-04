@@ -1,5 +1,6 @@
 use arrayref::array_ref;
 use solana_program::{
+    clock::UnixTimestamp,
     instruction::{AccountMeta, Instruction},
     program_error::ProgramError,
     pubkey::Pubkey,
@@ -31,7 +32,7 @@ pub enum OptionsInstruction {
         /// The strike price for the new market
         strike_price: u64,
         /// The Unix timestamp at which the contracts in this market expire
-        expiration_unix_timestamp: u64,
+        expiration_unix_timestamp: UnixTimestamp,
     },
     /// Mints an Options token to represent a Covered Call
     /// 
@@ -63,7 +64,7 @@ impl OptionsInstruction {
             0 => {
                 let (amount_per_contract, rest) = Self::unpack_u64(rest)?;
                 let (strike_price, rest) = Self::unpack_u64(rest)?;
-                let (expiration_unix_timestamp, _rest) = Self::unpack_u64(rest)?;
+                let (expiration_unix_timestamp, _rest) = Self::unpack_timestamp(rest)?;
                 Self::InitializeMarket {
                     amount_per_contract,
                     strike_price,
@@ -105,6 +106,16 @@ impl OptionsInstruction {
         buf
     }
 
+    fn unpack_timestamp(input: &[u8]) -> Result<(i64, &[u8]), ProgramError> {
+        if input.len() >= 8 {
+            let (num_buf, rest) = input.split_at(8);
+            let num_arr = array_ref![num_buf, 0, 8];
+            let num = UnixTimestamp::from_le_bytes(*num_arr);
+            Ok((num, rest))
+        } else {
+            Err(ProgramError::InvalidInstructionData)
+        }
+    }
     fn unpack_u64(input: &[u8]) -> Result<(u64, &[u8]), ProgramError> {
         if input.len() >= 8 {
             let (num_buf, rest) = input.split_at(8);
@@ -137,7 +148,7 @@ pub fn initiailize_market(
     underlying_asset_pool_pubkey: &Pubkey,
     amount_per_contract: u64,
     strike_price: u64,
-    expiration_unix_timestamp: u64,
+    expiration_unix_timestamp: UnixTimestamp,
 ) -> Result<Instruction, ProgramError> {
     let (options_spl_authority_pubkey, _bump_seed) = Pubkey::find_program_address(
         &[&contract_spl_token_pubkey.to_bytes()[..32]],
@@ -214,7 +225,7 @@ mod tests {
     fn test_pack_unpack_init_market() {
         let amount_per_contract: u64 = 100;
         let strike_price: u64 = 5;
-        let expiration_unix_timestamp: u64 = 1607743435;
+        let expiration_unix_timestamp: UnixTimestamp = 1607743435;
         let check = OptionsInstruction::InitializeMarket {
             amount_per_contract,
             strike_price,

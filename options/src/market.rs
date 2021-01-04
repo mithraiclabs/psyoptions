@@ -1,5 +1,6 @@
 use std::vec::Vec;
 use solana_program::{
+    clock::UnixTimestamp,
     program_error::ProgramError,
     program_pack::{ IsInitialized, Pack, Sealed },
     pubkey::Pubkey,
@@ -68,7 +69,7 @@ pub struct OptionMarket {
     /// The price for the **underlying asset** denominated in the **quote asset**
     pub strike_price: u64,
     /// The Unix timestamp at which the contracts in this market expire
-    pub expiration_unix_timestamp: u64,
+    pub expiration_unix_timestamp: UnixTimestamp,
     /// Address for the liquidity pool that contains the underlying assset
     pub asset_pool_address: Pubkey,
     /// Keeps track of the length of the option_writer_registry (number of outstanding contracts)
@@ -104,7 +105,7 @@ impl Pack for OptionMarket {
             quote_asset_address: Pubkey::new(qaa),
             amount_per_contract: u64::from_le_bytes(*apc), 
             strike_price: u64::from_le_bytes(*sp),
-            expiration_unix_timestamp: u64::from_le_bytes(*eut),
+            expiration_unix_timestamp: UnixTimestamp::from_le_bytes(*eut),
             asset_pool_address: Pubkey::new(apa),
             registry_length,
             option_writer_registry
@@ -177,7 +178,7 @@ mod tests {
         let quote_asset_address = Pubkey::new_unique();
         let amount_per_contract: u64 = 100;
         let strike_price: u64 = 5;
-        let expiration_unix_timestamp: u64 = 1607743435;
+        let expiration_unix_timestamp: UnixTimestamp = 1607743435;
         let asset_pool_address = Pubkey::new_unique();
 
         let registry_length: u16 = 2;
