@@ -25,7 +25,7 @@ pub enum OptionsInstruction {
     ///   2. `[writeable]` SPL Program address for contract token
     ///     (the client must create a new SPL Token prior to creating a market)
     ///   3. `[writeable]` Account with space for the option market we are creating
-    ///   4. `[]` Account with space for the option market we are creating
+    ///   4. `[]` Authority for Option Mint
     ///   5. `[writeable]` Pool for underlying asset deposits - Uninitialized
     ///   6. `[]` Rent Sysvar
     ///   7. `[]` Spl Token Program
@@ -65,7 +65,16 @@ pub enum OptionsInstruction {
     /// 
     ExercisePostExpiration { option_writer: OptionWriter, bump_seed: u8 },
     /// Exercise an Options token representing a Covered Call
-    ExerciseCoveredCall {},
+    ///
+    ///   0. `[writeable]` Option Mint
+    ///   1. `[writeable]` Option Market
+    ///   2. `[writeable]` Option Account to burn from
+    ///   3. `[]` Authority of Option Account
+    ///   4. `[writeable]` Underlying Asset Pool
+    ///   5. `[writeable]` Underlying Asset Destination
+    ///   6. `[]` Program Derived Address with authority for Option Mint
+    ///   7. `[]` SPL Token Program
+    ExerciseCoveredCall { bump_seed: u8 },
 }
 
 impl OptionsInstruction {
@@ -95,7 +104,10 @@ impl OptionsInstruction {
                 let (bump_seed, _rest) = Self::unpack_u8(rest)?;
                 Self::ExercisePostExpiration { option_writer, bump_seed }
             }
-            3 => Self::ExerciseCoveredCall {},
+            3 => {
+                let (bump_seed, _rest) = Self::unpack_u8(rest)?;
+                Self::ExerciseCoveredCall { bump_seed }
+            },
             _ => return Err(ProgramError::InvalidInstructionData.into()),
         })
     }
@@ -125,8 +137,9 @@ impl OptionsInstruction {
                 buf.extend_from_slice(&option_writer_slice);
                 buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
-            &Self::ExerciseCoveredCall {} => {
+            &Self::ExerciseCoveredCall { ref bump_seed } => {
                 buf.push(2);
+                buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
         };
         buf
@@ -294,9 +307,28 @@ pub fn exercise_post_expiration(
 }
 
 /// Creates a `ExerciseCoveredCall` instruction
-pub fn exercise_covered_call(program_id: &Pubkey) -> Result<Instruction, ProgramError> {
-    let accounts = vec![];
-    let data = OptionsInstruction::ExerciseCoveredCall {}.pack();
+pub fn exercise_covered_call(
+    program_id: &Pubkey,
+    option_mint: &Pubkey,
+    option_market: &Pubkey,
+    option_account_key: &Pubkey,
+    option_account_authority_key: &Pubkey,
+    underlying_asset_pool: &Pubkey,
+    underlying_asset_dest: &Pubkey,
+) -> Result<Instruction, ProgramError> {
+    let (options_spl_authority_pubkey, bump_seed) =
+        Pubkey::find_program_address(&[&option_mint.to_bytes()[..32]], program_id);
+    let accounts = vec![
+        AccountMeta::new(*option_mint, false),
+        AccountMeta::new(*option_market, false),
+        AccountMeta::new(*option_account_key, false),
+        AccountMeta::new_readonly(*option_account_authority_key, true),
+        AccountMeta::new(*underlying_asset_pool, false),
+        AccountMeta::new(*underlying_asset_dest, false),
+        AccountMeta::new_readonly(options_spl_authority_pubkey, false),
+        AccountMeta::new_readonly(spl_token::id(), false),
+    ];
+    let data = OptionsInstruction::ExerciseCoveredCall { bump_seed }.pack();
     Ok(Instruction {
         program_id: *program_id,
         accounts,
@@ -344,10 +376,11 @@ mod tests {
 
     #[test]
     fn test_pack_unpack_exercise_covered_call() {
-        let check = OptionsInstruction::ExerciseCoveredCall {};
+        let bump_seed = 2;
+        let check = OptionsInstruction::ExerciseCoveredCall { bump_seed };
         let packed = check.pack();
         // add the tag to the expected buffer
-        let expect = Vec::from([2u8]);
+        let expect = Vec::from([2u8, bump_seed]);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);

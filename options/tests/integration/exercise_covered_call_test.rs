@@ -9,12 +9,16 @@ use solana_sdk::{commitment_config::CommitmentConfig, signature::Signer};
 use spl_token::state::{Account, Mint};
 
 #[test]
+// TODO create Option Holder accounts
+// TODO transfer the Option to option holder
+// TODO have option holder execute exercise transaction
+// TODO add assertion for quote asset transfered back to option writer account
 fn test_exercise_covered_call_integration() {
   let client = RpcClient::new_with_commitment(
     "http://localhost:8899".to_string(),
     CommitmentConfig::recent(),
   );
-  let options_program_id = load_bpf_program(&client, "solana_options");
+  let program_id = load_bpf_program(&client, "solana_options");
   let amount_per_contract = 100;
   let strike_price = 5;
   let expiry = 10;
@@ -27,7 +31,7 @@ fn test_exercise_covered_call_integration() {
     option_market_key,
   ) = init_option_market(
     &client,
-    &options_program_id,
+    &program_id,
     amount_per_contract,
     strike_price,
     expiry,
@@ -49,7 +53,7 @@ fn test_exercise_covered_call_integration() {
 
   mint_covered_call(
     &client,
-    &options_program_id,
+    &program_id,
     &option_market_key,
     &option_mint_keys.pubkey(),
     &quote_asset_mint_keys.pubkey(),
@@ -62,8 +66,16 @@ fn test_exercise_covered_call_integration() {
   )
   .unwrap();
 
-  let exercise_covered_call_ix =
-    solana_options::instruction::exercise_covered_call(&options_program_id).unwrap();
+  let exercise_covered_call_ix = solana_options::instruction::exercise_covered_call(
+    &program_id,
+    &option_mint_keys.pubkey(),
+    &option_market_key,
+    &option_writer_option_keys.pubkey(),
+    &option_writer_keys.pubkey(),
+    &underlying_asset_pool_key,
+    &option_writer_underlying_asset_keys.pubkey(),
+  )
+  .unwrap();
   let signers = vec![&option_writer_keys];
   send_and_confirm_transaction(
     &client,
@@ -109,7 +121,7 @@ fn test_should_fail_exercise_covered_call_post_expiry_integration() {
     "http://localhost:8899".to_string(),
     CommitmentConfig::recent(),
   );
-  let options_program_id = load_bpf_program(&client, "solana_options");
+  let program_id = load_bpf_program(&client, "solana_options");
   let amount_per_contract = 100;
   let strike_price = 5;
   let expiry = 10;
@@ -118,11 +130,11 @@ fn test_should_fail_exercise_covered_call_post_expiry_integration() {
     quote_asset_mint_keys,
     option_mint_keys,
     asset_authority_keys,
-    _underlying_asset_pool_key,
+    underlying_asset_pool_key,
     option_market_key,
   ) = init_option_market(
     &client,
-    &options_program_id,
+    &program_id,
     amount_per_contract,
     strike_price,
     expiry,
@@ -144,7 +156,7 @@ fn test_should_fail_exercise_covered_call_post_expiry_integration() {
 
   mint_covered_call(
     &client,
-    &options_program_id,
+    &program_id,
     &option_market_key,
     &option_mint_keys.pubkey(),
     &quote_asset_mint_keys.pubkey(),
@@ -156,8 +168,16 @@ fn test_should_fail_exercise_covered_call_post_expiry_integration() {
     &option_writer_option_keys.pubkey(),
   )
   .unwrap();
-  let exercise_covered_call_ix =
-    solana_options::instruction::exercise_covered_call(&options_program_id).unwrap();
+  let exercise_covered_call_ix = solana_options::instruction::exercise_covered_call(
+    &program_id,
+    &option_mint_keys.pubkey(),
+    &option_market_key,
+    &option_writer_option_keys.pubkey(),
+    &option_writer_keys.pubkey(),
+    &underlying_asset_pool_key,
+    &option_writer_underlying_asset_keys.pubkey(),
+  )
+  .unwrap();
   let signers = vec![&option_writer_keys];
   let result = send_and_confirm_transaction(
     &client,
