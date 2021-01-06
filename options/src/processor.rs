@@ -1,14 +1,16 @@
 use crate::{
     instruction::OptionsInstruction,
     market::{OptionMarket, OptionWriter},
+    error::OptionsError
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
-    clock::UnixTimestamp,
+    clock::{UnixTimestamp, Clock},
     entrypoint::ProgramResult,
     program::{invoke, invoke_signed},
     program_pack::Pack,
     pubkey::Pubkey,
+    sysvar::Sysvar,
     msg
 };
 use spl_token::instruction as token_instruction;
@@ -94,9 +96,17 @@ impl Processor {
         let authority_acct = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
         let option_mint_authority_acct = next_account_info(account_info_iter)?;
+        let clock_sysvar_info = next_account_info(account_info_iter)?;
         // Get the amount of underlying asset for transfer
         let mut option_market_data = option_market_acct.try_borrow_mut_data()?;
         let mut option_market = OptionMarket::unpack(&option_market_data)?;
+
+        // Deserialize the account into a clock struct
+        let clock = Clock::from_account_info(&clock_sysvar_info)?;
+        // Verify that the expiration date for the options market has not passed
+        if clock.unix_timestamp > option_market.expiration_unix_timestamp {
+            return Err(OptionsError::CantMintExpired.into());
+        }
 
         // transfer the amount per contract of underlying asset from the src to the pool
         let transfer_tokens_ix = token_instruction::transfer(
