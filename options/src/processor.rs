@@ -36,6 +36,10 @@ impl Processor {
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
+
+        if quote_asset_acct.key == underlying_asset_acct.key {
+            return Err(OptionsError::QuoteAndUnderlyingAssetMustDiffer.into());
+        }
         // Initialize the Mint for the SPL token that will denote an Options contract
         let init_token_mint_ix = token_instruction::initialize_mint(
             &spl_token::id(),

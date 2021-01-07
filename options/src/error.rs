@@ -13,6 +13,9 @@ pub enum OptionsError {
     ///  the mint of the quote asset on the market
     #[error("Incorrect mint on the quote asset account, cannot mint")]
     IncorrectQuoteAssetKey,
+    /// The quote asset and underlying asset cannot be the same
+    #[error("Same quote and underlying asset, cannot create market")]
+    QuoteAndUnderlyingAssetMustDiffer,
 }
 impl From<OptionsError> for ProgramError {
     fn from(e: OptionsError) -> Self {
