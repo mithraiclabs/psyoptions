@@ -189,7 +189,7 @@ pub fn mint_covered_call(
     underlying_asset_pool: &Pubkey,
     quote_asset_dest: &Pubkey,
     option_market: &Pubkey,
-    authority_pubkey: &Pubkey,
+    authority_pubkey: &Pubkey
 ) -> Result<Instruction, ProgramError> {
     let mut accounts = Vec::with_capacity(9);
     accounts.push(AccountMeta::new(*option_mint, false));

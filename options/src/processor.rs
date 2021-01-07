@@ -13,7 +13,10 @@ use solana_program::{
     sysvar::Sysvar,
     msg
 };
-use spl_token::instruction as token_instruction;
+use spl_token::{
+    instruction as token_instruction,
+    state::Account as TokenAccount
+};
 
 pub struct Processor {}
 impl Processor {
@@ -106,6 +109,13 @@ impl Processor {
         // Verify that the expiration date for the options market has not passed
         if clock.unix_timestamp > option_market.expiration_unix_timestamp {
             return Err(OptionsError::CantMintExpired.into());
+        }
+
+        // Verify that the mint of the provided quote asset account matches the mint of the 
+        //  option's quote asset mint
+        let quote_asset_dest_acct_info = TokenAccount::unpack(&quote_asset_dest_acct.data.borrow())?;
+        if quote_asset_dest_acct_info.mint != option_market.quote_asset_address {
+            return Err(OptionsError::IncorrectQuoteAssetKey.into());
         }
 
         // transfer the amount per contract of underlying asset from the src to the pool
