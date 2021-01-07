@@ -222,8 +222,3 @@ fn test_mint_covered_call_fail_post_expiry() {
   )
   .unwrap();
 }
-
-#[test]
-fn test_mint_covered_call_fails_when_asset_mints_dont_match_contract_market() {
-  assert!(false);
-}
