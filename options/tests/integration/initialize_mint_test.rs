@@ -108,6 +108,57 @@ fn test_integration() {
 }
 
 #[test]
+#[should_panic(expected = "Error processing Instruction 0: custom program error: 0x2")]
 fn should_fail_with_same_quote_underlying_assets() {
-    assert!(false);
+    let client = RpcClient::new_with_commitment(
+        "http://localhost:8899".to_string(),
+        CommitmentConfig::recent(),
+    );
+    let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
+
+    let payer_keys = solana_helpers::create_account_with_lamports(&client, 10000000000);
+    let options_spl_mint = Keypair::new();
+    let options_market_keys = Keypair::new();
+
+    let underlying_spl = Keypair::new();
+    let underlying_spl_pool = Keypair::new();
+
+    // create the spl mints to be used in the options market
+    create_spl_mint_account(&client, &underlying_spl, &payer_keys).unwrap();
+    create_spl_account_uninitialized(&client, &underlying_spl_pool, &payer_keys).unwrap();
+
+    option_helpers::create_accounts_for_options_market(
+        &client,
+        &options_program_id,
+        &options_spl_mint,
+        &options_market_keys,
+        &payer_keys,
+    )
+    .unwrap();
+
+    //create the IX to init the market
+    let amount_per_contract = 100;
+    let strike_price = 5;
+    let expiry = 0;
+    let init_market_ix = solana_options::instruction::initiailize_market(
+        &options_program_id,
+        &underlying_spl.pubkey(),
+        &underlying_spl.pubkey(),
+        &options_spl_mint.pubkey(),
+        &options_market_keys.pubkey(),
+        &underlying_spl_pool.pubkey(),
+        amount_per_contract,
+        strike_price,
+        expiry,
+    )
+    .unwrap();
+    // fire TX to do it
+    let signers = vec![&payer_keys];
+    solana_helpers::send_and_confirm_transaction(
+        &client,
+        init_market_ix,
+        &payer_keys.pubkey(),
+        signers,
+    )
+    .unwrap();
 }

@@ -1852,6 +1852,7 @@ dependencies = [
  "solana-runtime",
  "solana-sdk",
  "spl-token",
+ "thiserror",
 ]
 
 [[package]]

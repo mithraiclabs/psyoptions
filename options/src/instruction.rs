@@ -48,6 +48,7 @@ pub enum OptionsInstruction {
     ///   7. `[]` Authority account for the various `OptionWriter` accounts
     ///   8. `[]` SPL Token Program
     ///   9. `[]` Program Derived Address for the authority over the Option Mint
+    ///   10. `[]` SysVar clock account
     ///   
     MintCoveredCall {
         bump_seed: u8
@@ -188,7 +189,7 @@ pub fn mint_covered_call(
     underlying_asset_pool: &Pubkey,
     quote_asset_dest: &Pubkey,
     option_market: &Pubkey,
-    authority_pubkey: &Pubkey,
+    authority_pubkey: &Pubkey
 ) -> Result<Instruction, ProgramError> {
     let mut accounts = Vec::with_capacity(9);
     accounts.push(AccountMeta::new(*option_mint, false));
@@ -205,6 +206,8 @@ pub fn mint_covered_call(
         &program_id,
     );
     accounts.push(AccountMeta::new_readonly(options_spl_authority_pubkey, false));
+    
+    accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
 
     let data = OptionsInstruction::MintCoveredCall {
         bump_seed

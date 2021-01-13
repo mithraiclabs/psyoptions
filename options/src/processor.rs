@@ -1,17 +1,22 @@
 use crate::{
     instruction::OptionsInstruction,
     market::{OptionMarket, OptionWriter},
+    error::OptionsError
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
-    clock::UnixTimestamp,
+    clock::{UnixTimestamp, Clock},
     entrypoint::ProgramResult,
     program::{invoke, invoke_signed},
     program_pack::Pack,
     pubkey::Pubkey,
+    sysvar::Sysvar,
     msg
 };
-use spl_token::instruction as token_instruction;
+use spl_token::{
+    instruction as token_instruction,
+    state::Account as TokenAccount
+};
 
 pub struct Processor {}
 impl Processor {
@@ -31,6 +36,10 @@ impl Processor {
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
+
+        if quote_asset_acct.key == underlying_asset_acct.key {
+            return Err(OptionsError::QuoteAndUnderlyingAssetMustDiffer.into());
+        }
         // Initialize the Mint for the SPL token that will denote an Options contract
         let init_token_mint_ix = token_instruction::initialize_mint(
             &spl_token::id(),
@@ -94,9 +103,24 @@ impl Processor {
         let authority_acct = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
         let option_mint_authority_acct = next_account_info(account_info_iter)?;
+        let clock_sysvar_info = next_account_info(account_info_iter)?;
         // Get the amount of underlying asset for transfer
         let mut option_market_data = option_market_acct.try_borrow_mut_data()?;
         let mut option_market = OptionMarket::unpack(&option_market_data)?;
+
+        // Deserialize the account into a clock struct
+        let clock = Clock::from_account_info(&clock_sysvar_info)?;
+        // Verify that the expiration date for the options market has not passed
+        if clock.unix_timestamp > option_market.expiration_unix_timestamp {
+            return Err(OptionsError::CantMintExpired.into());
+        }
+
+        // Verify that the mint of the provided quote asset account matches the mint of the 
+        //  option's quote asset mint
+        let quote_asset_dest_acct_info = TokenAccount::unpack(&quote_asset_dest_acct.data.borrow())?;
+        if quote_asset_dest_acct_info.mint != option_market.quote_asset_address {
+            return Err(OptionsError::IncorrectQuoteAssetKey.into());
+        }
 
         // transfer the amount per contract of underlying asset from the src to the pool
         let transfer_tokens_ix = token_instruction::transfer(
