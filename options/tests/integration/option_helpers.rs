@@ -3,7 +3,7 @@ use crate::{
     solana_helpers::{create_account_with_lamports, send_and_confirm_transaction},
     spl_helpers::{
         create_spl_account_uninitialized, create_spl_mint_account,
-        create_spl_mint_account_uninitialized,
+        create_spl_mint_account_uninitialized, create_spl_account, mint_tokens_to_account
     },
 };
 use solana_client::{client_error::ClientError, rpc_client::RpcClient};
@@ -123,4 +123,78 @@ pub fn init_option_market(
         underlying_spl_pool.pubkey(),
         options_market_keys.pubkey(),
     ))
+}
+
+
+pub fn create_and_add_option_writer(
+    client: &RpcClient,
+    options_program_id: &Pubkey,
+    underlying_asset_mint_keys: &Keypair,
+    asset_authority_keys: &Keypair,
+    quote_asset_mint_keys: &Keypair,
+    option_mint_keys: &Keypair,
+    underlying_asset_pool_key: &Pubkey,
+    option_market_key: &Pubkey,
+    amount_per_contract: u64
+) {
+    let option_writer_keys =
+    create_account_with_lamports(&client, 1_000_000_000_000_000);
+  let option_writer_underlying_asset_keys = Keypair::new();
+  let _option_writer_underlying_asset_acct = create_spl_account(
+    &client,
+    &option_writer_underlying_asset_keys,
+    &option_writer_keys.pubkey(),
+    &underlying_asset_mint_keys.pubkey(),
+    &option_writer_keys,
+  );
+  // add >= amount_per_contract of underlying asset to the src account
+  let _mint_to_res = mint_tokens_to_account(
+    &client,
+    &spl_token::id(),
+    &underlying_asset_mint_keys.pubkey(),
+    &option_writer_underlying_asset_keys.pubkey(),
+    &asset_authority_keys.pubkey(),
+    vec![&asset_authority_keys],
+    amount_per_contract,
+  )
+  .unwrap();
+
+  // Set up the users quote asset accounts
+  let option_writer_quote_asset_keys = Keypair::new();
+  let _option_writer_quote_asset_acct = create_spl_account(
+    &client,
+    &option_writer_quote_asset_keys,
+    &option_writer_keys.pubkey(),
+    &quote_asset_mint_keys.pubkey(),
+    &option_writer_keys,
+  );
+  let option_writer_option_keys = Keypair::new();
+  let _option_writer_option_acct = create_spl_account(
+    &client,
+    &option_writer_option_keys,
+    &option_writer_keys.pubkey(),
+    &option_mint_keys.pubkey(),
+    &option_writer_keys,
+  );
+
+  // send TX to mint a covered call
+  let mint_covered_call_ix = solana_options::instruction::mint_covered_call(
+    &options_program_id,
+    &option_mint_keys.pubkey(),
+    &option_writer_option_keys.pubkey(),
+    &option_writer_underlying_asset_keys.pubkey(),
+    &underlying_asset_pool_key,
+    &option_writer_quote_asset_keys.pubkey(),
+    &option_market_key,
+    &option_writer_keys.pubkey(),
+  )
+  .unwrap();
+  let signers = vec![&option_writer_keys];
+  send_and_confirm_transaction(
+    &client,
+    mint_covered_call_ix,
+    &option_writer_keys.pubkey(),
+    signers,
+  )
+  .unwrap();
 }
