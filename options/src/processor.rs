@@ -178,6 +178,10 @@ impl Processor {
         Ok(())
     }
 
+    pub fn process_exercise_post_expiration(_accounts: &[AccountInfo], _option_writer: OptionWriter) -> ProgramResult {
+        Ok(())
+    }
+
     pub fn process(program_id: &Pubkey, accounts: &[AccountInfo], input: &[u8]) -> ProgramResult {
         let instruction = OptionsInstruction::unpack(input)?;
         match instruction {
@@ -194,6 +198,9 @@ impl Processor {
             ),
             OptionsInstruction::MintCoveredCall { bump_seed } => {
                 Self::process_mint_covered_call(accounts, bump_seed)
+            },
+            OptionsInstruction::ExercisePostExpiration {option_writer} => {
+                Self::process_exercise_post_expiration(accounts, option_writer)
             }
         }
     }
