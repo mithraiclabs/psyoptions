@@ -7,6 +7,7 @@ use solana_program::{
     program_pack::Pack,
     pubkey::Pubkey,
     sysvar,
+    msg
 };
 use spl_token;
 use std::mem::size_of;
@@ -86,6 +87,11 @@ impl OptionsInstruction {
                 let (bump_seed, _rest) = Self::unpack_u8(rest)?;
                 Self::MintCoveredCall { bump_seed }
             }
+            2 => {
+                msg!("Options: unpacking ExercisePostExpiration");
+                let (option_writer, _rest) = Self::unpack_option_writer(rest)?;
+                Self::ExercisePostExpiration { option_writer }
+            }
             _ => return Err(ProgramError::InvalidInstructionData.into()),
         })
     }
@@ -147,6 +153,16 @@ impl OptionsInstruction {
         } else {
             Err(ProgramError::InvalidInstructionData)
         }
+    }
+    fn unpack_option_writer(input: &[u8]) -> Result<(OptionWriter, &[u8]), ProgramError> {
+        if input.len() >= OptionWriter::LEN {
+            let (writer_buf, rest) = input.split_at(OptionWriter::LEN);
+            let writer_arr = array_ref![writer_buf, 0, OptionWriter::LEN];
+            let option_writer = OptionWriter::unpack(writer_arr)?;
+            Ok((option_writer, rest))
+        } else {
+            Err(ProgramError::InvalidInstructionData)
+        } 
     }
 }
 
@@ -241,6 +257,7 @@ pub fn exercise_post_expiration(
         option_writer: cloned_writer,
     }
     .pack();
+    print!("Options: exercise_post_expiration data {:?}", data);
 
     let mut accounts = Vec::with_capacity(9);
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));

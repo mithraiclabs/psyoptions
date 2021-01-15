@@ -184,6 +184,7 @@ impl Processor {
 
     pub fn process(program_id: &Pubkey, accounts: &[AccountInfo], input: &[u8]) -> ProgramResult {
         let instruction = OptionsInstruction::unpack(input)?;
+        msg!("Options: Processing instruction {:?}", instruction);
         match instruction {
             OptionsInstruction::InitializeMarket {
                 amount_per_contract,
