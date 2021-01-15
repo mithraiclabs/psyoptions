@@ -198,3 +198,57 @@ pub fn create_and_add_option_writer(
   )
   .unwrap();
 }
+
+/// Creates the necessary accounts and adds tokens to those accounts for someone to
+/// exercise for a given option market
+/// 
+/// Returns a tuple consisting of
+/// - Exercisor Authority Keypair
+/// - Exercisor Quote Asset Account Keypair
+/// - Exercisor Underlying Asset Account Keypair
+pub fn create_exerciser(
+    client: &RpcClient,
+    asset_authority_keys: &Keypair,
+    underlying_asset_mint_keys: &Keypair,
+    quote_asset_mint_keys: &Keypair,
+    option_market: &OptionMarket,
+) -> Result<(Keypair, Keypair, Keypair), ClientError> {
+    // create the Authority account
+    let exerciser_authority_keys =
+        create_account_with_lamports(&client, 1_000_000_000_000_000);
+    // create an account to receive the underlying asset
+    let exerciser_underlying_asset_keys = Keypair::new();
+    let _exerciser_underlying_asset_acct = create_spl_account(
+        &client,
+        &exerciser_underlying_asset_keys,
+        &exerciser_authority_keys.pubkey(),
+        &underlying_asset_mint_keys.pubkey(),
+        &exerciser_authority_keys,
+    );
+    // TODO create and seed an Account with the quote asset
+    let exerciser_quote_asset_keys = Keypair::new();
+    let _exerciser_quote_asset_acct = create_spl_account(
+        &client,
+        &exerciser_quote_asset_keys,
+        &exerciser_authority_keys.pubkey(),
+        &quote_asset_mint_keys.pubkey(),
+        &exerciser_authority_keys,
+    );
+    // add >= amount_per_contract of underlying asset to the src account
+    let _mint_to_res = mint_tokens_to_account(
+        &client,
+        &spl_token::id(),
+        &quote_asset_mint_keys.pubkey(),
+        &exerciser_quote_asset_keys.pubkey(),
+        &asset_authority_keys.pubkey(),
+        vec![&asset_authority_keys],
+        option_market.amount_per_contract * option_market.strike_price,
+    )
+    .unwrap();
+
+    Ok((
+        exerciser_authority_keys,
+        exerciser_quote_asset_keys,
+        exerciser_underlying_asset_keys
+    ))
+}
