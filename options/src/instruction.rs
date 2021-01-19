@@ -261,12 +261,12 @@ pub fn exercise_post_expiration(
 
     let mut accounts = Vec::with_capacity(9);
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
-    accounts.push(AccountMeta::new(*options_market_key, true));
-    accounts.push(AccountMeta::new(*exerciser_quote_asset_key, true));
-    accounts.push(AccountMeta::new(option_writer.quote_asset_acct_address, true));
-    accounts.push(AccountMeta::new(*exerciser_underlying_asset_key, true));
-    accounts.push(AccountMeta::new(*market_underlying_asset_pool_key, true));
-    accounts.push(AccountMeta::new(*market_underlying_asset_pool_key, true));
+    accounts.push(AccountMeta::new(*options_market_key, false));
+    accounts.push(AccountMeta::new(*exerciser_quote_asset_key, false));
+    accounts.push(AccountMeta::new(option_writer.quote_asset_acct_address, false));
+    accounts.push(AccountMeta::new(*exerciser_underlying_asset_key, false));
+    accounts.push(AccountMeta::new(*market_underlying_asset_pool_key, false));
+    accounts.push(AccountMeta::new(*market_underlying_asset_pool_key, false));
 
     Ok(Instruction {
         program_id: *program_id,
