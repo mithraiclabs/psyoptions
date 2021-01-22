@@ -90,6 +90,7 @@ pub fn test_sucessful_exercise_post_expiration() {
   let exercise_post_exirpation_ix = solana_options::instruction::exercise_post_expiration(
     &options_program_id,
     option_writer,
+    &option_mint_keys.pubkey(),
     &option_market_key,
     &exerciser_quote_asset_keys.pubkey(),
     &exerciser_underlying_asset_keys.pubkey(),
