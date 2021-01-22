@@ -259,7 +259,7 @@ pub fn exercise_post_expiration(
     .pack();
     print!("Options: exercise_post_expiration data {:?}", data);
 
-    let mut accounts = Vec::with_capacity(9);
+    let mut accounts = Vec::with_capacity(7);
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
     accounts.push(AccountMeta::new(*options_market_key, false));
     accounts.push(AccountMeta::new(*exerciser_quote_asset_key, false));

@@ -1,4 +1,5 @@
 use std::vec::Vec;
+use crate::error::OptionsError;
 use solana_program::{
     clock::UnixTimestamp,
     program_error::ProgramError,
@@ -129,6 +130,19 @@ impl Pack for OptionMarket {
         for option_writer in self.option_writer_registry.clone() {
             option_writer.pack_into_slice(&mut owr[offset..offset+OptionWriter::LEN]);
             offset += OptionWriter::LEN;
+        }
+    }
+}
+impl OptionMarket {
+    /// Removes an OptionWriter from the OptioMarket instance
+    pub fn remove_option_writer(mut option_market: OptionMarket, option_writer: OptionWriter) -> Result<OptionMarket, ProgramError> {
+        match option_market.option_writer_registry.iter().position(|x| *x == option_writer) {
+            None => Err(OptionsError::OptionWriterNotFound.into()),
+            Some(position) => {
+                option_market.option_writer_registry.remove(position);
+                option_market.registry_length -= 1;
+                Ok(option_market)
+            }
         }
     }
 }

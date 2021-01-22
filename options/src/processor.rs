@@ -178,7 +178,24 @@ impl Processor {
         Ok(())
     }
 
-    pub fn process_exercise_post_expiration(_accounts: &[AccountInfo], _option_writer: OptionWriter) -> ProgramResult {
+    pub fn process_exercise_post_expiration(accounts: &[AccountInfo], option_writer: OptionWriter) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let clock_sysvar_info = next_account_info(account_info_iter)?;
+        let option_market_acct = next_account_info(account_info_iter)?;
+        let exerciser_quote_asset_acct = next_account_info(account_info_iter)?;
+        let option_writer_qupte_asset_acct = next_account_info(account_info_iter)?;
+        let exerciser_underlying_asset_acct = next_account_info(account_info_iter)?;
+        let market_underlying_asset_pool_acct = next_account_info(account_info_iter)?;
+        let market_underlying_asset_pool_acct = next_account_info(account_info_iter)?;
+
+        let mut option_market_data = option_market_acct.try_borrow_mut_data()?;
+        let mut option_market = OptionMarket::unpack(&option_market_data)?;
+
+        let updated_option_market = OptionMarket::remove_option_writer(option_market, option_writer)?;
+        OptionMarket::pack(
+            updated_option_market,
+            &mut option_market_data,
+        )?;
         Ok(())
     }
 

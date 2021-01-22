@@ -16,6 +16,9 @@ pub enum OptionsError {
     /// The quote asset and underlying asset cannot be the same
     #[error("Same quote and underlying asset, cannot create market")]
     QuoteAndUnderlyingAssetMustDiffer,
+    /// The OptionWriter was not found in the market registry
+    #[error("OptionWriter was not found in registry")]
+    OptionWriterNotFound,
 }
 impl From<OptionsError> for ProgramError {
     fn from(e: OptionsError) -> Self {
