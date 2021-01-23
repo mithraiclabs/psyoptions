@@ -267,7 +267,7 @@ pub fn exercise_post_expiration(
     }
     .pack();
 
-    let mut accounts = Vec::with_capacity(8);
+    let mut accounts = Vec::with_capacity(9);
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
     accounts.push(AccountMeta::new(*options_market_key, false));
