@@ -249,7 +249,7 @@ pub fn mint_covered_call(
 pub fn exercise_post_expiration(
     program_id: &Pubkey,
     option_writer: &OptionWriter,
-    contract_spl_token_pubkey: &Pubkey,
+    option_mint_key: &Pubkey,
     options_market_key: &Pubkey,
     exerciser_quote_asset_key: &Pubkey,
     exerciser_underlying_asset_key: &Pubkey,
@@ -258,7 +258,7 @@ pub fn exercise_post_expiration(
     let cloned_writer = option_writer.clone();
 
     let (options_spl_authority_pubkey, bump_seed) = Pubkey::find_program_address(
-        &[&contract_spl_token_pubkey.to_bytes()[..32]],
+        &[&option_mint_key.to_bytes()[..32]],
         &program_id,
     );
     let data = OptionsInstruction::ExercisePostExpiration {
@@ -276,7 +276,7 @@ pub fn exercise_post_expiration(
     accounts.push(AccountMeta::new(*exerciser_underlying_asset_key, false));
     accounts.push(AccountMeta::new(*market_underlying_asset_pool_key, false));
     accounts.push(AccountMeta::new_readonly(options_spl_authority_pubkey, false));
-    accounts.push(AccountMeta::new_readonly(*contract_spl_token_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
 
 
     Ok(Instruction {

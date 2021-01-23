@@ -94,7 +94,7 @@ pub fn test_sucessful_exercise_post_expiration() {
     &option_market_key,
     &exerciser_quote_asset_keys.pubkey(),
     &exerciser_underlying_asset_keys.pubkey(),
-    &option_market.underlying_asset_address,
+    &underlying_asset_pool_key,
   )
   .unwrap();
   let underlying_asset_pool_acct_data =
