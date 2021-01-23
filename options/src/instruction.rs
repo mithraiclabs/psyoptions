@@ -276,6 +276,8 @@ pub fn exercise_post_expiration(
     accounts.push(AccountMeta::new(*exerciser_underlying_asset_key, false));
     accounts.push(AccountMeta::new(*market_underlying_asset_pool_key, false));
     accounts.push(AccountMeta::new_readonly(options_spl_authority_pubkey, false));
+    accounts.push(AccountMeta::new_readonly(*contract_spl_token_pubkey, false));
+
 
     Ok(Instruction {
         program_id: *program_id,

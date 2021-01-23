@@ -180,14 +180,15 @@ impl Processor {
 
     pub fn process_exercise_post_expiration(accounts: &[AccountInfo], option_writer: OptionWriter, bump_seed: u8) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
-        let clock_sysvar_info = next_account_info(account_info_iter)?;
+        let _clock_sysvar_info = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
         let option_market_acct = next_account_info(account_info_iter)?;
-        let exerciser_quote_asset_acct = next_account_info(account_info_iter)?;
-        let option_writer_qupte_asset_acct = next_account_info(account_info_iter)?;
+        let _exerciser_quote_asset_acct = next_account_info(account_info_iter)?;
+        let _option_writer_quote_asset_acct = next_account_info(account_info_iter)?;
         let exerciser_underlying_asset_acct = next_account_info(account_info_iter)?;
         let market_underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let options_spl_authority_acct = next_account_info(account_info_iter)?;
+        let option_mint_acct = next_account_info(account_info_iter)?;
 
         let mut option_market_data = option_market_acct.try_borrow_mut_data()?;
         let mut option_market = OptionMarket::unpack(&option_market_data)?;
@@ -212,7 +213,7 @@ impl Processor {
                 options_spl_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&options_spl_authority_acct.key.to_bytes(), &[bump_seed]]]
+            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]]
         )?;
 
         OptionMarket::pack(
