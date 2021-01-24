@@ -86,6 +86,7 @@ pub fn test_sucessful_exercise_post_expiration() {
       &option_market,
     )
     .unwrap();
+
   // generate the exercise_post_expiration instruction
   let exercise_post_exirpation_ix = solana_options::instruction::exercise_post_expiration(
     &options_program_id,
@@ -94,7 +95,7 @@ pub fn test_sucessful_exercise_post_expiration() {
     &option_market_key,
     &exerciser_quote_asset_keys.pubkey(),
     &exerciser_underlying_asset_keys.pubkey(),
-    &underlying_asset_pool_key,
+    &option_market.asset_pool_address,
   )
   .unwrap();
   let underlying_asset_pool_acct_data =
