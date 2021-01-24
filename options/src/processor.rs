@@ -180,7 +180,7 @@ impl Processor {
 
     pub fn process_exercise_post_expiration(accounts: &[AccountInfo], option_writer: OptionWriter, bump_seed: u8) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
-        let _clock_sysvar_info = next_account_info(account_info_iter)?;
+        let clock_sysvar_info = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
         let option_market_acct = next_account_info(account_info_iter)?;
         let exerciser_quote_asset_acct = next_account_info(account_info_iter)?;
@@ -192,7 +192,13 @@ impl Processor {
         let option_mint_acct = next_account_info(account_info_iter)?;
 
         let mut option_market_data = option_market_acct.try_borrow_mut_data()?;
-        let mut option_market = OptionMarket::unpack(&option_market_data)?;
+        let option_market = OptionMarket::unpack(&option_market_data)?;
+
+        let clock = Clock::from_account_info(&clock_sysvar_info)?;
+        // Verify that the OptionMarket has already expired
+        if clock.unix_timestamp <= option_market.expiration_unix_timestamp {
+            return Err(OptionsError::OptionMarketNotExpired.into());
+        }
 
         // Remove the option writer and decrement the 
         let updated_option_market = OptionMarket::remove_option_writer(option_market, option_writer)?;
