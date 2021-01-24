@@ -183,8 +183,9 @@ impl Processor {
         let _clock_sysvar_info = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
         let option_market_acct = next_account_info(account_info_iter)?;
-        let _exerciser_quote_asset_acct = next_account_info(account_info_iter)?;
-        let _option_writer_quote_asset_acct = next_account_info(account_info_iter)?;
+        let exerciser_quote_asset_acct = next_account_info(account_info_iter)?;
+        let exerciser_authority_acct = next_account_info(account_info_iter)?;
+        let option_writer_quote_asset_acct = next_account_info(account_info_iter)?;
         let exerciser_underlying_asset_acct = next_account_info(account_info_iter)?;
         let market_underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let options_spl_authority_acct = next_account_info(account_info_iter)?;
@@ -196,7 +197,26 @@ impl Processor {
         // Remove the option writer and decrement the 
         let updated_option_market = OptionMarket::remove_option_writer(option_market, option_writer)?;
 
-        // TODO transfer underlying asset from the pool to the exerciser's account
+        // transfer the quote asset from the Exerciser to the OptionWriter
+        let transer_quote_tokens_ix = token_instruction::transfer(
+            &spl_program_acct.key,
+            &exerciser_quote_asset_acct.key, 
+            &option_writer_quote_asset_acct.key, 
+            &exerciser_authority_acct.key, 
+            &[], 
+            updated_option_market.amount_per_contract * updated_option_market.strike_price
+        )?;
+        invoke(
+            &transer_quote_tokens_ix,
+            &[
+                spl_program_acct.clone(),
+                exerciser_quote_asset_acct.clone(),
+                option_writer_quote_asset_acct.clone(),
+                exerciser_authority_acct.clone()
+            ]
+        )?;
+
+        // transfer underlying asset from the pool to the exerciser's account
         let transfer_underlying_tokens_ix = token_instruction::transfer(
             &spl_program_acct.key,
             &market_underlying_asset_pool_acct.key,

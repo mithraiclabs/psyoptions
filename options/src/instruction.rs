@@ -253,6 +253,7 @@ pub fn exercise_post_expiration(
     options_market_key: &Pubkey,
     exerciser_quote_asset_key: &Pubkey,
     exerciser_underlying_asset_key: &Pubkey,
+    exerciser_authority_key: &Pubkey,
     market_underlying_asset_pool_key: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
     let cloned_writer = option_writer.clone();
@@ -272,6 +273,7 @@ pub fn exercise_post_expiration(
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
     accounts.push(AccountMeta::new(*options_market_key, false));
     accounts.push(AccountMeta::new(*exerciser_quote_asset_key, false));
+    accounts.push(AccountMeta::new_readonly(*exerciser_authority_key, true));
     accounts.push(AccountMeta::new(option_writer.quote_asset_acct_address, false));
     accounts.push(AccountMeta::new(*exerciser_underlying_asset_key, false));
     accounts.push(AccountMeta::new(*market_underlying_asset_pool_key, false));
