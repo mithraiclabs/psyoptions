@@ -8,7 +8,7 @@ use solana_options::{instruction, market::OptionMarket};
 use solana_program::{
   clock::Clock,
   program_pack::Pack,
-  sysvar::{clock, Sysvar}
+  sysvar::{clock, Sysvar},
 };
 use solana_sdk::{
   account::create_account_infos,
@@ -65,7 +65,8 @@ pub fn test_sucessful_exercise_post_expiration() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
-  );
+  )
+  .unwrap();
   create_and_add_option_writer(
     &client,
     &options_program_id,
@@ -76,7 +77,8 @@ pub fn test_sucessful_exercise_post_expiration() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
-  );
+  )
+  .unwrap();
 
   // pick one of the option writers from the OptionMarket account
   let option_market_data = client.get_account_data(&option_market_key).unwrap();
@@ -107,11 +109,13 @@ pub fn test_sucessful_exercise_post_expiration() {
   .unwrap();
   let underlying_asset_pool_acct_data =
     client.get_account_data(&underlying_asset_pool_key).unwrap();
-  let initial_underlying_asset_pool_acct = Account::unpack(&underlying_asset_pool_acct_data[..]).unwrap();
+  let initial_underlying_asset_pool_acct =
+    Account::unpack(&underlying_asset_pool_acct_data[..]).unwrap();
 
   // Hold some initial values in memory for assertions
-  let exerciser_quote_asset_acct_data =
-    client.get_account_data(&exerciser_quote_asset_keys.pubkey()).unwrap();
+  let exerciser_quote_asset_acct_data = client
+    .get_account_data(&exerciser_quote_asset_keys.pubkey())
+    .unwrap();
   let exerciser_quote_asset_acct = Account::unpack(&exerciser_quote_asset_acct_data[..]).unwrap();
 
   // Sleep 20 seconds so the market is expired
@@ -130,10 +134,16 @@ pub fn test_sucessful_exercise_post_expiration() {
   let option_market_data = client.get_account_data(&option_market_key).unwrap();
   let updated_option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
   // assert that the OptionMarket.registry_length decremented
-  assert_eq!(updated_option_market.registry_length, option_market.registry_length - 1);
+  assert_eq!(
+    updated_option_market.registry_length,
+    option_market.registry_length - 1
+  );
   // assert that the 1 OptionWriter is removed from the OptionMarket.option_writer_registry
   // TODO make this more robust/exhaustive
-  assert_ne!(*option_writer, updated_option_market.option_writer_registry[0]);
+  assert_ne!(
+    *option_writer,
+    updated_option_market.option_writer_registry[0]
+  );
 
   // assert that the underlying_asset_pool size decreased by amount_per_contract
   let underlying_asset_pool_acct_data =
@@ -146,15 +156,26 @@ pub fn test_sucessful_exercise_post_expiration() {
   let expected_pool_amount = initial_underlying_asset_pool_acct.amount - amount_per_contract;
   assert_eq!(underlying_asset_pool_acct.amount, expected_pool_amount);
   // assert that the exerciser received the underlying asset
-  let exerciser_underlying_asset_acct_data =
-    client.get_account_data(&exerciser_underlying_asset_keys.pubkey()).unwrap();
-  let exerciser_underlying_asset_acct = Account::unpack(&exerciser_underlying_asset_acct_data[..]).unwrap();
-  assert_eq!(exerciser_underlying_asset_acct.amount, option_market.amount_per_contract);
+  let exerciser_underlying_asset_acct_data = client
+    .get_account_data(&exerciser_underlying_asset_keys.pubkey())
+    .unwrap();
+  let exerciser_underlying_asset_acct =
+    Account::unpack(&exerciser_underlying_asset_acct_data[..]).unwrap();
+  assert_eq!(
+    exerciser_underlying_asset_acct.amount,
+    option_market.amount_per_contract
+  );
   // assert that the exerciser's quote asset account is less the amount required to close the contract
-  let exerciser_quote_asset_acct_data =
-    client.get_account_data(&exerciser_quote_asset_keys.pubkey()).unwrap();
-  let updated_exerciser_quote_asset_acct = Account::unpack(&exerciser_quote_asset_acct_data[..]).unwrap();
-  assert_eq!(updated_exerciser_quote_asset_acct.amount, exerciser_quote_asset_acct.amount - (option_market.amount_per_contract * option_market.strike_price));
+  let exerciser_quote_asset_acct_data = client
+    .get_account_data(&exerciser_quote_asset_keys.pubkey())
+    .unwrap();
+  let updated_exerciser_quote_asset_acct =
+    Account::unpack(&exerciser_quote_asset_acct_data[..]).unwrap();
+  assert_eq!(
+    updated_exerciser_quote_asset_acct.amount,
+    exerciser_quote_asset_acct.amount
+      - (option_market.amount_per_contract * option_market.strike_price)
+  );
 }
 
 #[test]
@@ -201,7 +222,8 @@ pub fn test_panic_when_expiration_has_not_passed() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
-  );
+  )
+  .unwrap();
   create_and_add_option_writer(
     &client,
     &options_program_id,
@@ -212,7 +234,8 @@ pub fn test_panic_when_expiration_has_not_passed() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
-  );
+  )
+  .unwrap();
 
   // pick one of the option writers from the OptionMarket account
   let option_market_data = client.get_account_data(&option_market_key).unwrap();
