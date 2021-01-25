@@ -178,8 +178,80 @@ impl Processor {
         Ok(())
     }
 
+    pub fn process_exercise_post_expiration(accounts: &[AccountInfo], option_writer: OptionWriter, bump_seed: u8) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let clock_sysvar_info = next_account_info(account_info_iter)?;
+        let spl_program_acct = next_account_info(account_info_iter)?;
+        let option_market_acct = next_account_info(account_info_iter)?;
+        let exerciser_quote_asset_acct = next_account_info(account_info_iter)?;
+        let exerciser_authority_acct = next_account_info(account_info_iter)?;
+        let option_writer_quote_asset_acct = next_account_info(account_info_iter)?;
+        let exerciser_underlying_asset_acct = next_account_info(account_info_iter)?;
+        let market_underlying_asset_pool_acct = next_account_info(account_info_iter)?;
+        let options_spl_authority_acct = next_account_info(account_info_iter)?;
+        let option_mint_acct = next_account_info(account_info_iter)?;
+
+        let mut option_market_data = option_market_acct.try_borrow_mut_data()?;
+        let option_market = OptionMarket::unpack(&option_market_data)?;
+
+        let clock = Clock::from_account_info(&clock_sysvar_info)?;
+        // Verify that the OptionMarket has already expired
+        if clock.unix_timestamp <= option_market.expiration_unix_timestamp {
+            return Err(OptionsError::OptionMarketNotExpired.into());
+        }
+
+        // Remove the option writer and decrement the 
+        let updated_option_market = OptionMarket::remove_option_writer(option_market, option_writer)?;
+
+        // transfer the quote asset from the Exerciser to the OptionWriter
+        let transer_quote_tokens_ix = token_instruction::transfer(
+            &spl_program_acct.key,
+            &exerciser_quote_asset_acct.key, 
+            &option_writer_quote_asset_acct.key, 
+            &exerciser_authority_acct.key, 
+            &[], 
+            updated_option_market.amount_per_contract * updated_option_market.strike_price
+        )?;
+        invoke(
+            &transer_quote_tokens_ix,
+            &[
+                spl_program_acct.clone(),
+                exerciser_quote_asset_acct.clone(),
+                option_writer_quote_asset_acct.clone(),
+                exerciser_authority_acct.clone()
+            ]
+        )?;
+
+        // transfer underlying asset from the pool to the exerciser's account
+        let transfer_underlying_tokens_ix = token_instruction::transfer(
+            &spl_program_acct.key,
+            &market_underlying_asset_pool_acct.key,
+            &exerciser_underlying_asset_acct.key,
+            &options_spl_authority_acct.key,
+            &[],
+            updated_option_market.amount_per_contract,
+        )?;
+        invoke_signed(
+            &transfer_underlying_tokens_ix,
+            &[
+                market_underlying_asset_pool_acct.clone(),
+                exerciser_underlying_asset_acct.clone(),
+                options_spl_authority_acct.clone(),
+                spl_program_acct.clone(),
+            ],
+            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]]
+        )?;
+
+        OptionMarket::pack(
+            updated_option_market,
+            &mut option_market_data,
+        )?;
+        Ok(())
+    }
+
     pub fn process(program_id: &Pubkey, accounts: &[AccountInfo], input: &[u8]) -> ProgramResult {
         let instruction = OptionsInstruction::unpack(input)?;
+
         match instruction {
             OptionsInstruction::InitializeMarket {
                 amount_per_contract,
@@ -194,6 +266,9 @@ impl Processor {
             ),
             OptionsInstruction::MintCoveredCall { bump_seed } => {
                 Self::process_mint_covered_call(accounts, bump_seed)
+            },
+            OptionsInstruction::ExercisePostExpiration {option_writer, bump_seed} => {
+                Self::process_exercise_post_expiration(accounts, option_writer, bump_seed)
             }
         }
     }

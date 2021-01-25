@@ -20,3 +20,8 @@ Exploring architectures for options trading on Serum
 3. in terminal run `rust-lldb +nightly FILE_PATH`
 4. set a break point (for example `b instruction.rs:157`)
 5. Run tests with `run —test`
+
+
+## Potential Improvements (V1)
+* Integration Tests
+    * Wrap the load_bpf_program method and cache the program id so it's not being loaded on each test
