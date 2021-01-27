@@ -338,7 +338,31 @@ impl Processor {
         Ok(())
     }
 
-    pub fn process_close_post_expiration(_accounts: &[AccountInfo], _option_writer: OptionWriter) -> ProgramResult {
+    pub fn process_close_post_expiration(accounts: &[AccountInfo], option_writer: OptionWriter, _bump_seed: u8) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let clock_sysvar_info = next_account_info(account_info_iter)?;
+        let _spl_program_acct = next_account_info(account_info_iter)?;
+        let option_market_acct = next_account_info(account_info_iter)?;
+        let _option_writer_underlying_asset_acct = next_account_info(account_info_iter)?;
+        let _market_underlying_asset_pool_acct = next_account_info(account_info_iter)?;
+        let _options_spl_authority_acct = next_account_info(account_info_iter)?;
+
+        let mut option_market_data = option_market_acct.try_borrow_mut_data()?;
+        let option_market = OptionMarket::unpack(&option_market_data)?;
+
+        let clock = Clock::from_account_info(&clock_sysvar_info)?;
+        // Verify that the OptionMarket has already expired
+        if clock.unix_timestamp <= option_market.expiration_unix_timestamp {
+            return Err(OptionsError::OptionMarketNotExpired.into());
+        }
+
+        // Remove the option writer and decrement the 
+        let option_market = OptionMarket::remove_option_writer(option_market, option_writer)?;
+
+        OptionMarket::pack(
+            option_market,
+            &mut option_market_data,
+        )?;
         Ok(())
     }
 
@@ -366,8 +390,8 @@ impl Processor {
             OptionsInstruction::ExerciseCoveredCall { option_writer, bump_seed } => {
                 Self::process_exercise_covered_call(accounts, option_writer, bump_seed)
             }
-            OptionsInstruction::ClosePostExpiration { option_writer } => {
-                Self::process_close_post_expiration(accounts, option_writer)
+            OptionsInstruction::ClosePostExpiration { option_writer, bump_seed } => {
+                Self::process_close_post_expiration(accounts, option_writer, bump_seed)
             }
         }
     }

@@ -86,7 +86,7 @@ pub fn test_sucessful_close_post_expiration() {
   let option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
   let option_writer = &option_market.option_writer_registry[0];
   // create an option exerciser with SPL accounts we can check
-  let (exerciser_authority_keys, exerciser_quote_asset_keys, exerciser_underlying_asset_keys) =
+  let (exerciser_authority_keys, _exerciser_quote_asset_keys, _exerciser_underlying_asset_keys) =
     create_exerciser(
       &client,
       &asset_authority_keys,
@@ -100,8 +100,9 @@ pub fn test_sucessful_close_post_expiration() {
   let close_post_exirpation_ix = solana_options::instruction::close_post_expiration(
     &options_program_id,
     option_writer,
-    &option_mint_keys.pubkey(),
+    &option_market_key,
     &option_market.asset_pool_address,
+    &option_mint_keys.pubkey()
   )
   .unwrap();
   let underlying_asset_pool_acct_data =
@@ -229,7 +230,7 @@ pub fn test_panic_when_expiration_has_not_passed() {
   let option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
   let option_writer = &option_market.option_writer_registry[0];
   // create an option exerciser with SPL accounts we can check
-  let (exerciser_authority_keys, exerciser_quote_asset_keys, exerciser_underlying_asset_keys) =
+  let (exerciser_authority_keys, _exerciser_quote_asset_keys, _exerciser_underlying_asset_keys) =
     create_exerciser(
       &client,
       &asset_authority_keys,
@@ -243,8 +244,9 @@ pub fn test_panic_when_expiration_has_not_passed() {
   let close_post_exirpation_ix = solana_options::instruction::close_post_expiration(
     &options_program_id,
     option_writer,
-    &option_mint_keys.pubkey(),
+    &option_market_key,
     &option_market.asset_pool_address,
+    &option_mint_keys.pubkey()
   )
   .unwrap();
   // Send the transaction
