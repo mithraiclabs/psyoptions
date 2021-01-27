@@ -1,4 +1,4 @@
-use crate::market::{OptionMarket, OptionWriter};
+use crate::market::OptionWriter;
 use arrayref::array_ref;
 use solana_program::{
     clock::UnixTimestamp,
@@ -81,6 +81,12 @@ pub enum OptionsInstruction {
         option_writer: OptionWriter,
         bump_seed: u8,
     },
+    /// Close a single option contract post expiration
+    /// 
+    /// 
+    ClosePostExpiration {
+        option_writer: OptionWriter,
+    }
 }
 
 impl OptionsInstruction {
@@ -121,6 +127,12 @@ impl OptionsInstruction {
                     bump_seed 
                 }
             }
+            4 => {
+                let (option_writer, _rest) = Self::unpack_option_writer(rest)?;
+                Self::ClosePostExpiration {
+                    option_writer
+                }
+            }
             _ => return Err(ProgramError::InvalidInstructionData.into()),
         })
     }
@@ -159,6 +171,12 @@ impl OptionsInstruction {
                 option_writer.pack_into_slice(&mut option_writer_slice);
                 buf.extend_from_slice(&option_writer_slice);
                 buf.extend_from_slice(&bump_seed.to_le_bytes());
+            }
+            &Self::ClosePostExpiration { ref option_writer } => {
+                buf.push(4);
+                let mut option_writer_slice = [0u8; OptionWriter::LEN];
+                option_writer.pack_into_slice(&mut option_writer_slice);
+                buf.extend_from_slice(&option_writer_slice);
             }
         };
         buf
@@ -329,6 +347,46 @@ pub fn exercise_post_expiration(
     })
 }
 
+/// Creates a `ClosePostExpiration` instruction
+// pub fn close_post_expiration(
+//     program_id: &Pubkey,
+//     option_writer: &OptionWriter,
+//     option_mint_key: &Pubkey,
+//     options_market_key: &Pubkey,
+//     exerciser_quote_asset_key: &Pubkey,
+//     exerciser_underlying_asset_key: &Pubkey,
+//     exerciser_authority_key: &Pubkey,
+//     market_underlying_asset_pool_key: &Pubkey,
+// ) -> Result<Instruction, ProgramError> {
+
+//     let cloned_writer = option_writer.clone();
+
+//     let data = OptionsInstruction::ClosePostExpiration {
+//         option_writer: cloned_writer
+//     }
+//     .pack();
+
+//     let mut accounts = Vec::with_capacity(9);
+//     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
+//     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
+//     accounts.push(AccountMeta::new(*options_market_key, false));
+//     accounts.push(AccountMeta::new(*exerciser_quote_asset_key, false));
+//     accounts.push(AccountMeta::new_readonly(*exerciser_authority_key, true));
+//     accounts.push(AccountMeta::new(
+//         option_writer.quote_asset_acct_address,
+//         false,
+//     ));
+//     accounts.push(AccountMeta::new(*exerciser_underlying_asset_key, false));
+//     accounts.push(AccountMeta::new(*market_underlying_asset_pool_key, false));
+//     accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
+
+//     Ok(Instruction {
+//         program_id: *program_id,
+//         data,
+//         accounts,
+//     })
+// }
+
 /// Creates a `ExerciseCoveredCall` instruction
 pub fn exercise_covered_call(
     program_id: &Pubkey,
@@ -437,6 +495,29 @@ mod tests {
         let mut expect = Vec::from([3u8]);
         expect.extend_from_slice(&option_writer_slice);
         expect.push(bump_seed);
+        assert_eq!(packed, expect);
+        let unpacked = OptionsInstruction::unpack(&expect).unwrap();
+        assert_eq!(unpacked, check);
+    }
+
+
+    #[test]
+    fn test_pack_unpack_close_post_expiration() {
+        let option_writer = OptionWriter {
+            underlying_asset_acct_address: Pubkey::new_unique(),
+            quote_asset_acct_address: Pubkey::new_unique(),
+            contract_token_acct_address: Pubkey::new_unique()
+        };
+        let cloned_option_wrtier = option_writer.clone();
+        let check = OptionsInstruction::ClosePostExpiration { 
+            option_writer
+        };
+        let packed = check.pack();
+        // add the tag to the expected buffer
+        let mut option_writer_slice = [0u8; OptionWriter::LEN];
+        cloned_option_wrtier.pack_into_slice(&mut option_writer_slice);
+        let mut expect = Vec::from([4u8]);
+        expect.extend_from_slice(&option_writer_slice);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);

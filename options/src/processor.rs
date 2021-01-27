@@ -11,7 +11,6 @@ use solana_program::{
     program_pack::Pack,
     pubkey::Pubkey,
     sysvar::Sysvar,
-    msg
 };
 use spl_token::{
     instruction as token_instruction,
@@ -339,6 +338,10 @@ impl Processor {
         Ok(())
     }
 
+    pub fn process_close_post_expiration(_accounts: &[AccountInfo], _option_writer: OptionWriter) -> ProgramResult {
+        Ok(())
+    }
+
     pub fn process(program_id: &Pubkey, accounts: &[AccountInfo], input: &[u8]) -> ProgramResult {
         let instruction = OptionsInstruction::unpack(input)?;
 
@@ -362,6 +365,9 @@ impl Processor {
             }
             OptionsInstruction::ExerciseCoveredCall { option_writer, bump_seed } => {
                 Self::process_exercise_covered_call(accounts, option_writer, bump_seed)
+            }
+            OptionsInstruction::ClosePostExpiration { option_writer } => {
+                Self::process_close_post_expiration(accounts, option_writer)
             }
         }
     }
