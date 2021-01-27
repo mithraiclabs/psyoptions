@@ -348,44 +348,36 @@ pub fn exercise_post_expiration(
 }
 
 /// Creates a `ClosePostExpiration` instruction
-// pub fn close_post_expiration(
-//     program_id: &Pubkey,
-//     option_writer: &OptionWriter,
-//     option_mint_key: &Pubkey,
-//     options_market_key: &Pubkey,
-//     exerciser_quote_asset_key: &Pubkey,
-//     exerciser_underlying_asset_key: &Pubkey,
-//     exerciser_authority_key: &Pubkey,
-//     market_underlying_asset_pool_key: &Pubkey,
-// ) -> Result<Instruction, ProgramError> {
+pub fn close_post_expiration(
+    program_id: &Pubkey,
+    option_writer: &OptionWriter,
+    option_mint_key: &Pubkey,
+    market_underlying_asset_pool_key: &Pubkey,
+) -> Result<Instruction, ProgramError> {
 
-//     let cloned_writer = option_writer.clone();
+    let cloned_writer = option_writer.clone();
 
-//     let data = OptionsInstruction::ClosePostExpiration {
-//         option_writer: cloned_writer
-//     }
-//     .pack();
+    let data = OptionsInstruction::ClosePostExpiration {
+        option_writer: cloned_writer
+    }
+    .pack();
 
-//     let mut accounts = Vec::with_capacity(9);
-//     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
-//     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
-//     accounts.push(AccountMeta::new(*options_market_key, false));
-//     accounts.push(AccountMeta::new(*exerciser_quote_asset_key, false));
-//     accounts.push(AccountMeta::new_readonly(*exerciser_authority_key, true));
-//     accounts.push(AccountMeta::new(
-//         option_writer.quote_asset_acct_address,
-//         false,
-//     ));
-//     accounts.push(AccountMeta::new(*exerciser_underlying_asset_key, false));
-//     accounts.push(AccountMeta::new(*market_underlying_asset_pool_key, false));
-//     accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
+    let mut accounts = Vec::with_capacity(9);
+    accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
+    accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
+    accounts.push(AccountMeta::new(
+        option_writer.underlying_asset_acct_address,
+        false,
+    ));
+    accounts.push(AccountMeta::new(*market_underlying_asset_pool_key, false));
+    accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
 
-//     Ok(Instruction {
-//         program_id: *program_id,
-//         data,
-//         accounts,
-//     })
-// }
+    Ok(Instruction {
+        program_id: *program_id,
+        data,
+        accounts,
+    })
+}
 
 /// Creates a `ExerciseCoveredCall` instruction
 pub fn exercise_covered_call(
