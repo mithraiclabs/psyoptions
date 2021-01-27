@@ -160,8 +160,8 @@ pub fn test_sucessful_close_post_expiration() {
     .unwrap();
   let updated_writer_underlying_asset_acct = Account::unpack(&writer_underlying_asset_acct_data[..]).unwrap();
   assert_eq!(
-    writer_underlying_asset_acct.amount,
-    updated_writer_underlying_asset_acct.amount + option_market.amount_per_contract
+    updated_writer_underlying_asset_acct.amount,
+    writer_underlying_asset_acct.amount + option_market.amount_per_contract
   );
 }
 
@@ -178,10 +178,7 @@ pub fn test_panic_when_expiration_has_not_passed() {
   let amount_per_contract = 100;
   let strike_price = 5;
   let now = SystemTime::now();
-  let expiry = (now + Duration::from_secs(10))
-    .duration_since(UNIX_EPOCH)
-    .unwrap()
-    .as_secs() as i64;
+  let expiry = 999_999_999_999_999_999;
   // Create the option market
   let (
     underlying_asset_mint_keys,

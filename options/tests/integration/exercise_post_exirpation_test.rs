@@ -192,10 +192,7 @@ pub fn test_panic_when_expiration_has_not_passed() {
   let amount_per_contract = 100;
   let strike_price = 5;
   let now = SystemTime::now();
-  let expiry = (now + Duration::from_secs(10))
-    .duration_since(UNIX_EPOCH)
-    .unwrap()
-    .as_secs() as i64;
+  let expiry = 999_999_999_999_999_999;
   // Create the option market
   let (
     underlying_asset_mint_keys,

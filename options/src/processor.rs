@@ -338,14 +338,15 @@ impl Processor {
         Ok(())
     }
 
-    pub fn process_close_post_expiration(accounts: &[AccountInfo], option_writer: OptionWriter, _bump_seed: u8) -> ProgramResult {
+    pub fn process_close_post_expiration(accounts: &[AccountInfo], option_writer: OptionWriter, bump_seed: u8) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let clock_sysvar_info = next_account_info(account_info_iter)?;
-        let _spl_program_acct = next_account_info(account_info_iter)?;
+        let spl_program_acct = next_account_info(account_info_iter)?;
         let option_market_acct = next_account_info(account_info_iter)?;
-        let _option_writer_underlying_asset_acct = next_account_info(account_info_iter)?;
-        let _market_underlying_asset_pool_acct = next_account_info(account_info_iter)?;
-        let _options_spl_authority_acct = next_account_info(account_info_iter)?;
+        let option_writer_underlying_asset_acct = next_account_info(account_info_iter)?;
+        let market_underlying_asset_pool_acct = next_account_info(account_info_iter)?;
+        let options_spl_authority_acct = next_account_info(account_info_iter)?;
+        let option_mint_acct = next_account_info(account_info_iter)?;
 
         let mut option_market_data = option_market_acct.try_borrow_mut_data()?;
         let option_market = OptionMarket::unpack(&option_market_data)?;
@@ -355,6 +356,26 @@ impl Processor {
         if clock.unix_timestamp <= option_market.expiration_unix_timestamp {
             return Err(OptionsError::OptionMarketNotExpired.into());
         }
+
+        // transfer underlying asset from the pool to the option writers's account
+        let transfer_underlying_tokens_ix = token_instruction::transfer(
+            &spl_program_acct.key,
+            &market_underlying_asset_pool_acct.key,
+            &option_writer_underlying_asset_acct.key,
+            &options_spl_authority_acct.key,
+            &[],
+            option_market.amount_per_contract,
+        )?;
+        invoke_signed(
+            &transfer_underlying_tokens_ix,
+            &[
+                market_underlying_asset_pool_acct.clone(),
+                option_writer_underlying_asset_acct.clone(),
+                options_spl_authority_acct.clone(),
+                spl_program_acct.clone(),
+            ],
+            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]]
+        )?;
 
         // Remove the option writer and decrement the 
         let option_market = OptionMarket::remove_option_writer(option_market, option_writer)?;

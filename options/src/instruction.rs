@@ -384,6 +384,7 @@ pub fn close_post_expiration(
         options_spl_authority_pubkey,
         false,
     ));
+    accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
 
     Ok(Instruction {
         program_id: *program_id,
