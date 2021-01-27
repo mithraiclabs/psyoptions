@@ -19,9 +19,12 @@ pub enum OptionsError {
     /// The OptionWriter was not found in the market registry
     #[error("OptionWriter was not found in registry")]
     OptionWriterNotFound,
-    /// The OptionMarket has not expired yet and this operation requires it to be expiredt
+    /// The OptionMarket has not expired yet and this operation requires it to be expired
     #[error("OptionMarket has not expired yet")]
-    OptionMarketNotExpired
+    OptionMarketNotExpired,
+    /// The OptionMarket has expired operation isn't possible
+    #[error("OptionMarket has expired")]
+    OptionMarketHasExpired
 }
 impl From<OptionsError> for ProgramError {
     fn from(e: OptionsError) -> Self {
