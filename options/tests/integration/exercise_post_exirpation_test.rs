@@ -20,8 +20,10 @@ use std::{
   thread,
   time::{Duration, SystemTime, UNIX_EPOCH},
 };
+use serial_test::serial;
 
 #[test]
+#[serial]
 pub fn test_sucessful_exercise_post_expiration() {
   // Create the options market
   let client = RpcClient::new_with_commitment(
@@ -179,6 +181,7 @@ pub fn test_sucessful_exercise_post_expiration() {
 }
 
 #[test]
+#[serial]
 #[should_panic(expected = "Error processing Instruction 0: custom program error: 0x4")]
 pub fn test_panic_when_expiration_has_not_passed() {
   // Create the options market

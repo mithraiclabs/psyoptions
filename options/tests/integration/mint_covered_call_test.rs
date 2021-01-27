@@ -11,8 +11,10 @@ use solana_sdk::{
   signature::{Keypair, Signer},
 };
 use spl_token::state::{Account, Mint};
+use serial_test::serial;
 
 #[test]
+#[serial]
 fn test_mint_covered_call_integration() {
   let client = RpcClient::new_with_commitment(
     "http://localhost:8899".to_string(),
@@ -136,6 +138,7 @@ fn test_mint_covered_call_integration() {
 }
 
 #[test]
+#[serial]
 #[should_panic(expected = "Error processing Instruction 0: custom program error: 0x0")]
 fn test_mint_covered_call_fail_post_expiry() {
   let client = RpcClient::new_with_commitment(
@@ -224,6 +227,7 @@ fn test_mint_covered_call_fail_post_expiry() {
 }
 
 #[test]
+#[serial]
 #[should_panic(expected = "Error processing Instruction 0: custom program error: 0x1")]
 fn test_when_quote_asset_mint_dont_match_contract_market() {
   let client = RpcClient::new_with_commitment(

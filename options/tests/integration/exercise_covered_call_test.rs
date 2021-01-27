@@ -20,8 +20,10 @@ use std::{
   thread,
   time::{Duration},
 };
+use serial_test::serial;
 
 #[test]
+#[serial]
 pub fn test_sucessful_exercise_covered_call() {
   // Create the options market
   let client = RpcClient::new_with_commitment(
