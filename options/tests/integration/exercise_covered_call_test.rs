@@ -1,10 +1,9 @@
 use crate::{
   option_helpers::{create_and_add_option_writer, create_exerciser, init_option_market},
-  solana_helpers,
-  spl_helpers::{create_spl_account, mint_tokens_to_account},
+  solana_helpers
 };
 use solana_client::rpc_client::RpcClient;
-use solana_options::{instruction, market::OptionMarket};
+use solana_options::market::OptionMarket;
 use solana_program::{
   clock::Clock,
   program_pack::Pack,
@@ -13,7 +12,7 @@ use solana_program::{
 use solana_sdk::{
   account::create_account_infos,
   commitment_config::CommitmentConfig,
-  signature::{Keypair, Signer},
+  signature::Signer,
 };
 use spl_token::state::{Account, Mint};
 use std::{
