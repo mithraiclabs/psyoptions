@@ -195,9 +195,9 @@ impl Processor {
 
         let clock = Clock::from_account_info(&clock_sysvar_info)?;
         // Verify that the OptionMarket has not expired
-        // if clock.unix_timestamp > option_market.expiration_unix_timestamp {
-        //     return Err(OptionsError::OptionMarketHasExpired.into());
-        // }
+        if clock.unix_timestamp > option_market.expiration_unix_timestamp {
+            return Err(OptionsError::OptionMarketHasExpired.into());
+        }
 
         // Burn an option token that was in the account passed in
         let burn_option_ix = token_instruction::burn(
