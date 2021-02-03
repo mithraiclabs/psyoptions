@@ -29,9 +29,9 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let underlying_asset_acct = next_account_info(account_info_iter)?;
         let quote_asset_acct = next_account_info(account_info_iter)?;
-        let contract_token_act = next_account_info(account_info_iter)?;
+        let option_mint_acct = next_account_info(account_info_iter)?;
         let option_market_data_acct = next_account_info(account_info_iter)?;
-        let contract_token_authority = next_account_info(account_info_iter)?;
+        let option_mint_authority = next_account_info(account_info_iter)?;
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
@@ -42,15 +42,15 @@ impl Processor {
         // Initialize the Mint for the SPL token that will denote an Options contract
         let init_token_mint_ix = token_instruction::initialize_mint(
             &spl_token::id(),
-            contract_token_act.key,
-            contract_token_authority.key,
+            option_mint_acct.key,
+            option_mint_authority.key,
             None,
             0,
         )?;
         invoke(
             &init_token_mint_ix,
             &[
-                contract_token_act.clone(),
+                option_mint_acct.clone(),
                 rent_info.clone(),
                 spl_program_acct.clone(),
             ],
@@ -61,14 +61,14 @@ impl Processor {
             &spl_token::id(),
             underlying_asset_pool_acct.key,
             underlying_asset_acct.key,
-            contract_token_authority.key,
+            option_mint_authority.key,
         )?;
         invoke(
             &init_underlying_pool_ix,
             &[
                 underlying_asset_pool_acct.clone(),
                 underlying_asset_acct.clone(),
-                contract_token_authority.clone(),
+                option_mint_authority.clone(),
                 rent_info.clone(),
                 spl_program_acct.clone(),
             ],

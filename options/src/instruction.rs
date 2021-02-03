@@ -22,11 +22,10 @@ pub enum OptionsInstruction {
     ///
     ///   0. `[]` Underlying Asset Mint
     ///   1. `[]` Quote Asset Mint
-    ///   2. `[writeable]` SPL Program address for contract token
-    ///     (the client must create a new SPL Token prior to creating a market)
-    ///   3. `[writeable]` Account with space for the option market we are creating
-    ///   4. `[]` Authority for Option Mint
-    ///   5. `[writeable]` Pool for underlying asset deposits - Uninitialized
+    ///   2. `[writeable]` Option Mint (uninitialized)
+    ///   3. `[writeable]` Option Market
+    ///   4. `[]` Option Mint Authority
+    ///   5. `[writeable]` Underlying Asset Pool (uninitialized)
     ///   6. `[]` Rent Sysvar
     ///   7. `[]` Spl Token Program
     InitializeMarket {
@@ -45,10 +44,8 @@ pub enum OptionsInstruction {
     ///   2. `[writeable]` Source account for `OptionWriter`'s underlying asset
     ///   3. `[writeable]` Destination account for underlying asset pool
     ///   4. `[writeable]` Destination account for `OptionWriter`'s quote asset
-    ///   5. `[]` Destination account for quote asset
-    ///     (this is stored in the mint registry to be used in the event of option exerciese)
     ///   6. `[writeable]` `OptionMarket` data account
-    ///   7. `[]` Authority account for the various `OptionWriter` accounts
+    ///   7. `[signer]` Authority account for the various `OptionWriter` accounts
     ///   8. `[]` SPL Token Program
     ///   9. `[]` Program Derived Address for the authority over the Option Mint
     ///   10. `[]` SysVar clock account
@@ -56,34 +53,46 @@ pub enum OptionsInstruction {
     MintCoveredCall { bump_seed: u8 },
     /// Exercises the specified OptionWriter
     ///
-    /// 0. `[]` Sys var clock account
-    /// 1. `[writeable]` Option Market data account address
-    /// 2. `[writeable]` option exerciser's containing quote asset for swap
-    /// 3. `[writeable]` option writer's quote asset account to receive
-    /// 4. `[writeable]` option exerciser's underlying asset address to receive
-    /// 5. `[writeable]` Option Market's underlying asset pool address
-    ///
+    /// 0. `[]` Sysvar clock
+    /// 1. `[]` SPL Token Program
+    /// 2. `[writeable]` Option Market
+    /// 3. `[writeable]` Exerciser Quote Asset Source
+    /// 4. `[signer]` Exerciser Quote Asset Authority
+    /// 5. `[writeable]` Option Writer Quote Asset Destination
+    /// 6. `[writeable]` Exerciser Underlying Asset Destination
+    /// 7. `[writeable]` Underlying Asset Pool
+    /// 8. `[]` Option Mint Authority
+    /// 9. `[]` Option Mint
     ExercisePostExpiration {
         option_writer: OptionWriter,
         bump_seed: u8,
     },
     /// Exercise an Options token representing a Covered Call
     ///
-    ///   0. `[writeable]` Option Mint
-    ///   1. `[writeable]` Option Market
-    ///   2. `[writeable]` Option Account to burn from
-    ///   3. `[]` Authority of Option Account
-    ///   4. `[writeable]` Underlying Asset Pool
-    ///   5. `[writeable]` Underlying Asset Destination
-    ///   6. `[]` Program Derived Address with authority for Option Mint
-    ///   7. `[]` SPL Token Program
+    ///   0. `[]` Sysvar clock
+    ///   1. `[]` SPL Token Program
+    ///   2. `[writeable]` Option Market
+    ///   3. `[writeable]` Exerciser Quote Asset Source
+    ///   4. `[signer]` Exerciser Authority
+    ///   5. `[writeable]` Option Writer Quote Asset Destination
+    ///   6. `[writeable]` Exerciser Underlying Asset Destination
+    ///   7. `[writeable]` Underlying Asset Pool
+    ///   8. `[]` Option Mint Authority
+    ///   9. `[writeable]` Option Mint
+    ///   10. `[writeable]` Option Token Account
+    ///   11. `[signer]` Option Token Account Authority
     ExerciseCoveredCall {
         option_writer: OptionWriter,
         bump_seed: u8,
     },
     /// Close a single option contract post expiration
-    /// 
-    /// 
+    /// 0. `[]` Sysvar clock
+    /// 1. `[]` SPL Token Program
+    /// 2. `[writeable]` Option Market
+    /// 3. `[writeable]` Option Writer Underlying Asset Destination
+    /// 4. `[writeable]` Underlying Asset Pool
+    /// 5. `[]` Option Mint Authority
+    /// 6. `[]` Option Mint
     ClosePostExpiration {
         option_writer: OptionWriter,
         bump_seed: u8,
