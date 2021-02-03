@@ -11,7 +11,6 @@ use solana_program::{
     program_pack::Pack,
     pubkey::Pubkey,
     sysvar::Sysvar,
-    msg
 };
 use spl_token::{
     instruction as token_instruction,
@@ -339,6 +338,55 @@ impl Processor {
         Ok(())
     }
 
+    pub fn process_close_post_expiration(accounts: &[AccountInfo], option_writer: OptionWriter, bump_seed: u8) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let clock_sysvar_info = next_account_info(account_info_iter)?;
+        let spl_program_acct = next_account_info(account_info_iter)?;
+        let option_market_acct = next_account_info(account_info_iter)?;
+        let option_writer_underlying_asset_acct = next_account_info(account_info_iter)?;
+        let market_underlying_asset_pool_acct = next_account_info(account_info_iter)?;
+        let options_spl_authority_acct = next_account_info(account_info_iter)?;
+        let option_mint_acct = next_account_info(account_info_iter)?;
+
+        let mut option_market_data = option_market_acct.try_borrow_mut_data()?;
+        let option_market = OptionMarket::unpack(&option_market_data)?;
+
+        let clock = Clock::from_account_info(&clock_sysvar_info)?;
+        // Verify that the OptionMarket has already expired
+        if clock.unix_timestamp <= option_market.expiration_unix_timestamp {
+            return Err(OptionsError::OptionMarketNotExpired.into());
+        }
+
+        // transfer underlying asset from the pool to the option writers's account
+        let transfer_underlying_tokens_ix = token_instruction::transfer(
+            &spl_program_acct.key,
+            &market_underlying_asset_pool_acct.key,
+            &option_writer_underlying_asset_acct.key,
+            &options_spl_authority_acct.key,
+            &[],
+            option_market.amount_per_contract,
+        )?;
+        invoke_signed(
+            &transfer_underlying_tokens_ix,
+            &[
+                market_underlying_asset_pool_acct.clone(),
+                option_writer_underlying_asset_acct.clone(),
+                options_spl_authority_acct.clone(),
+                spl_program_acct.clone(),
+            ],
+            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]]
+        )?;
+
+        // Remove the option writer and decrement the 
+        let option_market = OptionMarket::remove_option_writer(option_market, option_writer)?;
+
+        OptionMarket::pack(
+            option_market,
+            &mut option_market_data,
+        )?;
+        Ok(())
+    }
+
     pub fn process(program_id: &Pubkey, accounts: &[AccountInfo], input: &[u8]) -> ProgramResult {
         let instruction = OptionsInstruction::unpack(input)?;
 
@@ -362,6 +410,9 @@ impl Processor {
             }
             OptionsInstruction::ExerciseCoveredCall { option_writer, bump_seed } => {
                 Self::process_exercise_covered_call(accounts, option_writer, bump_seed)
+            }
+            OptionsInstruction::ClosePostExpiration { option_writer, bump_seed } => {
+                Self::process_close_post_expiration(accounts, option_writer, bump_seed)
             }
         }
     }
