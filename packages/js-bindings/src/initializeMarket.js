@@ -1,5 +1,5 @@
 import { struct, u16, nu64, ns64 } from 'buffer-layout';
-import { PublicKey, TransactionInstruction } from '@solana/web3.js'
+import { PublicKey, TransactionInstruction, SYSVAR_CLOCK_PUBKEY, SYSVAR_RENT_PUBKEY } from '@solana/web3.js'
 
 // TODO create struct for initialize market date
 /**
@@ -24,14 +24,13 @@ export const INITIALIZE_MARKET_LAYOUT = struct([
 export const INTRUCTION_TAG_LAYOUT = u16('instructionTag');
 
 
-const initializeMarket = ({
+const initializeMarket = async ({
   programId, // the deployed program account
-  underlyingAssetAccount, // user's account to get underlying asset from
-  quoteAssetAccount, // user's account to get quote asset from
-  optionMintAccount, // user's account to send minted tokens to
-  optionMarketDataAccount, // ??? - the program's data account...?
-  optionMintAuthority, // ??? - need to ask
-  underlyingAssetPoolAccount, // ??? - need to ask
+  underlyingAssetAccount, // user's account to get underlying asset from (web3 Publickey)
+  quoteAssetAccount, // user's account to get quote asset from  (web3 Publickey)
+  optionMintAccount, // user's account to send minted tokens to  (web3 Publickey)
+  optionMarketDataAccount, // ??? - the program's data account...?  (web3 Publickey)
+  underlyingAssetPoolAccount, // ??? - need to ask  (web3 Publickey)
   amountPerContract,
   strikePrice,
   expirationUnixTimestamp,
@@ -54,14 +53,21 @@ const initializeMarket = ({
   // concatentate the tag with the data
   const data = Buffer.concat([tagBuffer, initializeMarketBuffer]);
 
+
+  // Generate the program derived address needed
+  const [optionsSplAuthorityPubkey, _bumpSeed] = await PublicKey.findProgramAddress([optionMintAccount.toBuffer()], programId);
+
   const instruction = new TransactionInstruction({
+    // The order of the accounts must match the instruction.rs implementation
     keys: [
-      underlyingAssetAccount,
-      quoteAssetAccount,
-      optionMintAccount,
-      optionMarketDataAccount,
-      optionMintAuthority,
-      underlyingAssetPoolAccount,
+      { pubkey: underlyingAssetAccount, isSigner: false, isWritable: false },
+      { pubkey: quoteAssetAccount, isSigner: false, isWritable: false },
+      { pubkey: optionMintAccount, isSigner: false, isWritable: true },
+      { pubkey: optionMarketDataAccount, isSigner: false, isWritable: true },
+      { pubkey: optionsSplAuthorityPubkey, isSigner: false, isWritable: false },
+      { pubkey: underlyingAssetPoolAccount, isSigner: false, isWritable: false },
+      { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+      { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
     ],
     data,
     programId,
