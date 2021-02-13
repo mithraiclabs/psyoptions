@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "@solana/web3.js": "^0.91.2",
+    "buffer-layout": "^1.2.0",
     "rollup": "^2.39.0"
   },
   "devDependencies": {

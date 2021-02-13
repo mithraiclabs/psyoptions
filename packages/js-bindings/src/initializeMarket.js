@@ -1,19 +1,28 @@
-import { TransactionInstruction } from '@solana/web3.js'
+import { struct, u16, nu64, ns64 } from 'buffer-layout';
+import { PublicKey, TransactionInstruction } from '@solana/web3.js'
 
-/*
-// One way to convert to uint64 bytes if you can't find a better way:
-const n = 123456789
-const hex = n.toString(16) // e.g. 75bcd15
-const padding = hex.length + hex.length % 2 // 1 or 0 depending on length
-const hexBytes = hex
-  .padStart(padding, '0')
-  .padEnd(16, '0')
-  .match(/.{2}/g)
-  .map(hex => parseInt(hex, 16))
-const leBytes = Uint8Array.from(hexBytes)
+// TODO create struct for initialize market date
+/**
+ * 
+ * OptionsInstruction::InitializeMarket {
+ *      /// The amount of the **underlying asset** that derives a single contract
+ *      amount_per_contract: u64,
+ *      /// The strike price for the new market
+ *      strike_price: u64,
+ *      /// The Unix timestamp at which the contracts in this market expire
+ *      expiration_unix_timestamp: UnixTimestamp,
+ *  }
+ * 
+ * UnixTimestamp is really an alias for i64 type.
+ */
+export const INITIALIZE_MARKET_LAYOUT = struct([
+  nu64('amountPerContract'),
+  nu64('strikePrice'),
+  ns64('expirationUnixTimestamp')
+]);
 
-console.log(leBytes)
-*/
+export const INTRUCTION_TAG_LAYOUT = u16('instructionTag');
+
 
 const initializeMarket = ({
   programId, // the deployed program account
@@ -27,8 +36,23 @@ const initializeMarket = ({
   strikePrice,
   expirationUnixTimestamp,
 }) => {
-  // Convert apc, strike price, expiration to byte arrays and push them to data
-  const data = new Uint8Array(25)
+  // Create a u8 buffer that conforms to the InitializeMarket structure
+  const initializeMarketBuffer = Buffer.alloc(INITIALIZE_MARKET_LAYOUT.span)
+  INITIALIZE_MARKET_LAYOUT.encode({
+    amountPerContract,
+    strikePrice,
+    expirationUnixTimestamp
+  }, initializeMarketBuffer, 0);
+
+  /*
+   * Generate the instruction tag. 0 is the tag that denotes the InitializeMarket instructions
+   * The tags can be found the OptionInstruction.unpack function (instruction.rs)
+   */
+  const tagBuffer = Buffer.alloc(INTRUCTION_TAG_LAYOUT.span);
+  INTRUCTION_TAG_LAYOUT.encode(0, tagBuffer, 0);
+
+  // concatentate the tag with the data
+  const data = Buffer.concat([tagBuffer, initializeMarketBuffer]);
 
   const instruction = new TransactionInstruction({
     keys: [
@@ -39,7 +63,7 @@ const initializeMarket = ({
       optionMintAuthority,
       underlyingAssetPoolAccount,
     ],
-    data, // must be turned into base58 before sending I think
+    data,
     programId,
   })
 
