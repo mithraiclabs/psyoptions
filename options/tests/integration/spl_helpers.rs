@@ -68,13 +68,13 @@ pub fn create_spl_mint_account(
   let mut transaction = Transaction::new_unsigned(message.clone());
 
   let (blockhash, _, _) = client
-    .get_recent_blockhash_with_commitment(CommitmentConfig::recent())?
+    .get_recent_blockhash_with_commitment(CommitmentConfig::processed())?
     .value;
   transaction.try_sign(&[payer_keys, spl_mint], blockhash)?;
 
   client.send_and_confirm_transaction_with_spinner_and_commitment(
     &transaction,
-    CommitmentConfig::recent(),
+    CommitmentConfig::processed(),
   )?;
   println!(
     "Created and Initialized SPL mint account {}",

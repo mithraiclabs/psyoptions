@@ -16,7 +16,7 @@ use spl_token::state::Mint;
 fn test_integration() {
     let client = RpcClient::new_with_commitment(
         "http://localhost:8899".to_string(),
-        CommitmentConfig::recent(),
+        CommitmentConfig::processed(),
     );
     let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
 
@@ -112,7 +112,7 @@ fn test_integration() {
 fn should_fail_with_same_quote_underlying_assets() {
     let client = RpcClient::new_with_commitment(
         "http://localhost:8899".to_string(),
-        CommitmentConfig::recent(),
+        CommitmentConfig::processed(),
     );
     let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
 

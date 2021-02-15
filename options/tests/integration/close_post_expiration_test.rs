@@ -14,10 +14,10 @@ use solana_sdk::{
   commitment_config::CommitmentConfig,
   signature::Signer,
 };
-use spl_token::state::{Account, Mint};
+use spl_token::state::{Account};
 use std::{
   thread,
-  time::{Duration, SystemTime, UNIX_EPOCH},
+  time::{Duration},
 };
 use serial_test::serial;
 
@@ -27,7 +27,7 @@ pub fn test_sucessful_close_post_expiration() {
   // Create the options market
   let client = RpcClient::new_with_commitment(
     "http://localhost:8899".to_string(),
-    CommitmentConfig::recent(),
+    CommitmentConfig::processed(),
   );
   let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
   let amount_per_contract = 100;
@@ -172,12 +172,11 @@ pub fn test_panic_when_expiration_has_not_passed() {
   // Create the options market
   let client = RpcClient::new_with_commitment(
     "http://localhost:8899".to_string(),
-    CommitmentConfig::recent(),
+    CommitmentConfig::processed(),
   );
   let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
   let amount_per_contract = 100;
   let strike_price = 5;
-  let now = SystemTime::now();
   let expiry = 999_999_999_999_999_999;
   // Create the option market
   let (

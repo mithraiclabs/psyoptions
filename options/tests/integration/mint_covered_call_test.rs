@@ -18,7 +18,7 @@ use serial_test::serial;
 fn test_mint_covered_call_integration() {
   let client = RpcClient::new_with_commitment(
     "http://localhost:8899".to_string(),
-    CommitmentConfig::recent(),
+    CommitmentConfig::processed(),
   );
   let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
   let amount_per_contract = 100;
@@ -143,7 +143,7 @@ fn test_mint_covered_call_integration() {
 fn test_mint_covered_call_fail_post_expiry() {
   let client = RpcClient::new_with_commitment(
     "http://localhost:8899".to_string(),
-    CommitmentConfig::recent(),
+    CommitmentConfig::processed(),
   );
   let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
   let amount_per_contract = 100;
@@ -232,7 +232,7 @@ fn test_mint_covered_call_fail_post_expiry() {
 fn test_when_quote_asset_mint_dont_match_contract_market() {
   let client = RpcClient::new_with_commitment(
     "http://localhost:8899".to_string(),
-    CommitmentConfig::recent(),
+    CommitmentConfig::processed(),
   );
   let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
   let amount_per_contract = 100;

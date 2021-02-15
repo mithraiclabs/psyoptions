@@ -239,7 +239,7 @@ pub fn airdrop_lamports(client: &RpcClient, faucet_addr: &SocketAddr, id: &Keypa
         client
             .send_and_confirm_transaction_with_spinner_and_commitment(
                 &transaction,
-                CommitmentConfig::recent(),
+                CommitmentConfig::processed(),
             )
             .unwrap();
     }
@@ -310,7 +310,7 @@ pub fn load_bpf_program(client: &RpcClient, name: &str) -> Pubkey {
 
     println!("Preparing program account {}", account_to_init.pubkey());
     let (blockhash, _, _) = client
-        .get_recent_blockhash_with_commitment(CommitmentConfig::recent())
+        .get_recent_blockhash_with_commitment(CommitmentConfig::processed())
         .unwrap()
         .value;
     let mut initial_transaction = Transaction::new_unsigned(initial_message.clone());
@@ -320,13 +320,13 @@ pub fn load_bpf_program(client: &RpcClient, name: &str) -> Pubkey {
     client
         .send_and_confirm_transaction_with_spinner_and_commitment(
             &initial_transaction,
-            CommitmentConfig::recent(),
+            CommitmentConfig::processed(),
         )
         .unwrap();
 
     println!("Writing program data (this may take a while)...");
     let (blockhash, _, last_valid_slot) = client
-        .get_recent_blockhash_with_commitment(CommitmentConfig::recent())
+        .get_recent_blockhash_with_commitment(CommitmentConfig::processed())
         .unwrap()
         .value;
     let mut write_transactions = vec![];
@@ -341,7 +341,7 @@ pub fn load_bpf_program(client: &RpcClient, name: &str) -> Pubkey {
         &client,
         write_transactions,
         &[&payer_keys, &account_to_init],
-        CommitmentConfig::recent(),
+        CommitmentConfig::processed(),
         last_valid_slot,
     )
     .unwrap();
@@ -350,7 +350,7 @@ pub fn load_bpf_program(client: &RpcClient, name: &str) -> Pubkey {
 
     println!("Finalizing program");
     let (blockhash, _, _) = client
-        .get_recent_blockhash_with_commitment(CommitmentConfig::recent())
+        .get_recent_blockhash_with_commitment(CommitmentConfig::processed())
         .unwrap()
         .value;
     let mut final_tx = Transaction::new_unsigned(final_message.clone());
@@ -360,7 +360,7 @@ pub fn load_bpf_program(client: &RpcClient, name: &str) -> Pubkey {
     client
         .send_and_confirm_transaction_with_spinner_and_commitment(
             &final_tx,
-            CommitmentConfig::recent(),
+            CommitmentConfig::processed(),
         )
         .unwrap();
     println!("Loaded program {}", account_to_init.pubkey());
@@ -377,7 +377,7 @@ pub fn send_and_confirm_transaction(
     let message = Message::new(&[instruction], Some(&payer_key));
 
     let (blockhash, _, _) = client
-        .get_recent_blockhash_with_commitment(CommitmentConfig::recent())?
+        .get_recent_blockhash_with_commitment(CommitmentConfig::processed())?
         .value;
 
     let mut transaction = Transaction::new_unsigned(message.clone());
@@ -385,7 +385,7 @@ pub fn send_and_confirm_transaction(
 
     client.send_and_confirm_transaction_with_spinner_and_commitment(
         &transaction,
-        CommitmentConfig::recent(),
+        CommitmentConfig::processed(),
     )?;
     Ok(())
 }

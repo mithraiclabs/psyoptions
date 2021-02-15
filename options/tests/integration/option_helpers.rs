@@ -38,7 +38,7 @@ fn create_options_market(
     let message = Message::new(&[instruction], Some(&payer_keys.pubkey()));
 
     let (blockhash, _, _) = client
-        .get_recent_blockhash_with_commitment(CommitmentConfig::recent())?
+        .get_recent_blockhash_with_commitment(CommitmentConfig::processed())?
         .value;
 
     let mut transaction = Transaction::new_unsigned(message.clone());
@@ -46,7 +46,7 @@ fn create_options_market(
 
     client.send_and_confirm_transaction_with_spinner_and_commitment(
         &transaction,
-        CommitmentConfig::recent(),
+        CommitmentConfig::processed(),
     )?;
     println!("Created Options Market account {}", options_market.pubkey());
 
