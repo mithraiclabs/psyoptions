@@ -57,8 +57,9 @@ const buildAndInitMarket = async () => {
   let expirationTimeStamp = new Date();
   expirationTimeStamp.setDate(expirationTimeStamp.getDate() + 14);
 
+  let optionMarketAccount;
   try {
-    initializeMarket(
+    optionMarketAccount = await initializeMarket(
       connection, 
       payer, 
       optionsProgramId, 
@@ -71,6 +72,11 @@ const buildAndInitMarket = async () => {
   } catch (error) {
     console.error('initializeMarket Error: ', error);
   }
+  console.log(`Successfully initialized market\n
+  OptionMarket data key: ${optionMarketAccount.publicKey}\n
+  Underlying Asset key: ${underlyingAsset.publicKey}\n
+  Quote Asset key: ${quoteAsset.publicKey}
+  `);
 }
 
 buildAndInitMarket();

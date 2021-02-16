@@ -173,10 +173,11 @@ export const initializeMarket = async (
   const signers = [payer, optionMintAccount, underlyingAssetPoolAccount, optionMarketDataAccount];
 
 
-  return sendAndConfirmTransaction(connection, transaction, signers, {
+  await sendAndConfirmTransaction(connection, transaction, signers, {
     skipPreflight: false,
     commitment: 'recent',
     preflightCommitment: 'recent',
-  })
+  });
 
+  return optionMarketDataAccount;
 }
