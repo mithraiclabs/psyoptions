@@ -9,7 +9,7 @@ import {
   SystemProgram,
   sendAndConfirmTransaction
 } from '@solana/web3.js'
-import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID, Token } from '@solana/spl-token';
 import { OPTION_MARKET_LAYOUT } from './market';
 
 // TODO create struct for initialize market date
@@ -51,6 +51,7 @@ export const initializeMarketInstruction = async ({
   strikePrice,
   expirationUnixTimestamp,
 }) => {
+  console.log('*** optionMintAccount3', optionMintAccount);
   // Create a u8 buffer that conforms to the InitializeMarket structure
   const initializeMarketBuffer = Buffer.alloc(INITIALIZE_MARKET_LAYOUT.span)
   INITIALIZE_MARKET_LAYOUT.encode({
@@ -104,10 +105,13 @@ export const initializeMarket = async (
   strikePrice,
   expirationUnixTimestamp,
 ) => {
+  if ( !(programId instanceof PublicKey))
+    programId = new PublicKey(programId);
 
   const optionMintAccount = new Account();
   const optionMarketDataAccount = new Account();
   const underlyingAssetPoolAccount = new Account();
+  console.log('*** optionMintAccount', optionMintAccount.publicKey);
 
   const transaction = new Transaction();
 
@@ -122,7 +126,7 @@ export const initializeMarket = async (
       newAccountPubkey: optionMintAccount.publicKey,
       lamports: optionMintRentBalance,
       space: MintLayout.span,
-      programId: TOKEN_PROGRAM_ID
+      programId: programId
     })
   )
 
@@ -148,6 +152,7 @@ export const initializeMarket = async (
     })
   );
 
+  console.log('*** optionMintAccount2', optionMintAccount.publicKey);
   transaction.add(
     initializeMarketInstruction(
       programId,

@@ -6,6 +6,11 @@
 import { Account, Connection, PublicKey, Transaction } from '@solana/web3.js';
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { initializeMarket } from '../packages/js-bindings/src/index.js';
+const readline = require('readline');
+
+const sleep = (ms) => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};
 
 const createSplAssets = async (connection, payer) => {
   const underlyingAssetAccount = new PublicKey();
@@ -19,12 +24,23 @@ const createSplAssets = async (connection, payer) => {
 const buildAndInitMarket = async (optionsProgramId) => {
   // Create a connection to the local Solana cluster
   const connection = new Connection('http://localhost:8899');
-  // Generate the payer / authority account that will set everything up
+  // Generate the payer / authority account that will set everything up (with 1,000 SOL)
   const payer = new Account();
+  const lamports = 10**12;
   try {
-    await connection.requestAirdrop(payer.publicKey, 10**6);
+    await connection.requestAirdrop(payer.publicKey, lamports);
   } catch (error) {
     console.error('Airdrop Error: ', error);
+  }
+  let retries = 10;
+  for (;;) {
+    await sleep(500);
+    if (lamports == (await connection.getBalance(payer.publicKey))) {
+      return account;
+    }
+    if (--retries <= 0) {
+      break;
+    }
   }
 
   let underlyingAsset, quoteAsset;
@@ -57,4 +73,11 @@ const buildAndInitMarket = async (optionsProgramId) => {
   }
 }
 
-buildAndInitMarket('4Regns6jCJCpcc5qkTzKnxVV9AX5fZQgtmqhhaRj3tgi');
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+rl.question('Please paste your options program address\n', (optionsProgramId) => {
+  buildAndInitMarket(optionsProgramId);
+});
