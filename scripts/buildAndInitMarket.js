@@ -6,7 +6,6 @@
 import { Account, Connection, PublicKey, Transaction } from '@solana/web3.js';
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { initializeMarket } from '../packages/js-bindings/src/index.js';
-const readline = require('readline');
 
 const sleep = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -21,7 +20,8 @@ const createSplAssets = async (connection, payer) => {
   return { underlyingAsset, quoteAsset };
 }
 
-const buildAndInitMarket = async (optionsProgramId) => {
+const buildAndInitMarket = async () => {
+  const optionsProgramId = process.argv[2];
   // Create a connection to the local Solana cluster
   const connection = new Connection('http://localhost:8899');
   // Generate the payer / authority account that will set everything up (with 1,000 SOL)
@@ -73,11 +73,4 @@ const buildAndInitMarket = async (optionsProgramId) => {
   }
 }
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
-
-rl.question('Please paste your options program address\n', (optionsProgramId) => {
-  buildAndInitMarket(optionsProgramId);
-});
+buildAndInitMarket();

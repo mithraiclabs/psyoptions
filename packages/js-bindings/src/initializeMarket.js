@@ -131,7 +131,7 @@ export const initializeMarket = async (
       newAccountPubkey: optionMintAccount.publicKey,
       lamports: optionMintRentBalance,
       space: MintLayout.span,
-      programId: programId
+      programId: TOKEN_PROGRAM_ID
     })
   )
 
