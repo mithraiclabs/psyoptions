@@ -35,7 +35,7 @@ export const INITIALIZE_MARKET_LAYOUT = struct([
 export const INTRUCTION_TAG_LAYOUT = u16('instructionTag');
 
 
-export const initializeMarketInstruction = async ({
+export const initializeMarketInstruction = async (
   programId, // the deployed program account
   // The public key of the SPL Token Mint for the underlying asset
   underlyingAssetMint, 
@@ -50,7 +50,7 @@ export const initializeMarketInstruction = async ({
   amountPerContract,
   strikePrice,
   expirationUnixTimestamp,
-}) => {
+) => {
   console.log('*** optionMintAccount3', optionMintAccount);
   // Create a u8 buffer that conforms to the InitializeMarket structure
   const initializeMarketBuffer = Buffer.alloc(INITIALIZE_MARKET_LAYOUT.span)
