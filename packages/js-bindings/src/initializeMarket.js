@@ -90,7 +90,7 @@ export const initializeMarketInstruction = async (
       { pubkey: optionsSplAuthorityPubkey, isSigner: false, isWritable: false },
       { pubkey: underlyingAssetPoolAccount, isSigner: false, isWritable: false },
       { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
-      { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
+      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     ],
     data: data,
     programId: programId
