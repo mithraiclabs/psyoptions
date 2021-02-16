@@ -51,7 +51,7 @@ export const initializeMarketInstruction = async (
   strikePrice,
   expirationUnixTimestamp,
 ) => {
-  console.log('*** optionMintAccount3', optionMintAccount);
+  
   // Create a u8 buffer that conforms to the InitializeMarket structure
   const initializeMarketBuffer = Buffer.alloc(INITIALIZE_MARKET_LAYOUT.span)
   INITIALIZE_MARKET_LAYOUT.encode({
@@ -72,7 +72,13 @@ export const initializeMarketInstruction = async (
 
 
   // Generate the program derived address needed
-  const [optionsSplAuthorityPubkey, _bumpSeed] = await PublicKey.findProgramAddress([optionMintAccount.toBuffer()], programId);
+  let optionsSplAuthorityPubkey;
+  try {
+    const [tmpOptionsSplAuthorityPubkey, _bumpSeed] = await PublicKey.findProgramAddress([optionMintAccount.toBuffer()], programId);
+    optionsSplAuthorityPubkey = tmpOptionsSplAuthorityPubkey;
+  } catch (error) {
+    console.error('findProgramAddress Error: ', error);
+  }
 
   const instruction = new TransactionInstruction({
     // The order of the accounts must match the instruction.rs implementation
@@ -86,8 +92,8 @@ export const initializeMarketInstruction = async (
       { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
       { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
     ],
-    data,
-    programId,
+    data: data,
+    programId: programId
   })
 
   return instruction
@@ -111,7 +117,6 @@ export const initializeMarket = async (
   const optionMintAccount = new Account();
   const optionMarketDataAccount = new Account();
   const underlyingAssetPoolAccount = new Account();
-  console.log('*** optionMintAccount', optionMintAccount.publicKey);
 
   const transaction = new Transaction();
 
@@ -152,20 +157,19 @@ export const initializeMarket = async (
     })
   );
 
-  console.log('*** optionMintAccount2', optionMintAccount.publicKey);
-  transaction.add(
-    initializeMarketInstruction(
-      programId,
-      underlyingAssetMint,
-      quoteAssetMint,
-      optionMintAccount.publicKey,
-      optionMarketDataAccount.publicKey,
-      underlyingAssetPoolAccount.publicKey,
-      amountPerContract,
-      strikePrice,
-      expirationUnixTimestamp
-    )
+  const initMarketInstruction = await initializeMarketInstruction(
+    programId,
+    underlyingAssetMint,
+    quoteAssetMint,
+    optionMintAccount.publicKey,
+    optionMarketDataAccount.publicKey,
+    underlyingAssetPoolAccount.publicKey,
+    amountPerContract,
+    strikePrice,
+    expirationUnixTimestamp
   );
+
+  transaction.add(initMarketInstruction);
 
   const signers = [payer];
 
