@@ -1,5 +1,14 @@
 import { struct, u16, nu64, ns64 } from 'buffer-layout';
-import { PublicKey, TransactionInstruction, SYSVAR_CLOCK_PUBKEY, SYSVAR_RENT_PUBKEY } from '@solana/web3.js'
+import { 
+  PublicKey, 
+  TransactionInstruction, 
+  SYSVAR_CLOCK_PUBKEY, 
+  SYSVAR_RENT_PUBKEY, 
+  Account, 
+  Transaction,
+  SystemProgram
+} from '@solana/web3.js'
+import { MintLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
 // TODO create struct for initialize market date
 /**
@@ -24,13 +33,18 @@ export const INITIALIZE_MARKET_LAYOUT = struct([
 export const INTRUCTION_TAG_LAYOUT = u16('instructionTag');
 
 
-const initializeMarket = async ({
+export const initializeMarketInstruction = async ({
   programId, // the deployed program account
-  underlyingAssetAccount, // user's account to get underlying asset from (web3 Publickey)
-  quoteAssetAccount, // user's account to get quote asset from  (web3 Publickey)
-  optionMintAccount, // user's account to send minted tokens to  (web3 Publickey)
-  optionMarketDataAccount, // ??? - the program's data account...?  (web3 Publickey)
-  underlyingAssetPoolAccount, // ??? - need to ask  (web3 Publickey)
+  // The public key of the SPL Token Mint for the underlying asset
+  underlyingAssetMint, 
+  // The public key of the SPL Token Mint for the quote asset
+  quoteAssetMint,
+  // The public key of the SPL Token Mint for the new option SPL token
+  optionMintAccount, 
+  // The public key for a new Account that will store the data for the options market
+  optionMarketDataAccount, 
+  // The public key for a new Account that will be the underlying asset pool
+  underlyingAssetPoolAccount,
   amountPerContract,
   strikePrice,
   expirationUnixTimestamp,
@@ -60,8 +74,8 @@ const initializeMarket = async ({
   const instruction = new TransactionInstruction({
     // The order of the accounts must match the instruction.rs implementation
     keys: [
-      { pubkey: underlyingAssetAccount, isSigner: false, isWritable: false },
-      { pubkey: quoteAssetAccount, isSigner: false, isWritable: false },
+      { pubkey: underlyingAssetMint, isSigner: false, isWritable: false },
+      { pubkey: quoteAssetMint, isSigner: false, isWritable: false },
       { pubkey: optionMintAccount, isSigner: false, isWritable: true },
       { pubkey: optionMarketDataAccount, isSigner: false, isWritable: true },
       { pubkey: optionsSplAuthorityPubkey, isSigner: false, isWritable: false },
@@ -76,4 +90,48 @@ const initializeMarket = async ({
   return instruction
 }
 
-export { initializeMarket }
+export const initializeMarket = (
+  connection, 
+  payer, 
+  programId, // the deployed program account
+  // The public key of the SPL Token Mint for the underlying asset
+  underlyingAssetMint, 
+  // The public key of the SPL Token Mint for the quote asset
+  quoteAssetMint,
+  amountPerContract,
+  strikePrice,
+  expirationUnixTimestamp,
+  )  => {
+
+    const optionMintAccount = new Account();
+    const optionMarketDataAccount = new Account();
+    const underlyingAssetPoolAccount = new Account();
+
+    const transaction = new Transaction();
+
+    // Create the Option Mint Account with rent exemption
+    // Allocate memory for the account
+    const optionMintRentBalance = await Token.getMinBalanceRentForExemptMint(
+      connection,
+    );
+    transaction.add(
+      SystemProgram.createAccount({
+        fromPubkey: payer.publicKey,
+        newAccountPubkey: optionMintAccount.publicKey,
+        lamports: optionMintRentBalance,
+        space: MintLayout.span,
+        programId: TOKEN_PROGRAM_ID
+      })
+    )
+
+    transaction.add(
+      SystemProgram.createAccount({
+        fromPubkey: payer.publicKey,
+        newAccountPubkey: optionMarketDataAccount.publicKey,
+        lamports: 
+      })
+    )
+
+
+
+}
