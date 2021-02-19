@@ -9,12 +9,7 @@ import {
   sendAndConfirmTransaction,
   Connection,
 } from '@solana/web3.js';
-import {
-  AccountLayout,
-  MintLayout,
-  TOKEN_PROGRAM_ID,
-  Token as SplToken,
-} from '@solana/spl-token';
+import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { OPTION_MARKET_LAYOUT } from './market';
 
 // TODO create struct for initialize market date
@@ -86,6 +81,7 @@ export const initializeMarketInstruction = async (
     );
     optionsSplAuthorityPubkey = tmpOptionsSplAuthorityPubkey;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('findProgramAddress Error: ', error);
   }
 
@@ -105,8 +101,8 @@ export const initializeMarketInstruction = async (
       { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
       { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     ],
-    data: data,
-    programId: programId,
+    data,
+    programId,
   });
 
   return instruction;
@@ -115,7 +111,7 @@ export const initializeMarketInstruction = async (
 export const initializeMarket = async (
   connection: Connection,
   payer: Account,
-  programId: PublicKey, // the deployed program account
+  programId: PublicKey | string, // the deployed program account
   // The public key of the SPL Token Mint for the underlying asset
   underlyingAssetMint: PublicKey,
   // The public key of the SPL Token Mint for the quote asset
@@ -124,7 +120,8 @@ export const initializeMarket = async (
   strikePrice: number,
   expirationUnixTimestamp: number,
 ) => {
-  if (!(programId instanceof PublicKey)) programId = new PublicKey(programId);
+  const programPubkey =
+    programId instanceof PublicKey ? programId : new PublicKey(programId);
 
   const optionMintAccount = new Account();
   const optionMarketDataAccount = new Account();
@@ -156,7 +153,7 @@ export const initializeMarket = async (
       newAccountPubkey: optionMarketDataAccount.publicKey,
       lamports: optionMarketDataRentBalance,
       space: OPTION_MARKET_LAYOUT.span,
-      programId: programId,
+      programId: programPubkey,
     }),
   );
 
@@ -174,7 +171,7 @@ export const initializeMarket = async (
   );
 
   const initMarketInstruction = await initializeMarketInstruction(
-    programId,
+    programPubkey,
     underlyingAssetMint,
     quoteAssetMint,
     optionMintAccount.publicKey,

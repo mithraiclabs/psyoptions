@@ -18,6 +18,7 @@
     }
   },
   "rules": {
+    "operator-linebreak": "off",
     "object-curly-newline": "off",
     "prettier/prettier": ["error", { "singleQuote": true }],
     "import/extensions": [
