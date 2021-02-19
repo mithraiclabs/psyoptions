@@ -6,8 +6,8 @@ import {
   Transaction,
   TransactionInstruction,
 } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
+import { TOKEN_PROGRAM_ID } from './utils';
 
 export const MINT_COVERED_CALL_LAYOUT = struct([u8('bumpSeed')]);
 

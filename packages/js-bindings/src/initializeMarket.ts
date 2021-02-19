@@ -8,9 +8,10 @@ import {
   SystemProgram,
   Connection,
 } from '@solana/web3.js';
-import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { AccountLayout, MintLayout } from '@solana/spl-token';
 import { OPTION_MARKET_LAYOUT } from './market';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
+import { TOKEN_PROGRAM_ID } from './utils';
 
 /**
  *
