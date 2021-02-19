@@ -1,4 +1,4 @@
-import { struct, u16, nu64, ns64 } from 'buffer-layout';
+import { struct, nu64, ns64 } from 'buffer-layout';
 import {
   PublicKey,
   TransactionInstruction,
@@ -11,8 +11,8 @@ import {
 } from '@solana/web3.js';
 import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { OPTION_MARKET_LAYOUT } from './market';
+import { INTRUCTION_TAG_LAYOUT } from './layout';
 
-// TODO create struct for initialize market date
 /**
  *
  * OptionsInstruction::InitializeMarket {
@@ -31,8 +31,6 @@ export const INITIALIZE_MARKET_LAYOUT = struct([
   nu64('strikePrice'),
   ns64('expirationUnixTimestamp'),
 ]);
-
-export const INTRUCTION_TAG_LAYOUT = u16('instructionTag');
 
 export const initializeMarketInstruction = async (
   programId: PublicKey, // the deployed program account
