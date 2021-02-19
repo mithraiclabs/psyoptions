@@ -7,12 +7,13 @@ import {
   Transaction,
   SystemProgram,
   sendAndConfirmTransaction,
+  Connection,
 } from '@solana/web3.js';
 import {
   AccountLayout,
   MintLayout,
   TOKEN_PROGRAM_ID,
-  Token,
+  Token as SplToken,
 } from '@solana/spl-token';
 import { OPTION_MARKET_LAYOUT } from './market';
 
@@ -39,20 +40,20 @@ export const INITIALIZE_MARKET_LAYOUT = struct([
 export const INTRUCTION_TAG_LAYOUT = u16('instructionTag');
 
 export const initializeMarketInstruction = async (
-  programId, // the deployed program account
+  programId: PublicKey, // the deployed program account
   // The public key of the SPL Token Mint for the underlying asset
-  underlyingAssetMint,
+  underlyingAssetMint: PublicKey,
   // The public key of the SPL Token Mint for the quote asset
-  quoteAssetMint,
+  quoteAssetMint: PublicKey,
   // The public key of the SPL Token Mint for the new option SPL token
-  optionMintAccount,
+  optionMintAccount: PublicKey,
   // The public key for a new Account that will store the data for the options market
-  optionMarketDataAccount,
+  optionMarketDataAccount: PublicKey,
   // The public key for a new Account that will be the underlying asset pool
-  underlyingAssetPoolAccount,
-  amountPerContract,
-  strikePrice,
-  expirationUnixTimestamp,
+  underlyingAssetPoolAccount: PublicKey,
+  amountPerContract: number,
+  strikePrice: number,
+  expirationUnixTimestamp: number,
 ) => {
   // Create a u8 buffer that conforms to the InitializeMarket structure
   const initializeMarketBuffer = Buffer.alloc(INITIALIZE_MARKET_LAYOUT.span);
@@ -112,16 +113,16 @@ export const initializeMarketInstruction = async (
 };
 
 export const initializeMarket = async (
-  connection,
-  payer,
-  programId, // the deployed program account
+  connection: Connection,
+  payer: Account,
+  programId: PublicKey, // the deployed program account
   // The public key of the SPL Token Mint for the underlying asset
-  underlyingAssetMint,
+  underlyingAssetMint: PublicKey,
   // The public key of the SPL Token Mint for the quote asset
-  quoteAssetMint,
-  amountPerContract,
-  strikePrice,
-  expirationUnixTimestamp,
+  quoteAssetMint: PublicKey,
+  amountPerContract: number,
+  strikePrice: number,
+  expirationUnixTimestamp: number,
 ) => {
   if (!(programId instanceof PublicKey)) programId = new PublicKey(programId);
 
@@ -133,8 +134,8 @@ export const initializeMarket = async (
 
   // Create the Option Mint Account with rent exemption
   // Allocate memory for the account
-  const optionMintRentBalance = await Token.getMinBalanceRentForExemptMint(
-    connection,
+  const optionMintRentBalance = await connection.getMinimumBalanceForRentExemption(
+    MintLayout.span,
   );
   transaction.add(
     SystemProgram.createAccount({

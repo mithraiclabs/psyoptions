@@ -16,6 +16,7 @@
     "rollup": "^2.39.0"
   },
   "devDependencies": {
+    "@types/bn.js": "^5.1.0",
     "@typescript-eslint/eslint-plugin": "^4.15.1",
     "@typescript-eslint/parser": "^4.15.1",
     "eslint": "^7.20.0",
