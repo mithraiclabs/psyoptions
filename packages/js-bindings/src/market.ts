@@ -6,7 +6,7 @@ const MAX_CONTRACTS = 10;
 export const OPTION_WRITER_LAYOUT = BufferLayout.struct([
   Layout.publicKey('underlyingAssetAcctAddress'),
   Layout.publicKey('quoteAssetAcctAddress'),
-  Layout.publicKey('contractTokenAcctAddress')
+  Layout.publicKey('contractTokenAcctAddress'),
 ]);
 
 export const OPTION_MARKET_LAYOUT = BufferLayout.struct([
@@ -17,5 +17,5 @@ export const OPTION_MARKET_LAYOUT = BufferLayout.struct([
   BufferLayout.ns64('expirationUnixTimestamp'),
   Layout.publicKey('assetPoolAddress'),
   BufferLayout.u16('registryLength'),
-  BufferLayout.seq(OPTION_WRITER_LAYOUT, MAX_CONTRACTS, 'optionWriterRegistry')
+  BufferLayout.seq(OPTION_WRITER_LAYOUT, MAX_CONTRACTS, 'optionWriterRegistry'),
 ]);
