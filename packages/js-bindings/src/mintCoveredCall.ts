@@ -1,7 +1,11 @@
 import { struct, u8 } from 'buffer-layout';
 import {
+  Account,
+  Connection,
   PublicKey,
+  sendAndConfirmTransaction,
   SYSVAR_CLOCK_PUBKEY,
+  Transaction,
   TransactionInstruction,
 } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
@@ -57,5 +61,42 @@ export const mintCoveredCallInstruction = async (
     keys,
     data,
     programId,
+  });
+};
+
+export const mintCoveredCall = async (
+  connection: Connection,
+  programId: PublicKey | string,
+  optionMintAccount: PublicKey,
+  mintedOptionDest: PublicKey,
+  underlyingAssetSrc: PublicKey,
+  underlyingAssetPool: PublicKey,
+  quoteAssetDest: PublicKey,
+  optionMarket: PublicKey,
+  // The OptionWriter's account that has authority over their underlying asset account
+  authorityAccount: Account,
+) => {
+  const programPubkey =
+    programId instanceof PublicKey ? programId : new PublicKey(programId);
+
+  const transaction = new Transaction();
+  const mintInstruction = await mintCoveredCallInstruction(
+    programPubkey,
+    optionMintAccount,
+    mintedOptionDest,
+    underlyingAssetSrc,
+    underlyingAssetPool,
+    quoteAssetDest,
+    optionMarket,
+    authorityAccount.publicKey,
+  );
+  transaction.add(mintInstruction);
+
+  const signers = [authorityAccount];
+
+  return sendAndConfirmTransaction(connection, transaction, signers, {
+    skipPreflight: false,
+    commitment: 'recent',
+    preflightCommitment: 'recent',
   });
 };
