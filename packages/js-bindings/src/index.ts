@@ -1,1 +1,1 @@
-export * from './initializeMarket'
+export * from './initializeMarket';
