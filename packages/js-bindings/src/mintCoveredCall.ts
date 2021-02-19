@@ -1,6 +1,7 @@
 import { struct, u8 } from 'buffer-layout';
 import {
   Account,
+  AccountMeta,
   PublicKey,
   SYSVAR_CLOCK_PUBKEY,
   Transaction,
@@ -37,12 +38,12 @@ export const mintCoveredCallInstruction = async (
    * The tags can be found the OptionInstruction.unpack function (instruction.rs)
    */
   const tagBuffer = Buffer.alloc(INTRUCTION_TAG_LAYOUT.span);
-  INTRUCTION_TAG_LAYOUT.encode(0, tagBuffer, 0);
+  INTRUCTION_TAG_LAYOUT.encode(1, tagBuffer, 0);
 
   // concatentate the tag with the data
   const data = Buffer.concat([tagBuffer, mintCoveredCallBuffer]);
 
-  const keys = [
+  const keys: AccountMeta[] = [
     { pubkey: optionMintAccount, isSigner: false, isWritable: true },
     { pubkey: mintedOptionDest, isSigner: false, isWritable: true },
     { pubkey: underlyingAssetSrc, isSigner: false, isWritable: true },

@@ -3,11 +3,15 @@ import * as Layout from './layout';
 
 const MAX_CONTRACTS = 10;
 
-export const OPTION_WRITER_LAYOUT = BufferLayout.struct([
+export const optionWriterStructArray = [
   Layout.publicKey('underlyingAssetAcctAddress'),
   Layout.publicKey('quoteAssetAcctAddress'),
   Layout.publicKey('contractTokenAcctAddress'),
-]);
+];
+
+export const OPTION_WRITER_LAYOUT = BufferLayout.struct(
+  optionWriterStructArray,
+);
 
 export const OPTION_MARKET_LAYOUT = BufferLayout.struct([
   Layout.publicKey('underlyingAssetMintAddress'),
