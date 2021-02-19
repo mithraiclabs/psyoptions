@@ -3,3 +3,4 @@ target/
 *.so
 *.log
 .DS_Store
+packages/**/dist/**/*

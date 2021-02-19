@@ -2,7 +2,6 @@ import { struct, u16, nu64, ns64 } from 'buffer-layout';
 import { 
   PublicKey, 
   TransactionInstruction, 
-  SYSVAR_CLOCK_PUBKEY, 
   SYSVAR_RENT_PUBKEY, 
   Account, 
   Transaction,
