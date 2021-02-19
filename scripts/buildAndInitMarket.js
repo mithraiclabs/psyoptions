@@ -57,23 +57,25 @@ const buildAndInitMarket = async () => {
   let expirationTimeStamp = new Date();
   expirationTimeStamp.setDate(expirationTimeStamp.getDate() + 14);
 
-  let optionMarketAccount;
-  try {
-    optionMarketAccount = await initializeMarket(
-      connection, 
-      payer, 
-      optionsProgramId, 
-      underlyingAsset.publicKey, 
-      quoteAsset.publicKey,
-      100,
-      5,
-      expirationTimeStamp.getTime()
-    )
-  } catch (error) {
-    console.error('initializeMarket Error: ', error);
-  }
+
+  const { transaction, signers, optionMarketDataAddress } = await initializeMarket(
+    connection, 
+    payer, 
+    optionsProgramId, 
+    underlyingAsset.publicKey, 
+    quoteAsset.publicKey,
+    100,
+    5,
+    expirationTimeStamp.getTime()
+  )
+  await sendAndConfirmTransaction(connection, transaction, signers, {
+    skipPreflight: false,
+    commitment: 'recent',
+    preflightCommitment: 'recent',
+  });
+
   console.log(`Successfully initialized market\n
-  OptionMarket data key: ${optionMarketAccount.publicKey}\n
+  OptionMarket data key: ${optionMarketDataAddress}\n
   Underlying Asset key: ${underlyingAsset.publicKey}\n
   Quote Asset key: ${quoteAsset.publicKey}
   `);
