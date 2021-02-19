@@ -1,9 +1,7 @@
 import { struct, u8 } from 'buffer-layout';
 import {
   Account,
-  Connection,
   PublicKey,
-  sendAndConfirmTransaction,
   SYSVAR_CLOCK_PUBKEY,
   Transaction,
   TransactionInstruction,
@@ -65,7 +63,6 @@ export const mintCoveredCallInstruction = async (
 };
 
 export const mintCoveredCall = async (
-  connection: Connection,
   programId: PublicKey | string,
   optionMintAccount: PublicKey,
   mintedOptionDest: PublicKey,
@@ -94,9 +91,5 @@ export const mintCoveredCall = async (
 
   const signers = [authorityAccount];
 
-  return sendAndConfirmTransaction(connection, transaction, signers, {
-    skipPreflight: false,
-    commitment: 'recent',
-    preflightCommitment: 'recent',
-  });
+  return { transaction, signers };
 };

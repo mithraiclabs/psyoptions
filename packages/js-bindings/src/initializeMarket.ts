@@ -6,7 +6,6 @@ import {
   Account,
   Transaction,
   SystemProgram,
-  sendAndConfirmTransaction,
   Connection,
 } from '@solana/web3.js';
 import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token';
@@ -187,12 +186,9 @@ export const initializeMarket = async (
     underlyingAssetPoolAccount,
     optionMarketDataAccount,
   ];
-
-  await sendAndConfirmTransaction(connection, transaction, signers, {
-    skipPreflight: false,
-    commitment: 'recent',
-    preflightCommitment: 'recent',
-  });
-
-  return optionMarketDataAccount;
+  return {
+    transaction,
+    signers,
+    optionMarketDataAddress: optionMarketDataAccount.publicKey,
+  };
 };
