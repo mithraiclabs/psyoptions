@@ -1,9 +1,11 @@
 {
   "compilerOptions": {
-      "module": "commonjs",
+      "declaration": true,
+      "declarationDir": "dist",
+      "module": "es6",
+      "noImplicitAny": true,
       "esModuleInterop": true,
       "target": "es6",
-      "noImplicitAny": true,
       "moduleResolution": "node",
       "sourceMap": true,
       "outDir": "dist",
