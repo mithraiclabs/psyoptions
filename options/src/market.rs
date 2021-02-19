@@ -9,6 +9,7 @@ use solana_program::{
 use arrayref::{ array_ref, array_refs, array_mut_ref, mut_array_refs };
 
 const PUBLIC_KEY_LEN: usize = 32;
+// If MAX_CONTRACTS is updated, please update the JS buffer layouts in the bindings package
 const MAX_CONTRACTS: usize = 10;
 const REGISTRY_LEN: usize = MAX_CONTRACTS * OptionWriter::LEN;
 

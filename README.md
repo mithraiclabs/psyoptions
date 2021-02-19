@@ -21,6 +21,13 @@ Exploring architectures for options trading on Serum
 4. set a break point (for example `b instruction.rs:157`)
 5. Run tests with `run —test`
 
+## Deploying and creating a market locally
+1. Run local Solana cluster `yarn localnet:up`
+2. Build program `cargo build-bpf --manifest-path options/Cargo.toml`
+3. Deploy program `solana program deploy $PWD/options/target/deploy/solana_options.so`
+    * NOTE: To use the above you must set your Solana config file (usually located at _~/.config/solana/cli/config.yml_) to point to the local cluster AND use an appropriate localnet keypair that has some SOL. Follow the docs to [generate keypair](https://docs.solana.com/wallet-guide/file-system-wallet#generate-a-file-system-wallet-keypair) and [airdrop some tokens](https://docs.solana.com/cli/transfer-tokens#airdrop-some-tokens-to-get-started)
+4. Run the script to build an options market `npx babel-node scripts/buildAndInitMarket.js YOUR_PROGRAM_ADDRESS`
+
 
 ## Potential Improvements (V1)
 * Integration Tests
@@ -33,4 +40,4 @@ Exploring architectures for options trading on Serum
 1. Make sure you're on solana CLI >= 1.5.6 `solana-install init v1.5.6`
 2. Build the program `cargo build-bpf --manifest-path options/Cargo.toml`
 3. Set the target network `solana config set --url https://devnet.solana.com`
-4. Deploy the program `solana program deploy YOUR_KEY_PAIR $PWD/options/target/deploy/solana_options.so --keypair YOUR_KEY_PAIR`
+4. Deploy the program `solana program deploy $PWD/options/target/deploy/solana_options.so`
