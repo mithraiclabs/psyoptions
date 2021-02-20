@@ -187,6 +187,11 @@ export const initializeMarket = async (
     underlyingAssetPoolAccount,
     optionMarketDataAccount,
   ];
+  transaction.feePayer = payer.publicKey;
+  const { blockhash } = await connection.getRecentBlockhash();
+  transaction.recentBlockhash = blockhash;
+  transaction.partialSign(...signers.slice(1));
+
   return {
     transaction,
     signers,

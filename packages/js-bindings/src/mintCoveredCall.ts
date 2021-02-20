@@ -2,6 +2,7 @@ import { struct, u8 } from 'buffer-layout';
 import {
   Account,
   AccountMeta,
+  Connection,
   PublicKey,
   SYSVAR_CLOCK_PUBKEY,
   Transaction,
@@ -64,6 +65,8 @@ export const mintCoveredCallInstruction = async (
 };
 
 export const mintCoveredCall = async (
+  connection: Connection,
+  payer: Account,
   programId: PublicKey | string,
   optionMintAccount: PublicKey,
   mintedOptionDest: PublicKey,
@@ -90,7 +93,11 @@ export const mintCoveredCall = async (
   );
   transaction.add(mintInstruction);
 
-  const signers = [authorityAccount];
+  const signers = [payer, authorityAccount];
+  transaction.feePayer = payer.publicKey;
+  const { blockhash } = await connection.getRecentBlockhash();
+  transaction.recentBlockhash = blockhash;
+  transaction.partialSign(...signers.slice(1));
 
   return { transaction, signers };
 };

@@ -1,6 +1,7 @@
 import {
   Account,
   AccountMeta,
+  Connection,
   PublicKey,
   SYSVAR_CLOCK_PUBKEY,
   Transaction,
@@ -83,6 +84,8 @@ export const exerciseCoveredCallPostExpirationInstruction = async (
 };
 
 export const exerciseCoveredCallPostExpiration = async (
+  connection: Connection,
+  payer: Account,
   programId: PublicKey | string,
   optionWriterUnderlyingAssetKey: PublicKey,
   optionWriterQuoteAssetKey: PublicKey,
@@ -112,7 +115,11 @@ export const exerciseCoveredCallPostExpiration = async (
   );
   transaction.add(exerciseInstruction);
 
-  const signers = [exerciserQuoteAssetAuthorityAccount];
+  const signers = [payer, exerciserQuoteAssetAuthorityAccount];
+  transaction.feePayer = payer.publicKey;
+  const { blockhash } = await connection.getRecentBlockhash();
+  transaction.recentBlockhash = blockhash;
+  transaction.partialSign(...signers.slice(1));
 
   return { transaction, signers };
 };
