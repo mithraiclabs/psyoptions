@@ -62,7 +62,7 @@ impl Pack for OptionWriter {
 /// Data structure that contains all the information needed to maintain an open
 /// option market.
 pub struct OptionMarket {
-    /// The SPL Token mint address for the 
+    /// The SPL Token mint address for the tokens that denote an option contract
     pub option_mint: Pubkey,
     /// The SPL Token Address that is held in the program's pool when a contract is written
     pub underlying_asset_address: Pubkey,
