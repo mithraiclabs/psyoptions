@@ -62,6 +62,8 @@ impl Pack for OptionWriter {
 /// Data structure that contains all the information needed to maintain an open
 /// option market.
 pub struct OptionMarket {
+    /// The SPL Token mint address for the 
+    pub option_mint: Pubkey,
     /// The SPL Token Address that is held in the program's pool when a contract is written
     pub underlying_asset_address: Pubkey,
     /// The SPL Token Address that denominates the strike price
@@ -86,13 +88,13 @@ impl IsInitialized for OptionMarket {
   }
 impl Sealed for OptionMarket {}
 impl Pack for OptionMarket {
-    const LEN: usize = PUBLIC_KEY_LEN + PUBLIC_KEY_LEN + 8 + 8 + 8 + PUBLIC_KEY_LEN + 2 + REGISTRY_LEN;
+    const LEN: usize = PUBLIC_KEY_LEN + PUBLIC_KEY_LEN + PUBLIC_KEY_LEN + 8 + 8 + 8 + PUBLIC_KEY_LEN + 2 + REGISTRY_LEN;
     
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         let src = array_ref![src, 0, OptionMarket::LEN];
         let (
-            uaa, qaa, apc, sp, eut, apa, rl, owr
-        ) = array_refs![src, PUBLIC_KEY_LEN, PUBLIC_KEY_LEN, 8, 8, 8, PUBLIC_KEY_LEN, 2, REGISTRY_LEN];
+            oma, uaa, qaa, apc, sp, eut, apa, rl, owr
+        ) = array_refs![src, PUBLIC_KEY_LEN, PUBLIC_KEY_LEN, PUBLIC_KEY_LEN, 8, 8, 8, PUBLIC_KEY_LEN, 2, REGISTRY_LEN];
         let registry_length = u16::from_le_bytes(*rl);
         let mut option_writer_registry: Vec<OptionWriter> = Vec::with_capacity(registry_length as usize);
         let mut offset = 0;
@@ -103,6 +105,7 @@ impl Pack for OptionMarket {
             offset += OptionWriter::LEN;
         }
         Ok(OptionMarket {
+            option_mint: Pubkey::new(oma),
             underlying_asset_address: Pubkey::new(uaa),
             quote_asset_address: Pubkey::new(qaa),
             amount_per_contract: u64::from_le_bytes(*apc), 
@@ -115,8 +118,9 @@ impl Pack for OptionMarket {
     }
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let dest = array_mut_ref![dst, 0, OptionMarket::LEN];
-        let (uaa, qaa, apc, sp, eut, apa, rl, owr) = 
-            mut_array_refs![dest, PUBLIC_KEY_LEN, PUBLIC_KEY_LEN, 8, 8, 8, PUBLIC_KEY_LEN, 2, REGISTRY_LEN];
+        let (oma, uaa, qaa, apc, sp, eut, apa, rl, owr) = 
+            mut_array_refs![dest, PUBLIC_KEY_LEN, PUBLIC_KEY_LEN, PUBLIC_KEY_LEN, 8, 8, 8, PUBLIC_KEY_LEN, 2, REGISTRY_LEN];
+        oma.copy_from_slice(&self.option_mint.to_bytes());
         uaa.copy_from_slice(&self.underlying_asset_address.to_bytes());
         qaa.copy_from_slice(&self.quote_asset_address.to_bytes());
         apc.copy_from_slice(&self.amount_per_contract.to_le_bytes());
@@ -189,6 +193,7 @@ mod tests {
 
     #[test]
     fn test_pack_unpck_option_market() {
+        let option_mint = Pubkey::new_unique();
         let underlying_asset_address = Pubkey::new_unique();
         let quote_asset_address = Pubkey::new_unique();
         let amount_per_contract: u64 = 100;
@@ -202,6 +207,7 @@ mod tests {
         let option_writer_registry = vec![option_writer_1, option_writer_2];
 
         let option_market = OptionMarket {
+            option_mint,
             underlying_asset_address,
             quote_asset_address,
             amount_per_contract, 
@@ -218,8 +224,9 @@ mod tests {
         OptionMarket::pack(option_market, &mut serialized_option_market).unwrap();
         let serialized_ref = array_ref![serialized_option_market, 0, OptionMarket::LEN]; 
         let (
-            uaa, qaa, apc, sp, eut, apa, rl, owr
-        ) = array_refs![serialized_ref, PUBLIC_KEY_LEN, PUBLIC_KEY_LEN, 8, 8, 8, PUBLIC_KEY_LEN, 2, REGISTRY_LEN];
+            oma, uaa, qaa, apc, sp, eut, apa, rl, owr
+        ) = array_refs![serialized_ref, PUBLIC_KEY_LEN, PUBLIC_KEY_LEN, PUBLIC_KEY_LEN, 8, 8, 8, PUBLIC_KEY_LEN, 2, REGISTRY_LEN];
+        assert_eq!(oma, &option_mint.to_bytes());
         assert_eq!(uaa, &underlying_asset_address.to_bytes());
         assert_eq!(qaa, &quote_asset_address.to_bytes());
         assert_eq!(apc, &amount_per_contract.to_le_bytes());

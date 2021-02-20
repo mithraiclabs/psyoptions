@@ -15,7 +15,8 @@ export const MINT_COVERED_CALL_LAYOUT = struct([u8('bumpSeed')]);
 
 export const mintCoveredCallInstruction = async (
   programId: PublicKey,
-  optionMintAccount: PublicKey,
+  // The SPL Mint for the tokens that denote an option contract
+  optionMint: PublicKey,
   mintedOptionDest: PublicKey,
   underlyingAssetSrc: PublicKey,
   underlyingAssetPool: PublicKey,
@@ -28,10 +29,7 @@ export const mintCoveredCallInstruction = async (
   const [
     optionsSplAuthorityPubkey,
     bumpSeed,
-  ] = await PublicKey.findProgramAddress(
-    [optionMintAccount.toBuffer()],
-    programId,
-  );
+  ] = await PublicKey.findProgramAddress([optionMint.toBuffer()], programId);
   MINT_COVERED_CALL_LAYOUT.encode({ bumpSeed }, mintCoveredCallBuffer, 0);
 
   /*
@@ -45,7 +43,7 @@ export const mintCoveredCallInstruction = async (
   const data = Buffer.concat([tagBuffer, mintCoveredCallBuffer]);
 
   const keys: AccountMeta[] = [
-    { pubkey: optionMintAccount, isSigner: false, isWritable: true },
+    { pubkey: optionMint, isSigner: false, isWritable: true },
     { pubkey: mintedOptionDest, isSigner: false, isWritable: true },
     { pubkey: underlyingAssetSrc, isSigner: false, isWritable: true },
     { pubkey: underlyingAssetPool, isSigner: false, isWritable: true },
@@ -64,18 +62,20 @@ export const mintCoveredCallInstruction = async (
   });
 };
 
+// Create function that wraps mintCoveredCall that will read OptionMarket data if the
+// FE doesn't have it already
 export const mintCoveredCall = async (
   connection: Connection,
   payer: Account,
   programId: PublicKey | string,
-  optionMintAccount: PublicKey,
+  optionMintAccount: PublicKey, // remove and read from OptionMarket
   mintedOptionDest: PublicKey,
   underlyingAssetSrc: PublicKey,
-  underlyingAssetPool: PublicKey,
+  underlyingAssetPool: PublicKey, // remove and read from OptionMarket
   quoteAssetDest: PublicKey,
   optionMarket: PublicKey,
   // The OptionWriter's account that has authority over their underlying asset account
-  authorityAccount: Account,
+  underlyingAssetAuthorityAccount: Account,
 ) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
@@ -89,11 +89,11 @@ export const mintCoveredCall = async (
     underlyingAssetPool,
     quoteAssetDest,
     optionMarket,
-    authorityAccount.publicKey,
+    underlyingAssetAuthorityAccount.publicKey,
   );
   transaction.add(mintInstruction);
 
-  const signers = [payer, authorityAccount];
+  const signers = [payer, underlyingAssetAuthorityAccount];
   transaction.feePayer = payer.publicKey;
   const { blockhash } = await connection.getRecentBlockhash();
   transaction.recentBlockhash = blockhash;
