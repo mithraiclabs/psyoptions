@@ -23,8 +23,6 @@ export const initializeSerumMarket = async (
   serumMarketQuoteMint: PublicKey,
   baseLotSize: number,
   quoteLotSize: number,
-  feeRateBps: number,
-  quoteDustThreshold: number,
 ) => {
   const dexProgramId = MARKETS.find(({ deprecated }) => !deprecated).programId;
   const market = new Account();
@@ -34,6 +32,8 @@ export const initializeSerumMarket = async (
   const asks = new Account();
   const baseVault = new Account();
   const quoteVault = new Account();
+  const feeRateBps = 0;
+  const quoteDustThreshold = new BN(100);
 
   async function getVaultOwnerAndNonce() {
     const nonce = new BN(0);
