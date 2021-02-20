@@ -11,6 +11,7 @@ import { struct, u8 } from 'buffer-layout';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { optionWriterStructArray } from './market';
 import { TOKEN_PROGRAM_ID } from './utils';
+import { getRandomOptionWriter } from './utils/getRandomOptionWriter';
 
 export const EXERCISE_COVERED_CALL_LAYOUT = struct([
   ...optionWriterStructArray,
@@ -138,4 +139,53 @@ export const exerciseCoveredCall = async (
   transaction.partialSign(...signers.slice(1));
 
   return { transaction, signers };
+};
+
+/**
+ *  Exercise an Option from a random Option Writer in the registry
+ *
+ * @param connection solana web3 connection
+ * @param payer Account paying for the transaction
+ * @param programId Pubkey for the Option Program
+ * @param optionMarketKey Pubkey for the Option Market Data Account
+ * @param exerciserQuoteAssetKey  Pubkey of where the Quote Asset will be sent from
+ * @param exerciserUnderlyingAssetKey  Pubkey of where the Underlying Asset will be sent to
+ * @param exerciserQuoteAssetAuthorityAccount Account that owns and can sign TXs on behalf
+ * of the Quote Asset Pubkey above
+ * @param exerciserContractTokenKey Pubkey for the account to burn the Option Mint from
+ * @param exerciserContractTokenAuthorityAccount Account that owns the Pubkey to burn
+ * Option Mint from
+ */
+export const exerciseCoveredCallWithRandomOptionWriter = async (
+  connection: Connection,
+  payer: Account,
+  programId: PublicKey | string,
+  optionMarketKey: PublicKey,
+  exerciserQuoteAssetKey: PublicKey,
+  exerciserUnderlyingAssetKey: PublicKey,
+  exerciserQuoteAssetAuthorityAccount: Account,
+  exerciserContractTokenKey: PublicKey,
+  exerciserContractTokenAuthorityAccount: Account,
+) => {
+  const [
+    optionWriterToExercise,
+    optionMarketData,
+  ] = await getRandomOptionWriter(connection, optionMarketKey);
+
+  return exerciseCoveredCall(
+    connection,
+    payer,
+    programId,
+    new PublicKey(optionWriterToExercise.underlyingAssetAcctAddress),
+    new PublicKey(optionWriterToExercise.quoteAssetAcctAddress),
+    new PublicKey(optionWriterToExercise.contractTokenAcctAddress),
+    new PublicKey(optionMarketData.optionMintAddress),
+    optionMarketKey,
+    exerciserQuoteAssetKey,
+    exerciserUnderlyingAssetKey,
+    exerciserQuoteAssetAuthorityAccount,
+    new PublicKey(optionMarketData.underlyingAssetPoolAddress),
+    exerciserContractTokenKey,
+    exerciserContractTokenAuthorityAccount,
+  );
 };
