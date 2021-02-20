@@ -3,7 +3,7 @@ import * as Layout from './layout';
 
 const MAX_CONTRACTS = 10;
 
-type OptionWriter = {
+export type OptionWriter = {
   underlyingAssetAcctAddress: string;
   quoteAssetAcctAddress: string;
   contractTokenAcctAddress: string;
@@ -25,7 +25,7 @@ export type OptionMarket = {
   amountPerContract: number;
   strikePrice: number;
   expirationUnixTimestamp: number;
-  assetPoolAddress: string;
+  underlyingAssetPoolAddress: string;
   registryLength: number;
   optionWriterRegistry: OptionWriter[];
 };
@@ -36,7 +36,7 @@ export const OPTION_MARKET_LAYOUT = BufferLayout.struct([
   Layout.uint64('amountPerContract'),
   Layout.uint64('strikePrice'),
   BufferLayout.ns64('expirationUnixTimestamp'),
-  Layout.publicKey('assetPoolAddress'),
+  Layout.publicKey('underlyingAssetPoolAddress'),
   BufferLayout.u16('registryLength'),
   BufferLayout.seq(OPTION_WRITER_LAYOUT, MAX_CONTRACTS, 'optionWriterRegistry'),
 ]);

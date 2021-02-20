@@ -11,6 +11,7 @@ import { struct, u8 } from 'buffer-layout';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { optionWriterStructArray } from './market';
 import { TOKEN_PROGRAM_ID } from './utils';
+import { getRandomOptionWriter } from './utils/getRandomOptionWriter';
 
 export const EXERCISE_COVERED_CALL_POST_EXP_LAYOUT = struct([
   ...optionWriterStructArray,
@@ -122,4 +123,46 @@ export const exerciseCoveredCallPostExpiration = async (
   transaction.partialSign(...signers.slice(1));
 
   return { transaction, signers };
+};
+
+/**
+ * Exercise an Option post expiration from a random Option Writer in the registry
+ *
+ * @param connection solana web3 connection
+ * @param payer Account paying for the transaction
+ * @param programId Pubkey for the Option Program
+ * @param optionMarketKey Pubkey for the Option Market Data Account
+ * @param exerciserQuoteAssetKey  Pubkey of where the Quote Asset will be sent from
+ * @param exerciserQuoteAssetAuthorityAccount Account that owns and can sign TXs on behalf
+ * of the Quote Asset Pubkey above
+ * @param exerciserUnderlyingAssetKey  Pubkey of where the Underlying Asset will be sent to
+ */
+export const exerciseCoveredCallPostExpirationWithRandomOptionWriter = async (
+  connection: Connection,
+  payer: Account,
+  programId: PublicKey | string,
+  optionMarketKey: PublicKey,
+  exerciserQuoteAssetKey: PublicKey,
+  exerciserQuoteAssetAuthorityAccount: Account,
+  exerciserUnderlyingAssetKey: PublicKey,
+) => {
+  const [
+    optionWriterToExercise,
+    optionMarketData,
+  ] = await getRandomOptionWriter(connection, optionMarketKey);
+
+  return exerciseCoveredCallPostExpiration(
+    connection,
+    payer,
+    programId,
+    new PublicKey(optionWriterToExercise.underlyingAssetAcctAddress),
+    new PublicKey(optionWriterToExercise.quoteAssetAcctAddress),
+    new PublicKey(optionWriterToExercise.contractTokenAcctAddress),
+    optionMarketKey,
+    exerciserQuoteAssetKey,
+    exerciserQuoteAssetAuthorityAccount,
+    exerciserUnderlyingAssetKey,
+    new PublicKey(optionMarketData.underlyingAssetPoolAddress),
+    new PublicKey(optionMarketData.optionMintAddress),
+  );
 };

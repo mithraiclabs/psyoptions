@@ -10,7 +10,7 @@ import {
 } from '@solana/web3.js';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { TOKEN_PROGRAM_ID } from './utils';
-import { OptionMarket, OPTION_MARKET_LAYOUT } from './market';
+import { getOptionMarketData } from './utils/getOptionMarketData';
 
 export const MINT_COVERED_CALL_LAYOUT = struct([u8('bumpSeed')]);
 
@@ -117,10 +117,7 @@ export const readMarketAndMintCoveredCall = async (
   // The OptionWriter's account that has authority over their underlying asset account
   underlyingAssetAuthorityAccount: Account,
 ) => {
-  const info = await connection.getAccountInfo(optionMarket);
-  const optionMarketData = OPTION_MARKET_LAYOUT.decode(
-    info.data,
-  ) as OptionMarket;
+  const optionMarketData = await getOptionMarketData(connection, optionMarket);
 
   return mintCoveredCall(
     connection,
@@ -132,6 +129,6 @@ export const readMarketAndMintCoveredCall = async (
     optionMarket,
     underlyingAssetAuthorityAccount,
     new PublicKey(optionMarketData.optionMintAddress),
-    new PublicKey(optionMarketData.assetPoolAddress),
+    new PublicKey(optionMarketData.underlyingAssetPoolAddress),
   );
 };
