@@ -196,5 +196,6 @@ export const initializeMarket = async (
     transaction,
     signers,
     optionMarketDataAddress: optionMarketDataAccount.publicKey,
+    optionMintAddress: optionMintAccount.publicKey,
   };
 };

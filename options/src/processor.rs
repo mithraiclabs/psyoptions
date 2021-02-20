@@ -77,6 +77,7 @@ impl Processor {
         // Add all relevant data to the OptionMarket data accountz
         OptionMarket::pack(
             OptionMarket {
+                option_mint: *option_mint_acct.key,
                 underlying_asset_address: *underlying_asset_acct.key,
                 quote_asset_address: *quote_asset_acct.key,
                 amount_per_contract,
