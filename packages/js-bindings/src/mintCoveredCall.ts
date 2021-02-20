@@ -10,6 +10,7 @@ import {
 } from '@solana/web3.js';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { TOKEN_PROGRAM_ID } from './utils';
+import { OptionMarket, OPTION_MARKET_LAYOUT } from './market';
 
 export const MINT_COVERED_CALL_LAYOUT = struct([u8('bumpSeed')]);
 
@@ -62,20 +63,19 @@ export const mintCoveredCallInstruction = async (
   });
 };
 
-// Create function that wraps mintCoveredCall that will read OptionMarket data if the
-// FE doesn't have it already
 export const mintCoveredCall = async (
   connection: Connection,
   payer: Account,
   programId: PublicKey | string,
-  optionMintAccount: PublicKey, // remove and read from OptionMarket
   mintedOptionDest: PublicKey,
   underlyingAssetSrc: PublicKey,
-  underlyingAssetPool: PublicKey, // remove and read from OptionMarket
   quoteAssetDest: PublicKey,
   optionMarket: PublicKey,
   // The OptionWriter's account that has authority over their underlying asset account
   underlyingAssetAuthorityAccount: Account,
+  // The following arguments should be read from the OptionMarket data account
+  optionMintAddress: PublicKey,
+  underlyingAssetPool: PublicKey,
 ) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
@@ -83,7 +83,7 @@ export const mintCoveredCall = async (
   const transaction = new Transaction();
   const mintInstruction = await mintCoveredCallInstruction(
     programPubkey,
-    optionMintAccount,
+    optionMintAddress,
     mintedOptionDest,
     underlyingAssetSrc,
     underlyingAssetPool,
@@ -100,4 +100,38 @@ export const mintCoveredCall = async (
   transaction.partialSign(...signers.slice(1));
 
   return { transaction, signers };
+};
+
+/**
+ * This is method is for convenience if the client does not have the
+ * OptionMarket data already available.
+ */
+export const readMarketAndMintCoveredCall = async (
+  connection: Connection,
+  payer: Account,
+  programId: PublicKey | string,
+  mintedOptionDest: PublicKey,
+  underlyingAssetSrc: PublicKey,
+  quoteAssetDest: PublicKey,
+  optionMarket: PublicKey,
+  // The OptionWriter's account that has authority over their underlying asset account
+  underlyingAssetAuthorityAccount: Account,
+) => {
+  const info = await connection.getAccountInfo(optionMarket);
+  const optionMarketData = OPTION_MARKET_LAYOUT.decode(
+    info.data,
+  ) as OptionMarket;
+
+  return mintCoveredCall(
+    connection,
+    payer,
+    programId,
+    mintedOptionDest,
+    underlyingAssetSrc,
+    quoteAssetDest,
+    optionMarket,
+    underlyingAssetAuthorityAccount,
+    new PublicKey(optionMarketData.optionMintAddress),
+    new PublicKey(optionMarketData.assetPoolAddress),
+  );
 };
