@@ -36,8 +36,9 @@ Exploring architectures for options trading on Serum
 # Deploying the program
 
 ## Dev Net
+The program is currently deployed @ `{"programId":"CgetkVhjkbdB3sYpAHZBTWVzojroqKqsZjkXxSP3kF3g"}`
 
 1. Make sure you're on solana CLI >= 1.5.6 `solana-install init v1.5.6`
 2. Build the program `cargo build-bpf --manifest-path options/Cargo.toml`
 3. Set the target network `solana config set --url https://devnet.solana.com`
-4. Deploy the program `solana program deploy $PWD/options/target/deploy/solana_options.so`
+4. Deploy the program `solana program deploy --program-id $PWD/options/deployed_programs/solana_options-devnet-keypair.json $PWD/options/target/deploy/solana_options.so`
