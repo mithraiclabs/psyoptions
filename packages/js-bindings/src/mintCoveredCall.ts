@@ -93,11 +93,14 @@ export const mintCoveredCall = async (
   );
   transaction.add(mintInstruction);
 
-  const signers = [payer, underlyingAssetAuthorityAccount];
+  const signers = [payer];
   transaction.feePayer = payer.publicKey;
   const { blockhash } = await connection.getRecentBlockhash();
   transaction.recentBlockhash = blockhash;
-  transaction.partialSign(...signers.slice(1));
+  if (payer.publicKey !== underlyingAssetAuthorityAccount.publicKey) {
+    signers.push(underlyingAssetAuthorityAccount)
+    transaction.partialSign(...signers.slice(1));
+  }
 
   return { transaction, signers };
 };
