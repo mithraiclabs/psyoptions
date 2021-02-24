@@ -13,7 +13,7 @@ export const optionWriterStructArray = [
   Layout.publicKey('underlyingAssetAcctAddress'),
   Layout.publicKey('quoteAssetAcctAddress'),
   Layout.publicKey('contractTokenAcctAddress'),
-];
+] as BufferLayout.Layout<any>[];
 
 export const OPTION_WRITER_LAYOUT = BufferLayout.struct(
   optionWriterStructArray,
@@ -27,6 +27,17 @@ export type OptionMarket = {
   strikePrice: number;
   expirationUnixTimestamp: number;
   underlyingAssetPoolAddress: string;
+  registryLength: number;
+  optionWriterRegistry: OptionWriter[];
+};
+export type DecodedOptionMarket = {
+  optionMintAddress: PublicKey;
+  underlyingAssetMintAddress: PublicKey;
+  quoteAssetMintAddress: PublicKey;
+  amountPerContract: number;
+  strikePrice: number;
+  expirationUnixTimestamp: number;
+  underlyingAssetPoolAddress: PublicKey;
   registryLength: number;
   optionWriterRegistry: OptionWriter[];
 };
@@ -47,12 +58,14 @@ export class Market {
 
   pubkey: PublicKey;
 
-  marketData: OptionMarket;
+  marketData: DecodedOptionMarket;
 
   constructor(programId: PublicKey, pubkey: PublicKey, accountData: Buffer) {
     this.programId = programId;
     this.pubkey = pubkey;
-    this.marketData = OPTION_MARKET_LAYOUT.decode(accountData) as OptionMarket;
+    this.marketData = OPTION_MARKET_LAYOUT.decode(
+      accountData,
+    ) as DecodedOptionMarket;
   }
 
   /**
@@ -98,12 +111,10 @@ export class Market {
       (market) =>
         // eslint-disable-next-line implicit-arrow-linebreak
         assetAddresses.includes(
-          new PublicKey(
-            market.marketData.underlyingAssetMintAddress,
-          ).toString(),
+          market.marketData.underlyingAssetMintAddress.toString(),
         ) &&
         assetAddresses.includes(
-          new PublicKey(market.marketData.quoteAssetMintAddress).toString(),
+          market.marketData.quoteAssetMintAddress.toString(),
         ),
     );
   };
