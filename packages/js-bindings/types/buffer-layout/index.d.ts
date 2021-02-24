@@ -11,6 +11,14 @@ declare module 'buffer-layout' {
       getSpan(b: Buffer, offset?: number): number;
       replicate(name: string): this;
     }
+    export class Blob {
+      span: number;
+      property?: string;
+      
+      constructor(span: number, property?: string);
+      decode(b: Buffer, offset?: number): T;
+      encode(src: T, b: Buffer, offset?: number): number;
+    }
     // TODO: remove any.
     export class Structure<T = any> extends Layout<T> {
       span: any;
@@ -55,7 +63,7 @@ declare module 'buffer-layout' {
     export function f64(property?: string): Layout<number>;
     export function f64be(property?: string): Layout<number>;
     export function struct<T>(
-      fields: Layout<any>[],
+      fields: (Layout<any>|Blob)[],
       property?: string,
       decodePrefixes?: boolean,
     ): Layout<T>;
