@@ -3,7 +3,6 @@ use arrayref::array_ref;
 use solana_program::{
     clock::UnixTimestamp,
     instruction::{AccountMeta, Instruction},
-    msg,
     program_error::ProgramError,
     program_pack::Pack,
     pubkey::Pubkey,
@@ -12,7 +11,7 @@ use solana_program::{
 use spl_token;
 use std::mem::size_of;
 /// Instructions supported by the Options program
-#[repr(C, u16)]
+#[repr(C)]
 #[derive(Debug, PartialEq)]
 pub enum OptionsInstruction {
     /// Initializes a new OptionMarket
@@ -121,7 +120,6 @@ impl OptionsInstruction {
                 Self::MintCoveredCall { bump_seed }
             }
             2 => {
-                msg!("Options: unpacking ExercisePostExpiration");
                 let (option_writer, rest) = Self::unpack_option_writer(rest)?;
                 let (bump_seed, _rest) = Self::unpack_u8(rest)?;
                 Self::ExercisePostExpiration {

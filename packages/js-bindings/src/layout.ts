@@ -13,4 +13,4 @@ export const uint64 = (property: string) => BufferLayout.blob(8, property);
 /**
  * Layout for the OptionInstruction tag
  */
-export const INTRUCTION_TAG_LAYOUT = BufferLayout.u16('instructionTag');
+export const INTRUCTION_TAG_LAYOUT = BufferLayout.u8('instructionTag');
