@@ -1,7 +1,6 @@
-import { AccountInfo, Connection, PublicKey } from '@solana/web3.js';
+import { Connection, PublicKey } from '@solana/web3.js';
 import * as BufferLayout from 'buffer-layout';
 import * as Layout from './layout';
-import { SolanaRpcResponse } from './types';
 
 const MAX_CONTRACTS = 10;
 
