@@ -6,5 +6,6 @@ export * from './exerciseCoveredCallPostExpiration';
 export * from './initializeMarket';
 export * from './initializeSerumMarket';
 export * from './mintCoveredCall';
+export * from './market';
 
 export { utils };
