@@ -1,4 +1,5 @@
 import { Connection, PublicKey } from '@solana/web3.js';
+import BN from 'bn.js';
 import * as BufferLayout from 'buffer-layout';
 import * as Layout from './layout';
 
@@ -34,8 +35,8 @@ export type DecodedOptionMarket = {
   optionMintAddress: PublicKey;
   underlyingAssetMintAddress: PublicKey;
   quoteAssetMintAddress: PublicKey;
-  amountPerContract: number;
-  strikePrice: number;
+  amountPerContract: BN;
+  strikePrice: BN;
   expirationUnixTimestamp: number;
   underlyingAssetPoolAddress: PublicKey;
   registryLength: number;
