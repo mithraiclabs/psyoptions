@@ -98,7 +98,7 @@ export const mintCoveredCall = async (
   const { blockhash } = await connection.getRecentBlockhash();
   transaction.recentBlockhash = blockhash;
   if (payer.publicKey !== underlyingAssetAuthorityAccount.publicKey) {
-    signers.push(underlyingAssetAuthorityAccount)
+    signers.push(underlyingAssetAuthorityAccount);
     transaction.partialSign(...signers.slice(1));
   }
 
@@ -131,7 +131,7 @@ export const readMarketAndMintCoveredCall = async (
     quoteAssetDest,
     optionMarket,
     underlyingAssetAuthorityAccount,
-    new PublicKey(optionMarketData.optionMintAddress),
-    new PublicKey(optionMarketData.underlyingAssetPoolAddress),
+    optionMarketData.optionMintAddress,
+    optionMarketData.underlyingAssetPoolAddress,
   );
 };
