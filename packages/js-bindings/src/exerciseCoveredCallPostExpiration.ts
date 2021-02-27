@@ -42,9 +42,9 @@ export const exerciseCoveredCallPostExpirationInstruction = async (
   EXERCISE_COVERED_CALL_POST_EXP_LAYOUT.encode(
     {
       bumpSeed,
-      underlyingAssetAcctAddress: optionWriterUnderlyingAssetKey.toBuffer(),
-      quoteAssetAcctAddress: optionWriterQuoteAssetKey.toBuffer(),
-      contractTokenAcctAddress: optionWriterContractTokenKey.toBuffer(),
+      underlyingAssetAcctAddress: optionWriterUnderlyingAssetKey,
+      quoteAssetAcctAddress: optionWriterQuoteAssetKey,
+      contractTokenAcctAddress: optionWriterContractTokenKey,
     },
     exerciseCoveredCallPostExpBuffer,
     0,
@@ -120,7 +120,6 @@ export const exerciseCoveredCallPostExpiration = async (
   transaction.feePayer = payer.publicKey;
   const { blockhash } = await connection.getRecentBlockhash();
   transaction.recentBlockhash = blockhash;
-  transaction.partialSign(...signers.slice(1));
 
   return { transaction, signers };
 };
