@@ -44,9 +44,9 @@ export const exerciseCoveredCallInstruction = async (
   EXERCISE_COVERED_CALL_LAYOUT.encode(
     {
       bumpSeed,
-      underlyingAssetAcctAddress: optionWriterUnderlyingAssetKey.toBuffer(),
-      quoteAssetAcctAddress: optionWriterQuoteAssetKey.toBuffer(),
-      contractTokenAcctAddress: optionWriterContractTokenKey.toBuffer(),
+      underlyingAssetAcctAddress: optionWriterUnderlyingAssetKey,
+      quoteAssetAcctAddress: optionWriterQuoteAssetKey,
+      contractTokenAcctAddress: optionWriterContractTokenKey,
     },
     exerciseCoveredCallBuffer,
     0,
@@ -136,7 +136,6 @@ export const exerciseCoveredCall = async (
   transaction.feePayer = payer.publicKey;
   const { blockhash } = await connection.getRecentBlockhash();
   transaction.recentBlockhash = blockhash;
-  transaction.partialSign(...signers.slice(1));
 
   return { transaction, signers };
 };
@@ -176,15 +175,15 @@ export const exerciseCoveredCallWithRandomOptionWriter = async (
     connection,
     payer,
     programId,
-    new PublicKey(optionWriterToExercise.underlyingAssetAcctAddress),
-    new PublicKey(optionWriterToExercise.quoteAssetAcctAddress),
-    new PublicKey(optionWriterToExercise.contractTokenAcctAddress),
-    new PublicKey(optionMarketData.optionMintAddress),
+    optionWriterToExercise.underlyingAssetAcctAddress,
+    optionWriterToExercise.quoteAssetAcctAddress,
+    optionWriterToExercise.contractTokenAcctAddress,
+    optionMarketData.optionMintAddress,
     optionMarketKey,
     exerciserQuoteAssetKey,
     exerciserUnderlyingAssetKey,
     exerciserQuoteAssetAuthorityAccount,
-    new PublicKey(optionMarketData.underlyingAssetPoolAddress),
+    optionMarketData.underlyingAssetPoolAddress,
     exerciserContractTokenKey,
     exerciserContractTokenAuthorityAccount,
   );

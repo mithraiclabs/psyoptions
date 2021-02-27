@@ -13,7 +13,22 @@ class PublicKeyLayout extends BufferLayout.Blob {
   }
 
   encode(src: any, b: Buffer, offset?: number) {
-    return super.encode(src.toBuffer(), b, offset);
+    const srcBuf = src.toBuffer();
+    let span = this.length;
+    if (this.length instanceof BufferLayout.ExternalLayout) {
+      span = srcBuf.length;
+    }
+    if (span !== srcBuf.length) {
+      throw new TypeError('wrong length for pubkey');
+    }
+    if (offset + span > b.length) {
+      throw new RangeError('encoding overruns Buffer');
+    }
+    b.write(srcBuf.toString('hex'), offset, span, 'hex');
+    if (this.length instanceof BufferLayout.ExternalLayout) {
+      this.length.encode(span, b, offset);
+    }
+    return span;
   }
 }
 
