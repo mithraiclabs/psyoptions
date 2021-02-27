@@ -6,9 +6,9 @@ import * as Layout from './layout';
 const MAX_CONTRACTS = 10;
 
 export type OptionWriter = {
-  underlyingAssetAcctAddress: string;
-  quoteAssetAcctAddress: string;
-  contractTokenAcctAddress: string;
+  underlyingAssetAcctAddress: PublicKey;
+  quoteAssetAcctAddress: PublicKey;
+  contractTokenAcctAddress: PublicKey;
 };
 export const optionWriterStructArray = [
   Layout.publicKey('underlyingAssetAcctAddress'),

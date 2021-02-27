@@ -39,9 +39,9 @@ export const closePostExpirationCoveredCallInstruction = async (
   CLOSE_POST_EXPIRATION_COVERED_CALL.encode(
     {
       bumpSeed,
-      underlyingAssetAcctAddress: optionWriterUnderlyingAssetKey.toBuffer(),
-      quoteAssetAcctAddress: optionWriterQuoteAssetKey.toBuffer(),
-      contractTokenAcctAddress: optionWriterContractTokenKey.toBuffer(),
+      underlyingAssetAcctAddress: optionWriterUnderlyingAssetKey,
+      quoteAssetAcctAddress: optionWriterQuoteAssetKey,
+      contractTokenAcctAddress: optionWriterContractTokenKey,
     },
     closePostExpirationBuffer,
     0,
