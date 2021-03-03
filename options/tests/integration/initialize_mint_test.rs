@@ -27,6 +27,7 @@ fn test_integration() {
     let underlying_spl = Keypair::new();
     let quote_spl = Keypair::new();
     let underlying_spl_pool = Keypair::new();
+    let writer_registry_kp = Keypair::new();
 
     // create the spl mints to be used in the options market
     create_spl_mint_account(&client, &underlying_spl, &payer_keys).unwrap();
@@ -53,6 +54,7 @@ fn test_integration() {
         &options_spl_mint.pubkey(),
         &options_market_keys.pubkey(),
         &underlying_spl_pool.pubkey(),
+        &writer_registry_kp.pubkey(),
         amount_per_contract,
         quote_amount_per_contract,
         expiry,
@@ -103,8 +105,14 @@ fn test_integration() {
         option_market.asset_pool_address,
         underlying_spl_pool.pubkey()
     );
-    assert_eq!(option_market.registry_length, 0);
-    assert_eq!(option_market.option_writer_registry, vec![]);
+    // assert the option writer registry initialized correctly
+    let writer_registry_data = client
+        .get_account_data(&writer_registry_kp.pubkey())
+        .unwrap();
+    let writer_registry =
+        solana_options::market::OptionWriterRegistry::unpack(&writer_registry_data[..]).unwrap();
+    assert_eq!(writer_registry.registry_length, 0);
+    assert_eq!(writer_registry.registry, vec![]);
 }
 
 #[test]
@@ -122,6 +130,7 @@ fn should_fail_with_same_quote_underlying_assets() {
 
     let underlying_spl = Keypair::new();
     let underlying_spl_pool = Keypair::new();
+    let writer_registry_kp = Keypair::new();
 
     // create the spl mints to be used in the options market
     create_spl_mint_account(&client, &underlying_spl, &payer_keys).unwrap();
@@ -147,6 +156,7 @@ fn should_fail_with_same_quote_underlying_assets() {
         &options_spl_mint.pubkey(),
         &options_market_keys.pubkey(),
         &underlying_spl_pool.pubkey(),
+        &writer_registry_kp.pubkey(),
         amount_per_contract,
         quote_amount_per_contract,
         expiry,

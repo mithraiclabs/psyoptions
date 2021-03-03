@@ -243,6 +243,7 @@ pub fn initiailize_market(
     contract_spl_token_pubkey: &Pubkey,
     option_market_data_pubkey: &Pubkey,
     underlying_asset_pool_pubkey: &Pubkey,
+    writer_registry_pubkey: &Pubkey,
     amount_per_contract: u64,
     quote_amount_per_contract: u64,
     expiration_unix_timestamp: UnixTimestamp,
@@ -265,6 +266,7 @@ pub fn initiailize_market(
         AccountMeta::new(*option_market_data_pubkey, false),
         AccountMeta::new_readonly(options_spl_authority_pubkey, false),
         AccountMeta::new(*underlying_asset_pool_pubkey, false),
+        AccountMeta::new(*writer_registry_pubkey, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];

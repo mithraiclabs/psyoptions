@@ -128,6 +128,7 @@ pub fn init_option_market(
     let underlying_spl = Keypair::new();
     let quote_spl = Keypair::new();
     let underlying_spl_pool = Keypair::new();
+    let writer_registry_kp = Keypair::new();
 
     // create the spl mints to be used in the options market
     create_spl_mint_account(&client, &underlying_spl, &payer_keys).unwrap();
@@ -149,6 +150,7 @@ pub fn init_option_market(
         &options_spl_mint.pubkey(),
         &options_market_keys.pubkey(),
         &underlying_spl_pool.pubkey(),
+        &writer_registry_kp.pubkey(),
         amount_per_contract,
         quote_amount_per_contract,
         expiry,
