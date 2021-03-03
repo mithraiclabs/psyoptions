@@ -1,6 +1,6 @@
 use crate::{
     instruction::OptionsInstruction,
-    market::{OptionMarket, OptionWriter},
+    market::{OptionWriterRegistry, OptionMarket, OptionWriter},
     error::OptionsError
 };
 use solana_program::{
@@ -35,6 +35,7 @@ impl Processor {
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
+        let option_writer_registry_acct = next_account_info(account_info_iter)?;
 
         if quote_asset_acct.key == underlying_asset_acct.key {
             return Err(OptionsError::QuoteAndUnderlyingAssetMustDiffer.into());
@@ -84,8 +85,7 @@ impl Processor {
                 quote_amount_per_contract,
                 expiration_unix_timestamp,
                 asset_pool_address: *underlying_asset_pool_acct.key,
-                registry_length: 0,
-                option_writer_registry: vec![],
+                writer_registry_address: *option_writer_registry_acct.key,
             },
             &mut option_market_data_acct.data.borrow_mut(),
         )?;
@@ -167,9 +167,9 @@ impl Processor {
             quote_asset_acct_address: *quote_asset_dest_acct.key,
             contract_token_acct_address: *minted_option_dest_acct.key,
         };
-        option_market.option_writer_registry.push(option_writer);
-        // increment registry_length
-        option_market.registry_length += 1;
+        // option_market.option_writer_registry.push(option_writer);
+        // // increment registry_length
+        // option_market.registry_length += 1;
         OptionMarket::pack(option_market, &mut option_market_data)?;
 
         Ok(())
@@ -220,7 +220,7 @@ impl Processor {
         )?;
 
         // Remove the option writer and decrement the 
-        let updated_option_market = OptionMarket::remove_option_writer(option_market, option_writer)?;
+        // let updated_option_market = OptionWriterRegistry::remove_option_writer(option_market, option_writer)?;
 
         // transfer the quote asset from the Exerciser to the OptionWriter
         let transer_quote_tokens_ix = token_instruction::transfer(
@@ -229,7 +229,7 @@ impl Processor {
             &option_writer_quote_asset_acct.key, 
             &exerciser_authority_acct.key, 
             &[], 
-            updated_option_market.quote_amount_per_contract
+            option_market.quote_amount_per_contract
         )?;
         invoke(
             &transer_quote_tokens_ix,
@@ -248,7 +248,7 @@ impl Processor {
             &exerciser_underlying_asset_acct.key,
             &options_spl_authority_acct.key,
             &[],
-            updated_option_market.amount_per_contract,
+            option_market.amount_per_contract,
         )?;
         invoke_signed(
             &transfer_underlying_tokens_ix,
@@ -262,7 +262,7 @@ impl Processor {
         )?;
 
         OptionMarket::pack(
-            updated_option_market,
+            option_market,
             &mut option_market_data,
         )?;
         Ok(())
@@ -291,7 +291,7 @@ impl Processor {
         }
 
         // Remove the option writer and decrement the 
-        let updated_option_market = OptionMarket::remove_option_writer(option_market, option_writer)?;
+        // let updated_option_market = OptionWriterRegistry::remove_option_writer(option_market, option_writer)?;
 
         // transfer the quote asset from the Exerciser to the OptionWriter
         let transer_quote_tokens_ix = token_instruction::transfer(
@@ -300,7 +300,7 @@ impl Processor {
             &option_writer_quote_asset_acct.key, 
             &exerciser_authority_acct.key, 
             &[], 
-            updated_option_market.quote_amount_per_contract
+            option_market.quote_amount_per_contract
         )?;
         invoke(
             &transer_quote_tokens_ix,
@@ -319,7 +319,7 @@ impl Processor {
             &exerciser_underlying_asset_acct.key,
             &options_spl_authority_acct.key,
             &[],
-            updated_option_market.amount_per_contract,
+            option_market.amount_per_contract,
         )?;
         invoke_signed(
             &transfer_underlying_tokens_ix,
@@ -333,7 +333,7 @@ impl Processor {
         )?;
 
         OptionMarket::pack(
-            updated_option_market,
+            option_market,
             &mut option_market_data,
         )?;
         Ok(())
@@ -348,6 +348,7 @@ impl Processor {
         let market_underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let options_spl_authority_acct = next_account_info(account_info_iter)?;
         let option_mint_acct = next_account_info(account_info_iter)?;
+        let option_writer_registry_acct = next_account_info(account_info_iter)?;
 
         let mut option_market_data = option_market_acct.try_borrow_mut_data()?;
         let option_market = OptionMarket::unpack(&option_market_data)?;
@@ -379,7 +380,12 @@ impl Processor {
         )?;
 
         // Remove the option writer and decrement the 
-        let option_market = OptionMarket::remove_option_writer(option_market, option_writer)?;
+        // let option_writer_registry_data = option_writer_registry_acct.try_borrow_mut_data()?;
+        // let option_writer_registry = OptionWriterRegistry::unpack(&option_writer_registry_data)?;
+        // let option_writer_registry = OptionWriterRegistry::remove_option_writer(option_writer_registry, option_writer)?;
+        // OptionWriterRegistry::pack(
+        //     option_writer_registry, &mut option_writer_registry_data
+        // );
 
         OptionMarket::pack(
             option_market,
