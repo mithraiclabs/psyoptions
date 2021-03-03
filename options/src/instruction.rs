@@ -288,8 +288,9 @@ pub fn mint_covered_call(
     quote_asset_dest: &Pubkey,
     option_market: &Pubkey,
     authority_pubkey: &Pubkey,
+    writer_registry_pubkey: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
-    let mut accounts = Vec::with_capacity(9);
+    let mut accounts = Vec::with_capacity(10);
     accounts.push(AccountMeta::new(*option_mint, false));
     accounts.push(AccountMeta::new(*minted_option_dest, false));
     accounts.push(AccountMeta::new(*underyling_asset_src, false));
@@ -298,6 +299,7 @@ pub fn mint_covered_call(
     accounts.push(AccountMeta::new(*option_market, false));
     accounts.push(AccountMeta::new_readonly(*authority_pubkey, true));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
+    accounts.push(AccountMeta::new(*writer_registry_pubkey, false));
 
     let (options_spl_authority_pubkey, bump_seed) =
         Pubkey::find_program_address(&[&option_mint.to_bytes()[..32]], &program_id);

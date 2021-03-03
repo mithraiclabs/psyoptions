@@ -120,7 +120,7 @@ pub fn init_option_market(
     amount_per_contract: u64,
     quote_amount_per_contract: u64,
     expiry: UnixTimestamp,
-) -> Result<(Keypair, Keypair, Keypair, Keypair, Pubkey, Pubkey), ClientError> {
+) -> Result<(Keypair, Keypair, Keypair, Keypair, Pubkey, Pubkey, Pubkey), ClientError> {
     let payer_keys = create_account_with_lamports(&client, 10000000000);
     let options_spl_mint = Keypair::new();
     let options_market_keys = Keypair::new();
@@ -165,6 +165,7 @@ pub fn init_option_market(
         payer_keys,
         underlying_spl_pool.pubkey(),
         options_market_keys.pubkey(),
+        writer_registry_kp.pubkey(),
     ))
 }
 /// Creates and seeds the necessary accounts for an entity, then mints a
