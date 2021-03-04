@@ -104,6 +104,7 @@ impl Processor {
         let spl_program_acct = next_account_info(account_info_iter)?;
         let option_mint_authority_acct = next_account_info(account_info_iter)?;
         let clock_sysvar_info = next_account_info(account_info_iter)?;
+        let writer_registry_acct = next_account_info(account_info_iter)?;
         // Get the amount of underlying asset for transfer
         let mut option_market_data = option_market_acct.try_borrow_mut_data()?;
         let mut option_market = OptionMarket::unpack(&option_market_data)?;

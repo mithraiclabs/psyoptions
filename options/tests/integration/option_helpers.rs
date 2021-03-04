@@ -184,6 +184,7 @@ pub fn create_and_add_option_writer(
     underlying_asset_pool_key: &Pubkey,
     option_market_key: &Pubkey,
     amount_per_contract: u64,
+    writer_registry_key: &Pubkey,
 ) -> Result<(Keypair, Keypair), ClientError> {
     let option_writer_keys = create_account_with_lamports(&client, 1_000_000_000_000_000);
     let option_writer_underlying_asset_keys = Keypair::new();
@@ -234,6 +235,7 @@ pub fn create_and_add_option_writer(
         &option_writer_quote_asset_keys.pubkey(),
         &option_market_key,
         &option_writer_keys.pubkey(),
+        &writer_registry_key,
     )
     .unwrap();
     let signers = vec![&option_writer_keys];

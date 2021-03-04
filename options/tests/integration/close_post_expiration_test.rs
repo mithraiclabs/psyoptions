@@ -46,6 +46,7 @@ pub fn test_sucessful_close_post_expiration() {
     asset_authority_keys,
     underlying_asset_pool_key,
     option_market_key,
+    writer_registry_key,
   ) = init_option_market(
     &client,
     &options_program_id,
@@ -66,6 +67,7 @@ pub fn test_sucessful_close_post_expiration() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
+    &writer_registry_key,
   )
   .unwrap();
   create_and_add_option_writer(
@@ -78,6 +80,7 @@ pub fn test_sucessful_close_post_expiration() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
+    &writer_registry_key,
   )
   .unwrap();
 
@@ -186,6 +189,7 @@ pub fn test_panic_when_expiration_has_not_passed() {
     asset_authority_keys,
     underlying_asset_pool_key,
     option_market_key,
+    writer_registry_key,
   ) = init_option_market(
     &client,
     &options_program_id,
@@ -206,6 +210,7 @@ pub fn test_panic_when_expiration_has_not_passed() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
+    &writer_registry_key,
   )
   .unwrap();
   create_and_add_option_writer(
@@ -218,6 +223,7 @@ pub fn test_panic_when_expiration_has_not_passed() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
+    &writer_registry_key,
   )
   .unwrap();
 
