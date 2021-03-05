@@ -23,7 +23,7 @@ impl Processor {
         _program_id: &Pubkey,
         accounts: &[AccountInfo],
         amount_per_contract: u64,
-        strike_price: u64,
+        quote_amount_per_contract: u64,
         expiration_unix_timestamp: UnixTimestamp,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
@@ -81,7 +81,7 @@ impl Processor {
                 underlying_asset_address: *underlying_asset_acct.key,
                 quote_asset_address: *quote_asset_acct.key,
                 amount_per_contract,
-                strike_price,
+                quote_amount_per_contract,
                 expiration_unix_timestamp,
                 asset_pool_address: *underlying_asset_pool_acct.key,
                 registry_length: 0,
@@ -229,7 +229,7 @@ impl Processor {
             &option_writer_quote_asset_acct.key, 
             &exerciser_authority_acct.key, 
             &[], 
-            updated_option_market.amount_per_contract * updated_option_market.strike_price
+            updated_option_market.quote_amount_per_contract
         )?;
         invoke(
             &transer_quote_tokens_ix,
@@ -300,7 +300,7 @@ impl Processor {
             &option_writer_quote_asset_acct.key, 
             &exerciser_authority_acct.key, 
             &[], 
-            updated_option_market.amount_per_contract * updated_option_market.strike_price
+            updated_option_market.quote_amount_per_contract
         )?;
         invoke(
             &transer_quote_tokens_ix,
@@ -394,13 +394,13 @@ impl Processor {
         match instruction {
             OptionsInstruction::InitializeMarket {
                 amount_per_contract,
-                strike_price,
+                quote_amount_per_contract,
                 expiration_unix_timestamp,
             } => Self::process_init_market(
                 program_id,
                 accounts,
                 amount_per_contract,
-                strike_price,
+                quote_amount_per_contract,
                 expiration_unix_timestamp,
             ),
             OptionsInstruction::MintCoveredCall { bump_seed } => {

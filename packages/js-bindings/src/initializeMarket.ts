@@ -18,8 +18,9 @@ import { TOKEN_PROGRAM_ID } from './utils';
  * OptionsInstruction::InitializeMarket {
  *      /// The amount of the **underlying asset** that derives a single contract
  *      amount_per_contract: u64,
- *      /// The strike price for the new market
- *      strike_price: u64,
+ *      /// The quote_amount_per_contract (strike price * amount_per_contract) for the new market
+ *      /// i.e. how much quote asset will be swapped when the contract is exercised
+ *      quote_amount_per_contract: u64,
  *      /// The Unix timestamp at which the contracts in this market expire
  *      expiration_unix_timestamp: UnixTimestamp,
  *  }
@@ -28,7 +29,7 @@ import { TOKEN_PROGRAM_ID } from './utils';
  */
 export const INITIALIZE_MARKET_LAYOUT = struct([
   nu64('amountPerContract'),
-  nu64('strikePrice'),
+  nu64('quoteAmountPerContract'),
   ns64('expirationUnixTimestamp'),
 ]);
 
@@ -53,7 +54,7 @@ export const initializeMarketInstruction = async (
   INITIALIZE_MARKET_LAYOUT.encode(
     {
       amountPerContract,
-      strikePrice,
+      quoteAmountPerContract: strikePrice * amountPerContract,
       expirationUnixTimestamp,
     },
     initializeMarketBuffer,

@@ -71,7 +71,7 @@ pub struct OptionMarket {
     /// The amount of the **underlying asset** that derives a single contract
     pub amount_per_contract: u64,
     /// The price for the **underlying asset** denominated in the **quote asset**
-    pub strike_price: u64,
+    pub quote_amount_per_contract: u64,
     /// The Unix timestamp at which the contracts in this market expire
     pub expiration_unix_timestamp: UnixTimestamp,
     /// Address for the liquidity pool that contains the underlying assset
@@ -109,7 +109,7 @@ impl Pack for OptionMarket {
             underlying_asset_address: Pubkey::new(uaa),
             quote_asset_address: Pubkey::new(qaa),
             amount_per_contract: u64::from_le_bytes(*apc), 
-            strike_price: u64::from_le_bytes(*sp),
+            quote_amount_per_contract: u64::from_le_bytes(*sp),
             expiration_unix_timestamp: UnixTimestamp::from_le_bytes(*eut),
             asset_pool_address: Pubkey::new(apa),
             registry_length,
@@ -124,7 +124,7 @@ impl Pack for OptionMarket {
         uaa.copy_from_slice(&self.underlying_asset_address.to_bytes());
         qaa.copy_from_slice(&self.quote_asset_address.to_bytes());
         apc.copy_from_slice(&self.amount_per_contract.to_le_bytes());
-        sp.copy_from_slice(&self.strike_price.to_le_bytes());
+        sp.copy_from_slice(&self.quote_amount_per_contract.to_le_bytes());
         eut.copy_from_slice(&self.expiration_unix_timestamp.to_le_bytes());
         apa.copy_from_slice(&self.asset_pool_address.to_bytes());
         rl.copy_from_slice(&self.registry_length.to_le_bytes());
@@ -197,7 +197,7 @@ mod tests {
         let underlying_asset_address = Pubkey::new_unique();
         let quote_asset_address = Pubkey::new_unique();
         let amount_per_contract: u64 = 100;
-        let strike_price: u64 = 5;
+        let quote_amount_per_contract: u64 = 5;
         let expiration_unix_timestamp: UnixTimestamp = 1607743435;
         let asset_pool_address = Pubkey::new_unique();
 
@@ -211,7 +211,7 @@ mod tests {
             underlying_asset_address,
             quote_asset_address,
             amount_per_contract, 
-            strike_price,
+            quote_amount_per_contract,
             expiration_unix_timestamp,
             asset_pool_address,
             registry_length: registry_length,
@@ -230,7 +230,7 @@ mod tests {
         assert_eq!(uaa, &underlying_asset_address.to_bytes());
         assert_eq!(qaa, &quote_asset_address.to_bytes());
         assert_eq!(apc, &amount_per_contract.to_le_bytes());
-        assert_eq!(sp, &strike_price.to_le_bytes());
+        assert_eq!(sp, &quote_amount_per_contract.to_le_bytes());
         assert_eq!(eut, &expiration_unix_timestamp.to_le_bytes());
         assert_eq!(apa, &asset_pool_address.to_bytes());
         assert_eq!(rl, &registry_length.to_le_bytes());

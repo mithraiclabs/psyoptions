@@ -21,17 +21,6 @@ export const OPTION_WRITER_LAYOUT = BufferLayout.struct(
 );
 
 export type OptionMarket = {
-  optionMintAddress: string;
-  underlyingAssetMintAddress: string;
-  quoteAssetMintAddress: string;
-  amountPerContract: number;
-  strikePrice: number;
-  expirationUnixTimestamp: number;
-  underlyingAssetPoolAddress: string;
-  registryLength: number;
-  optionWriterRegistry: OptionWriter[];
-};
-export type DecodedOptionMarket = {
   optionMintAddress: PublicKey;
   underlyingAssetMintAddress: PublicKey;
   quoteAssetMintAddress: PublicKey;
@@ -42,12 +31,25 @@ export type DecodedOptionMarket = {
   registryLength: number;
   optionWriterRegistry: OptionWriter[];
 };
+
+export type DecodedOptionMarket = {
+  optionMintAddress: PublicKey;
+  underlyingAssetMintAddress: PublicKey;
+  quoteAssetMintAddress: PublicKey;
+  amountPerContract: BN;
+  quoteAmountPerContract: BN;
+  expirationUnixTimestamp: number;
+  underlyingAssetPoolAddress: PublicKey;
+  registryLength: number;
+  optionWriterRegistry: OptionWriter[];
+};
+
 export const OPTION_MARKET_LAYOUT = BufferLayout.struct([
   Layout.publicKey('optionMintAddress'),
   Layout.publicKey('underlyingAssetMintAddress'),
   Layout.publicKey('quoteAssetMintAddress'),
   Layout.uint64('amountPerContract'),
-  Layout.uint64('strikePrice'),
+  Layout.uint64('quoteAmountPerContract'),
   BufferLayout.ns64('expirationUnixTimestamp'),
   Layout.publicKey('underlyingAssetPoolAddress'),
   BufferLayout.u16('registryLength'),
@@ -59,14 +61,36 @@ export class Market {
 
   pubkey: PublicKey;
 
-  marketData: DecodedOptionMarket;
+  marketData: OptionMarket;
 
   constructor(programId: PublicKey, pubkey: PublicKey, accountData: Buffer) {
     this.programId = programId;
     this.pubkey = pubkey;
-    this.marketData = OPTION_MARKET_LAYOUT.decode(
-      accountData,
-    ) as DecodedOptionMarket;
+    const {
+      optionMintAddress,
+      underlyingAssetMintAddress,
+      quoteAssetMintAddress,
+      amountPerContract,
+      quoteAmountPerContract,
+      expirationUnixTimestamp,
+      underlyingAssetPoolAddress,
+      registryLength,
+      optionWriterRegistry,
+    } = OPTION_MARKET_LAYOUT.decode(accountData) as DecodedOptionMarket;
+
+    const processedMarketData = {
+      optionMintAddress,
+      underlyingAssetMintAddress,
+      quoteAssetMintAddress,
+      amountPerContract,
+      strikePrice: quoteAmountPerContract.div(amountPerContract),
+      expirationUnixTimestamp,
+      underlyingAssetPoolAddress,
+      registryLength,
+      optionWriterRegistry,
+    };
+
+    this.marketData = processedMarketData;
   }
 
   /**

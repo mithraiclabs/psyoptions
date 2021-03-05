@@ -31,7 +31,7 @@ pub fn test_sucessful_exercise_covered_call() {
   );
   let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
   let amount_per_contract = 100;
-  let strike_price = 5;
+  let quote_amount_per_contract = 500;
   let expiry = 999_999_999_999_999_999;
   // Create the option market
   let (
@@ -45,7 +45,7 @@ pub fn test_sucessful_exercise_covered_call() {
     &client,
     &options_program_id,
     amount_per_contract,
-    strike_price,
+    quote_amount_per_contract,
     expiry,
   )
   .unwrap();
@@ -158,7 +158,7 @@ pub fn test_sucessful_exercise_covered_call() {
   let exerciser_quote_asset_acct_data =
     client.get_account_data(&exerciser_quote_asset_keys.pubkey()).unwrap();
   let updated_exerciser_quote_asset_acct = Account::unpack(&exerciser_quote_asset_acct_data[..]).unwrap();
-  assert_eq!(updated_exerciser_quote_asset_acct.amount, exerciser_quote_asset_acct.amount - (option_market.amount_per_contract * option_market.strike_price));
+  assert_eq!(updated_exerciser_quote_asset_acct.amount, exerciser_quote_asset_acct.amount - option_market.quote_amount_per_contract);
 }
 
 #[test]
@@ -171,7 +171,7 @@ pub fn test_panic_when_expiration_has_not_passed() {
   );
   let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
   let amount_per_contract = 100;
-  let strike_price = 5;
+  let quote_amount_per_contract = 500; // strike price of 5
   // Get the current network clock time to use as the basis for the expiration
   let sysvar_clock_acct = client.get_account(&clock::id()).unwrap();
   let accounts = &mut [(clock::id(), sysvar_clock_acct)];
@@ -190,7 +190,7 @@ pub fn test_panic_when_expiration_has_not_passed() {
     &client,
     &options_program_id,
     amount_per_contract,
-    strike_price,
+    quote_amount_per_contract,
     expiry,
   )
   .unwrap();

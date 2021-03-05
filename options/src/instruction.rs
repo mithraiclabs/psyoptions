@@ -30,8 +30,8 @@ pub enum OptionsInstruction {
     InitializeMarket {
         /// The amount of the **underlying asset** that derives a single contract
         amount_per_contract: u64,
-        /// The strike price for the new market
-        strike_price: u64,
+        /// Pre-computed quote amount for the new market, equal to strike price * amount_per_contract
+        quote_amount_per_contract: u64,
         /// The Unix timestamp at which the contracts in this market expire
         expiration_unix_timestamp: UnixTimestamp,
     },
@@ -107,11 +107,11 @@ impl OptionsInstruction {
         Ok(match tag {
             0 => {
                 let (amount_per_contract, rest) = Self::unpack_u64(rest)?;
-                let (strike_price, rest) = Self::unpack_u64(rest)?;
+                let (quote_amount_per_contract, rest) = Self::unpack_u64(rest)?;
                 let (expiration_unix_timestamp, _rest) = Self::unpack_timestamp(rest)?;
                 Self::InitializeMarket {
                     amount_per_contract,
-                    strike_price,
+                    quote_amount_per_contract,
                     expiration_unix_timestamp,
                 }
             }
@@ -130,9 +130,9 @@ impl OptionsInstruction {
             3 => {
                 let (option_writer, rest) = Self::unpack_option_writer(rest)?;
                 let (bump_seed, _rest) = Self::unpack_u8(rest)?;
-                Self::ExerciseCoveredCall { 
+                Self::ExerciseCoveredCall {
                     option_writer,
-                    bump_seed 
+                    bump_seed
                 }
             }
             4 => {
@@ -153,12 +153,12 @@ impl OptionsInstruction {
         match self {
             &Self::InitializeMarket {
                 ref amount_per_contract,
-                ref strike_price,
+                ref quote_amount_per_contract,
                 ref expiration_unix_timestamp,
             } => {
                 buf.push(0);
                 buf.extend_from_slice(&amount_per_contract.to_le_bytes());
-                buf.extend_from_slice(&strike_price.to_le_bytes());
+                buf.extend_from_slice(&quote_amount_per_contract.to_le_bytes());
                 buf.extend_from_slice(&expiration_unix_timestamp.to_le_bytes());
             }
             &Self::MintCoveredCall { ref bump_seed } => {
@@ -244,7 +244,7 @@ pub fn initiailize_market(
     option_market_data_pubkey: &Pubkey,
     underlying_asset_pool_pubkey: &Pubkey,
     amount_per_contract: u64,
-    strike_price: u64,
+    quote_amount_per_contract: u64,
     expiration_unix_timestamp: UnixTimestamp,
 ) -> Result<Instruction, ProgramError> {
     let (options_spl_authority_pubkey, _bump_seed) = Pubkey::find_program_address(
@@ -253,7 +253,7 @@ pub fn initiailize_market(
     );
     let data = OptionsInstruction::InitializeMarket {
         amount_per_contract,
-        strike_price,
+        quote_amount_per_contract,
         expiration_unix_timestamp,
     }
     .pack();
@@ -457,11 +457,11 @@ mod tests {
     #[test]
     fn test_pack_unpack_init_market() {
         let amount_per_contract: u64 = 100;
-        let strike_price: u64 = 5;
+        let quote_amount_per_contract: u64 = 500; // strike price of 5
         let expiration_unix_timestamp: UnixTimestamp = 1607743435;
         let check = OptionsInstruction::InitializeMarket {
             amount_per_contract,
-            strike_price,
+            quote_amount_per_contract,
             expiration_unix_timestamp,
         };
         let packed = check.pack();
@@ -469,7 +469,7 @@ mod tests {
         let mut expect = Vec::from([0u8]);
         // add the other instruction inputs to expected buffer
         expect.extend_from_slice(&amount_per_contract.to_le_bytes());
-        expect.extend_from_slice(&strike_price.to_le_bytes());
+        expect.extend_from_slice(&quote_amount_per_contract.to_le_bytes());
         expect.extend_from_slice(&expiration_unix_timestamp.to_le_bytes());
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
@@ -497,9 +497,9 @@ mod tests {
             contract_token_acct_address: Pubkey::new_unique()
         };
         let cloned_option_wrtier = option_writer.clone();
-        let check = OptionsInstruction::ExerciseCoveredCall { 
+        let check = OptionsInstruction::ExerciseCoveredCall {
             option_writer,
-            bump_seed 
+            bump_seed
         };
         let packed = check.pack();
         // add the tag to the expected buffer
@@ -523,7 +523,7 @@ mod tests {
             contract_token_acct_address: Pubkey::new_unique()
         };
         let cloned_option_wrtier = option_writer.clone();
-        let check = OptionsInstruction::ClosePostExpiration { 
+        let check = OptionsInstruction::ClosePostExpiration {
             option_writer,
             bump_seed
         };
