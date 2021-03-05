@@ -46,7 +46,7 @@ export const initializeMarketInstruction = async (
   // The public key for a new Account that will be the underlying asset pool
   underlyingAssetPoolAccount: PublicKey,
   amountPerContract: number,
-  strikePrice: number,
+  quoteAmountPerContract: number,
   expirationUnixTimestamp: number,
 ) => {
   // Create a u8 buffer that conforms to the InitializeMarket structure
@@ -54,7 +54,7 @@ export const initializeMarketInstruction = async (
   INITIALIZE_MARKET_LAYOUT.encode(
     {
       amountPerContract,
-      quoteAmountPerContract: strikePrice * amountPerContract,
+      quoteAmountPerContract,
       expirationUnixTimestamp,
     },
     initializeMarketBuffer,
@@ -115,6 +115,8 @@ export const initializeMarket = async (
   underlyingAssetMint: PublicKey,
   // The public key of the SPL Token Mint for the quote asset
   quoteAssetMint: PublicKey,
+  underlyingAssetDecimals: number,
+  quoteAssetDecimals: number,
   amountPerContract: number,
   strikePrice: number,
   expirationUnixTimestamp: number,
@@ -169,6 +171,12 @@ export const initializeMarket = async (
     }),
   );
 
+  // TODO -- do we need BN here?
+  const amountPerContractU64 =
+    amountPerContract * 10 ** underlyingAssetDecimals;
+  const quoteAmountPerContractU64 =
+    amountPerContract * strikePrice * 10 ** quoteAssetDecimals;
+
   const initMarketInstruction = await initializeMarketInstruction(
     programPubkey,
     underlyingAssetMint,
@@ -176,8 +184,8 @@ export const initializeMarket = async (
     optionMintAccount.publicKey,
     optionMarketDataAccount.publicKey,
     underlyingAssetPoolAccount.publicKey,
-    amountPerContract,
-    strikePrice,
+    amountPerContractU64,
+    quoteAmountPerContractU64,
     expirationUnixTimestamp,
   );
 

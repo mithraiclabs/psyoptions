@@ -25,7 +25,7 @@ export type OptionMarket = {
   underlyingAssetMintAddress: PublicKey;
   quoteAssetMintAddress: PublicKey;
   amountPerContract: BN;
-  strikePrice: BN;
+  quoteAmountPerContract: BN;
   expirationUnixTimestamp: number;
   underlyingAssetPoolAddress: PublicKey;
   registryLength: number;
@@ -66,31 +66,10 @@ export class Market {
   constructor(programId: PublicKey, pubkey: PublicKey, accountData: Buffer) {
     this.programId = programId;
     this.pubkey = pubkey;
-    const {
-      optionMintAddress,
-      underlyingAssetMintAddress,
-      quoteAssetMintAddress,
-      amountPerContract,
-      quoteAmountPerContract,
-      expirationUnixTimestamp,
-      underlyingAssetPoolAddress,
-      registryLength,
-      optionWriterRegistry,
-    } = OPTION_MARKET_LAYOUT.decode(accountData) as DecodedOptionMarket;
 
-    const processedMarketData = {
-      optionMintAddress,
-      underlyingAssetMintAddress,
-      quoteAssetMintAddress,
-      amountPerContract,
-      strikePrice: quoteAmountPerContract.div(amountPerContract),
-      expirationUnixTimestamp,
-      underlyingAssetPoolAddress,
-      registryLength,
-      optionWriterRegistry,
-    };
-
-    this.marketData = processedMarketData;
+    this.marketData = OPTION_MARKET_LAYOUT.decode(
+      accountData,
+    ) as DecodedOptionMarket;
   }
 
   /**
