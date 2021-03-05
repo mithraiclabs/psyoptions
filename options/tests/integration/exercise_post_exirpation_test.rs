@@ -3,7 +3,7 @@ use crate::{
   solana_helpers
 };
 use solana_client::rpc_client::RpcClient;
-use solana_options::{market::OptionMarket};
+use solana_options::market::{OptionMarket, OptionWriterRegistry};
 use solana_program::{
   clock::Clock,
   program_pack::Pack,
@@ -85,9 +85,12 @@ pub fn test_sucessful_exercise_post_expiration() {
   .unwrap();
 
   // pick one of the option writers from the OptionMarket account
+  let writer_registry_data = client.get_account_data(&writer_registry_key).unwrap();
+  let writer_registry = OptionWriterRegistry::unpack(&writer_registry_data[..]).unwrap();
+  let option_writer = &writer_registry.registry[0];
+
   let option_market_data = client.get_account_data(&option_market_key).unwrap();
   let option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
-  let option_writer = &option_market.option_writer_registry[0];
   // create an option exerciser with SPL accounts we can check
   let (exerciser_authority_keys, exerciser_quote_asset_keys, exerciser_underlying_asset_keys) =
     create_exerciser(
@@ -135,18 +138,18 @@ pub fn test_sucessful_exercise_post_expiration() {
   )
   .unwrap();
 
-  let option_market_data = client.get_account_data(&option_market_key).unwrap();
-  let updated_option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
+  let writer_registry_data = client.get_account_data(&writer_registry_key).unwrap();
+  let updated_wrtier_registry = OptionWriterRegistry::unpack(&writer_registry_data[..]).unwrap();
   // assert that the OptionMarket.registry_length decremented
   assert_eq!(
-    updated_option_market.registry_length,
-    option_market.registry_length - 1
+    updated_wrtier_registry.registry_length,
+    writer_registry.registry_length - 1
   );
   // assert that the 1 OptionWriter is removed from the OptionMarket.option_writer_registry
   // TODO make this more robust/exhaustive
   assert_ne!(
     *option_writer,
-    updated_option_market.option_writer_registry[0]
+    updated_wrtier_registry.registry[0]
   );
 
   // assert that the underlying_asset_pool size decreased by amount_per_contract
@@ -243,9 +246,12 @@ pub fn test_panic_when_expiration_has_not_passed() {
   .unwrap();
 
   // pick one of the option writers from the OptionMarket account
+  let writer_registry_data = client.get_account_data(&writer_registry_key).unwrap();
+  let writer_registry = OptionWriterRegistry::unpack(&writer_registry_data[..]).unwrap();
+  let option_writer = &writer_registry.registry[0];
+
   let option_market_data = client.get_account_data(&option_market_key).unwrap();
   let option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
-  let option_writer = &option_market.option_writer_registry[0];
   // create an option exerciser with SPL accounts we can check
   let (exerciser_authority_keys, exerciser_quote_asset_keys, exerciser_underlying_asset_keys) =
     create_exerciser(

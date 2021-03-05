@@ -81,7 +81,7 @@ impl Pack for OptionWriterRegistry {
     const LEN: usize = size_of::<AccountType>() + PUBLIC_KEY_LEN + 2 + REGISTRY_LEN;
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         let src = array_ref![src, 0, OptionWriterRegistry::LEN];
-        let (oma, rl, r) = array_refs![src, PUBLIC_KEY_LEN, 2, REGISTRY_LEN];
+        let (at, oma, rl, r) = array_refs![src, size_of::<AccountType>(), PUBLIC_KEY_LEN, 2, REGISTRY_LEN];
 
         let registry_length = u16::from_le_bytes(*rl);
         let mut registry: Vec<OptionWriter> = Vec::with_capacity(registry_length as usize);
@@ -102,8 +102,9 @@ impl Pack for OptionWriterRegistry {
     }
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let dest = array_mut_ref![dst, 0, OptionWriterRegistry::LEN];
-        let (oma, rl, r) = mut_array_refs![dest, PUBLIC_KEY_LEN, 2, REGISTRY_LEN];
+        let (at, oma, rl, r) = mut_array_refs![dest, size_of::<AccountType>(), PUBLIC_KEY_LEN, 2, REGISTRY_LEN];
 
+        at.copy_from_slice(&self.account_type);
         oma.copy_from_slice(&self.option_market_address.to_bytes());
         rl.copy_from_slice(&self.registry_length.to_le_bytes());
         let mut offset = 0;
