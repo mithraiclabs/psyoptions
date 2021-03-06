@@ -118,7 +118,7 @@ pub fn init_option_market(
     client: &RpcClient,
     program_id: &Pubkey,
     amount_per_contract: u64,
-    strike_price: u64,
+    quote_amount_per_contract: u64,
     expiry: UnixTimestamp,
 ) -> Result<(Keypair, Keypair, Keypair, Keypair, Pubkey, Pubkey), ClientError> {
     let payer_keys = create_account_with_lamports(&client, 10000000000);
@@ -150,7 +150,7 @@ pub fn init_option_market(
         &options_market_keys.pubkey(),
         &underlying_spl_pool.pubkey(),
         amount_per_contract,
-        strike_price,
+        quote_amount_per_contract,
         expiry,
     )
     .unwrap();
@@ -286,7 +286,7 @@ pub fn create_exerciser(
         &exerciser_quote_asset_keys.pubkey(),
         &asset_authority_keys.pubkey(),
         vec![&asset_authority_keys],
-        option_market.amount_per_contract * option_market.strike_price,
+        option_market.quote_amount_per_contract,
     )
     .unwrap();
 

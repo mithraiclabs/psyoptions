@@ -22,7 +22,7 @@ fn test_mint_covered_call_integration() {
   );
   let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
   let amount_per_contract = 100;
-  let strike_price = 5;
+  let quote_amount_per_contract = 500;
   let expiry = 999_999_999_999_999_999;
   let (
     underlying_asset_mint_keys,
@@ -35,7 +35,7 @@ fn test_mint_covered_call_integration() {
     &client,
     &options_program_id,
     amount_per_contract,
-    strike_price,
+    quote_amount_per_contract,
     expiry,
   )
   .unwrap();
@@ -147,7 +147,7 @@ fn test_mint_covered_call_fail_post_expiry() {
   );
   let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
   let amount_per_contract = 100;
-  let strike_price = 5;
+  let quote_amount_per_contract = 500; // strike price of 5
   let expiry = 10;
   let (
     underlying_asset_mint_keys,
@@ -160,7 +160,7 @@ fn test_mint_covered_call_fail_post_expiry() {
     &client,
     &options_program_id,
     amount_per_contract,
-    strike_price,
+    quote_amount_per_contract,
     expiry,
   )
   .unwrap();
@@ -236,7 +236,7 @@ fn test_when_quote_asset_mint_dont_match_contract_market() {
   );
   let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
   let amount_per_contract = 100;
-  let strike_price = 5;
+  let quote_amount_per_contract = 500; // strike price of 5
   let expiry = 999_999_999_999_999_999;
   let (
     underlying_asset_mint_keys,
@@ -249,7 +249,7 @@ fn test_when_quote_asset_mint_dont_match_contract_market() {
     &client,
     &options_program_id,
     amount_per_contract,
-    strike_price,
+    quote_amount_per_contract,
     expiry,
   )
   .unwrap();

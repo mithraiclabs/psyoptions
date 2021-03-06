@@ -44,7 +44,7 @@ fn test_integration() {
 
     //create the IX to init the market
     let amount_per_contract = 100;
-    let strike_price = 5;
+    let quote_amount_per_contract = 500; // strike price of 5
     let expiry = 0;
     let init_market_ix = solana_options::instruction::initiailize_market(
         &options_program_id,
@@ -54,7 +54,7 @@ fn test_integration() {
         &options_market_keys.pubkey(),
         &underlying_spl_pool.pubkey(),
         amount_per_contract,
-        strike_price,
+        quote_amount_per_contract,
         expiry,
     )
     .unwrap();
@@ -97,7 +97,7 @@ fn test_integration() {
     );
     assert_eq!(option_market.quote_asset_address, quote_spl.pubkey());
     assert_eq!(option_market.amount_per_contract, amount_per_contract);
-    assert_eq!(option_market.strike_price, strike_price);
+    assert_eq!(option_market.quote_amount_per_contract, quote_amount_per_contract);
     assert_eq!(option_market.expiration_unix_timestamp, expiry);
     assert_eq!(
         option_market.asset_pool_address,
@@ -138,7 +138,7 @@ fn should_fail_with_same_quote_underlying_assets() {
 
     //create the IX to init the market
     let amount_per_contract = 100;
-    let strike_price = 5;
+    let quote_amount_per_contract = 500; // strike price of 5
     let expiry = 0;
     let init_market_ix = solana_options::instruction::initiailize_market(
         &options_program_id,
@@ -148,7 +148,7 @@ fn should_fail_with_same_quote_underlying_assets() {
         &options_market_keys.pubkey(),
         &underlying_spl_pool.pubkey(),
         amount_per_contract,
-        strike_price,
+        quote_amount_per_contract,
         expiry,
     )
     .unwrap();
