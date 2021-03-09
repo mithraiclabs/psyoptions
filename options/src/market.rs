@@ -13,11 +13,19 @@ const PUBLIC_KEY_LEN: usize = 32;
 const MAX_CONTRACTS: usize = 10;
 const REGISTRY_LEN: usize = MAX_CONTRACTS * OptionWriter::LEN;
 
-#[repr(C)]
+#[repr(u8)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum AccountType {
-    Market,
-    Registry,
+    Market=0,
+    Registry=1,
+}
+impl AccountType {
+    fn to_le_bytes(&self) -> [u8;1] {
+        match self {
+            AccountType::Market => (0 as u8).to_le_bytes(),
+            AccountType::Registry => (1 as u8).to_le_bytes(),
+        }
+    }
 }
 
 #[repr(C)]
@@ -104,7 +112,7 @@ impl Pack for OptionWriterRegistry {
         let dest = array_mut_ref![dst, 0, OptionWriterRegistry::LEN];
         let (at, oma, rl, r) = mut_array_refs![dest, size_of::<AccountType>(), PUBLIC_KEY_LEN, 2, REGISTRY_LEN];
 
-        at.copy_from_slice(&self.account_type);
+        at.copy_from_slice(&self.account_type.to_le_bytes());
         oma.copy_from_slice(&self.option_market_address.to_bytes());
         rl.copy_from_slice(&self.registry_length.to_le_bytes());
         let mut offset = 0;
@@ -207,8 +215,9 @@ impl Pack for OptionMarket {
     }
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let dest = array_mut_ref![dst, 0, OptionMarket::LEN];
-        let (oma, uaa, qaa, apc, sp, eut, apa, wra) = mut_array_refs![
+        let (acct_type, oma, uaa, qaa, apc, sp, eut, apa, wra) = mut_array_refs![
             dest,
+            size_of::<AccountType>(),
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
@@ -218,6 +227,7 @@ impl Pack for OptionMarket {
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN
         ];
+        acct_type.copy_from_slice(&self.account_type.to_le_bytes());
         oma.copy_from_slice(&self.option_mint.to_bytes());
         uaa.copy_from_slice(&self.underlying_asset_address.to_bytes());
         qaa.copy_from_slice(&self.quote_asset_address.to_bytes());
@@ -300,8 +310,9 @@ mod tests {
         OptionWriterRegistry::pack(option_writer_registry, &mut serialized_wariter_registry)
             .unwrap();
         let serialized_ref = array_ref![serialized_wariter_registry, 0, OptionWriterRegistry::LEN];
-        let (oma, rl, r) = array_refs![serialized_ref, PUBLIC_KEY_LEN, 2, REGISTRY_LEN];
+        let (acct_type, oma, rl, r) = array_refs![serialized_ref, size_of::<AccountType>(), PUBLIC_KEY_LEN, 2, REGISTRY_LEN];
 
+        assert_eq!(acct_type, &AccountType::Registry.to_le_bytes());
         assert_eq!(oma, &option_market_address.to_bytes());
         assert_eq!(rl, &registry_length.to_le_bytes());
 
@@ -343,8 +354,9 @@ mod tests {
         let mut serialized_option_market = [0 as u8; OptionMarket::LEN];
         OptionMarket::pack(option_market, &mut serialized_option_market).unwrap();
         let serialized_ref = array_ref![serialized_option_market, 0, OptionMarket::LEN];
-        let (oma, uaa, qaa, apc, sp, eut, apa, wra) = array_refs![
+        let (acct_type, oma, uaa, qaa, apc, sp, eut, apa, wra) = array_refs![
             serialized_ref,
+            size_of::<AccountType>(),
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
@@ -354,6 +366,7 @@ mod tests {
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN
         ];
+        assert_eq!(acct_type, &AccountType::Market.to_le_bytes());
         assert_eq!(oma, &option_mint.to_bytes());
         assert_eq!(uaa, &underlying_asset_address.to_bytes());
         assert_eq!(qaa, &quote_asset_address.to_bytes());
