@@ -410,6 +410,7 @@ pub fn exercise_covered_call(
     option_writer: &OptionWriter,
     option_mint_key: &Pubkey,
     options_market_key: &Pubkey,
+    options_writer_registry_key: &Pubkey,
     exerciser_quote_asset_key: &Pubkey,
     exerciser_underlying_asset_key: &Pubkey,
     exerciser_authority_key: &Pubkey,
@@ -446,6 +447,7 @@ pub fn exercise_covered_call(
     accounts.push(AccountMeta::new(*option_mint_key, false));
     accounts.push(AccountMeta::new(*contract_token_key, false));
     accounts.push(AccountMeta::new_readonly(*contract_token_authority, true));
+    accounts.push(AccountMeta::new(*options_writer_registry_key, false));
 
     Ok(Instruction {
         program_id: *program_id,
