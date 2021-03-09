@@ -370,7 +370,8 @@ pub fn close_post_expiration(
     option_writer: &OptionWriter,
     options_market_key: &Pubkey,
     market_underlying_asset_pool_key: &Pubkey,
-    option_mint_key: &Pubkey
+    option_mint_key: &Pubkey,
+    options_writer_registry_key: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
 
     let cloned_writer = option_writer.clone();
@@ -384,7 +385,7 @@ pub fn close_post_expiration(
     }
     .pack();
 
-    let mut accounts = Vec::with_capacity(6);
+    let mut accounts = Vec::with_capacity(7);
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
     accounts.push(AccountMeta::new(*options_market_key, false));
@@ -398,6 +399,7 @@ pub fn close_post_expiration(
         false,
     ));
     accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
+    accounts.push(AccountMeta::new(*options_writer_registry_key, false));
 
     Ok(Instruction {
         program_id: *program_id,

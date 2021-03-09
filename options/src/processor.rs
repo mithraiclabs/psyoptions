@@ -351,9 +351,9 @@ impl Processor {
         let market_underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let options_spl_authority_acct = next_account_info(account_info_iter)?;
         let option_mint_acct = next_account_info(account_info_iter)?;
-        let option_writer_registry_acct = next_account_info(account_info_iter)?;
+        let writer_registry_acct = next_account_info(account_info_iter)?;
 
-        let mut option_market_data = option_market_acct.try_borrow_mut_data()?;
+        let option_market_data = option_market_acct.try_borrow_data()?;
         let option_market = OptionMarket::unpack(&option_market_data)?;
 
         let clock = Clock::from_account_info(&clock_sysvar_info)?;
@@ -383,17 +383,10 @@ impl Processor {
         )?;
 
         // Remove the option writer and decrement the 
-        // let option_writer_registry_data = option_writer_registry_acct.try_borrow_mut_data()?;
-        // let option_writer_registry = OptionWriterRegistry::unpack(&option_writer_registry_data)?;
-        // let option_writer_registry = OptionWriterRegistry::remove_option_writer(option_writer_registry, option_writer)?;
-        // OptionWriterRegistry::pack(
-        //     option_writer_registry, &mut option_writer_registry_data
-        // );
-
-        OptionMarket::pack(
-            option_market,
-            &mut option_market_data,
-        )?;
+        let mut writer_registry_data = writer_registry_acct.try_borrow_mut_data()?;
+        let writer_registry = OptionWriterRegistry::unpack(&writer_registry_data)?;
+        let updated_writer_registry = OptionWriterRegistry::remove_option_writer(writer_registry, option_writer)?;
+        OptionWriterRegistry::pack(updated_writer_registry, &mut writer_registry_data)?;
         Ok(())
     }
 

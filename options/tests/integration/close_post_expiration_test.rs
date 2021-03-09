@@ -108,7 +108,8 @@ pub fn test_sucessful_close_post_expiration() {
     option_writer,
     &option_market_key,
     &option_market.asset_pool_address,
-    &option_mint_keys.pubkey()
+    &option_mint_keys.pubkey(),
+    &writer_registry_key,
   )
   .unwrap();
   let underlying_asset_pool_acct_data =
@@ -254,7 +255,8 @@ pub fn test_panic_when_expiration_has_not_passed() {
     option_writer,
     &option_market_key,
     &option_market.asset_pool_address,
-    &option_mint_keys.pubkey()
+    &option_mint_keys.pubkey(),
+    &writer_registry_key,
   )
   .unwrap();
   // Send the transaction
