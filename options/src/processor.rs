@@ -103,12 +103,12 @@ impl Processor {
         let option_market_acct = next_account_info(account_info_iter)?;
         let authority_acct = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
+        let writer_registry_acct = next_account_info(account_info_iter)?;
         let option_mint_authority_acct = next_account_info(account_info_iter)?;
         let clock_sysvar_info = next_account_info(account_info_iter)?;
-        let writer_registry_acct = next_account_info(account_info_iter)?;
         // Get the amount of underlying asset for transfer
-        let mut option_market_data = option_market_acct.try_borrow_mut_data()?;
-        let mut option_market = OptionMarket::unpack(&option_market_data)?;
+        let option_market_data = option_market_acct.try_borrow_data()?;
+        let option_market = OptionMarket::unpack(&option_market_data)?;
 
         // Deserialize the account into a clock struct
         let clock = Clock::from_account_info(&clock_sysvar_info)?;
@@ -169,10 +169,13 @@ impl Processor {
             quote_asset_acct_address: *quote_asset_dest_acct.key,
             contract_token_acct_address: *minted_option_dest_acct.key,
         };
-        // option_market.option_writer_registry.push(option_writer);
-        // // increment registry_length
-        // option_market.registry_length += 1;
-        OptionMarket::pack(option_market, &mut option_market_data)?;
+        // Add the writer to the registry
+        let mut writer_registry_data = writer_registry_acct.try_borrow_mut_data()?;
+        let mut writer_registry = OptionWriterRegistry::unpack(&writer_registry_data)?;
+        writer_registry.registry.push(option_writer);
+        // increment registry_length
+        writer_registry.registry_length += 1;
+        OptionWriterRegistry::pack(writer_registry, &mut writer_registry_data);
 
         Ok(())
     }
