@@ -322,6 +322,7 @@ pub fn exercise_post_expiration(
     option_writer: &OptionWriter,
     option_mint_key: &Pubkey,
     options_market_key: &Pubkey,
+    options_writer_registry_key: &Pubkey,
     exerciser_quote_asset_key: &Pubkey,
     exerciser_underlying_asset_key: &Pubkey,
     exerciser_authority_key: &Pubkey,
@@ -337,10 +338,10 @@ pub fn exercise_post_expiration(
     }
     .pack();
 
-    let mut accounts = Vec::with_capacity(9);
+    let mut accounts = Vec::with_capacity(10);
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
-    accounts.push(AccountMeta::new(*options_market_key, false));
+    accounts.push(AccountMeta::new_readonly(*options_market_key, false));
     accounts.push(AccountMeta::new(*exerciser_quote_asset_key, false));
     accounts.push(AccountMeta::new_readonly(*exerciser_authority_key, true));
     accounts.push(AccountMeta::new(
@@ -354,6 +355,7 @@ pub fn exercise_post_expiration(
         false,
     ));
     accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
+    accounts.push(AccountMeta::new(*options_writer_registry_key, false));
 
     Ok(Instruction {
         program_id: *program_id,

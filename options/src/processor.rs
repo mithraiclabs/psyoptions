@@ -284,8 +284,9 @@ impl Processor {
         let market_underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let options_spl_authority_acct = next_account_info(account_info_iter)?;
         let option_mint_acct = next_account_info(account_info_iter)?;
+        let writer_registry_acct = next_account_info(account_info_iter)?;
 
-        let mut option_market_data = option_market_acct.try_borrow_mut_data()?;
+        let option_market_data = option_market_acct.try_borrow_data()?;
         let option_market = OptionMarket::unpack(&option_market_data)?;
 
         let clock = Clock::from_account_info(&clock_sysvar_info)?;
@@ -293,9 +294,6 @@ impl Processor {
         if clock.unix_timestamp <= option_market.expiration_unix_timestamp {
             return Err(OptionsError::OptionMarketNotExpired.into());
         }
-
-        // Remove the option writer and decrement the 
-        // let updated_option_market = OptionWriterRegistry::remove_option_writer(option_market, option_writer)?;
 
         // transfer the quote asset from the Exerciser to the OptionWriter
         let transer_quote_tokens_ix = token_instruction::transfer(
@@ -336,10 +334,11 @@ impl Processor {
             &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]]
         )?;
 
-        OptionMarket::pack(
-            option_market,
-            &mut option_market_data,
-        )?;
+        // Remove the option writer and decrement the 
+        let mut writer_registry_data = writer_registry_acct.try_borrow_mut_data()?;
+        let writer_registry = OptionWriterRegistry::unpack(&writer_registry_data)?;
+        let updated_writer_registry = OptionWriterRegistry::remove_option_writer(writer_registry, option_writer)?;
+        OptionWriterRegistry::pack(updated_writer_registry, &mut writer_registry_data)?;
         Ok(())
     }
 
