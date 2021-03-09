@@ -6,7 +6,7 @@ use crate::{
     },
 };
 use solana_client::{client_error::ClientError, rpc_client::RpcClient};
-use solana_options::market::OptionMarket;
+use solana_options::market::{OptionMarket, OptionWriterRegistry};
 use solana_program::{
     clock::UnixTimestamp, program_pack::Pack, pubkey::Pubkey, system_instruction,
 };
@@ -16,6 +16,42 @@ use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
+
+fn create_writer_registry_acct(
+    client: &RpcClient,
+    options_program_id: &Pubkey,
+    option_wrtier_registry: &Keypair,
+    payer_keys: &Keypair,
+) -> Result<(), ClientError> {
+    let data_len = OptionWriterRegistry::LEN;
+
+    let min_balance = client.get_minimum_balance_for_rent_exemption(data_len)?;
+
+    let instruction = system_instruction::create_account(
+        &payer_keys.pubkey(),
+        &option_wrtier_registry.pubkey(),
+        min_balance,
+        data_len as u64,
+        options_program_id,
+    );
+
+    let message = Message::new(&[instruction], Some(&payer_keys.pubkey()));
+
+    let (blockhash, _, _) = client
+        .get_recent_blockhash_with_commitment(CommitmentConfig::processed())?
+        .value;
+
+    let mut transaction = Transaction::new_unsigned(message.clone());
+    transaction.try_sign(&[payer_keys, option_wrtier_registry], blockhash)?;
+
+    client.send_and_confirm_transaction_with_spinner_and_commitment(
+        &transaction,
+        CommitmentConfig::processed(),
+    )?;
+    println!("Created Options Market account {}", option_wrtier_registry.pubkey());
+
+    Ok(())
+}
 
 fn create_options_market(
     client: &RpcClient,
@@ -58,11 +94,13 @@ pub fn create_accounts_for_options_market(
     options_program_id: &Pubkey,
     spl_mint: &Keypair,
     options_market: &Keypair,
+    option_writer_registry: &Keypair,
     payer_keys: &Keypair,
 ) -> Result<(), ClientError> {
     create_spl_mint_account_uninitialized(client, spl_mint, payer_keys)?;
     create_options_market(client, options_program_id, options_market, payer_keys)?;
-
+    create_writer_registry_acct(client, options_program_id, option_writer_registry, payer_keys)?;
+    
     Ok(())
 }
 
@@ -140,6 +178,7 @@ pub fn init_option_market(
         &program_id,
         &options_spl_mint,
         &options_market_keys,
+        &writer_registry_kp,
         &payer_keys,
     )?;
 

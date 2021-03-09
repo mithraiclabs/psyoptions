@@ -39,6 +39,7 @@ fn test_integration() {
         &options_program_id,
         &options_spl_mint,
         &options_market_keys,
+        &writer_registry_kp,
         &payer_keys,
     )
     .unwrap();
@@ -141,6 +142,7 @@ fn should_fail_with_same_quote_underlying_assets() {
         &options_program_id,
         &options_spl_mint,
         &options_market_keys,
+        &writer_registry_kp,
         &payer_keys,
     )
     .unwrap();
