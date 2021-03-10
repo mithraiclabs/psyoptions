@@ -25,6 +25,7 @@ export const exerciseCoveredCallInstruction = async (
   optionWriterContractTokenKey: PublicKey,
   optionMintKey: PublicKey,
   optionMarketKey: PublicKey,
+  optionWriterRegistryKey: PublicKey,
   exerciserQuoteAssetKey: PublicKey,
   exerciserUnderlyingAssetKey: PublicKey,
   exerciserQuoteAssetAuthorityKey: PublicKey,
@@ -83,6 +84,11 @@ export const exerciseCoveredCallInstruction = async (
       isSigner: true,
       isWritable: false,
     },
+    {
+      pubkey: optionWriterRegistryKey,
+      isSigner: false,
+      isWritable: true,
+    },
   ];
 
   return new TransactionInstruction({
@@ -101,6 +107,7 @@ export const exerciseCoveredCall = async (
   optionWriterContractTokenKey: PublicKey,
   optionMintKey: PublicKey,
   optionMarketKey: PublicKey,
+  optionWriterRegistryKey: PublicKey,
   exerciserQuoteAssetKey: PublicKey,
   exerciserUnderlyingAssetKey: PublicKey,
   exerciserQuoteAssetAuthorityAccount: Account,
@@ -119,6 +126,7 @@ export const exerciseCoveredCall = async (
     optionWriterContractTokenKey,
     optionMintKey,
     optionMarketKey,
+    optionWriterRegistryKey,
     exerciserQuoteAssetKey,
     exerciserUnderlyingAssetKey,
     exerciserQuoteAssetAuthorityAccount.publicKey,
@@ -180,6 +188,7 @@ export const exerciseCoveredCallWithRandomOptionWriter = async (
     optionWriterToExercise.contractTokenAcctAddress,
     optionMarketData.optionMintAddress,
     optionMarketKey,
+    optionMarketData.writerRegistryAddress,
     exerciserQuoteAssetKey,
     exerciserUnderlyingAssetKey,
     exerciserQuoteAssetAuthorityAccount,
