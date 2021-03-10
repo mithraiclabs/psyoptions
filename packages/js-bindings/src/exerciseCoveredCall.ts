@@ -66,7 +66,7 @@ export const exerciseCoveredCallInstruction = async (
   const keys: AccountMeta[] = [
     { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-    { pubkey: optionMarketKey, isSigner: false, isWritable: true },
+    { pubkey: optionMarketKey, isSigner: false, isWritable: false },
     { pubkey: exerciserQuoteAssetKey, isSigner: false, isWritable: true },
     {
       pubkey: exerciserQuoteAssetAuthorityKey,

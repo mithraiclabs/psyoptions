@@ -388,7 +388,7 @@ pub fn close_post_expiration(
     let mut accounts = Vec::with_capacity(7);
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
-    accounts.push(AccountMeta::new(*options_market_key, false));
+    accounts.push(AccountMeta::new_readonly(*options_market_key, false));
     accounts.push(AccountMeta::new(
         option_writer.underlying_asset_acct_address,
         false,
@@ -435,7 +435,7 @@ pub fn exercise_covered_call(
     let mut accounts = Vec::with_capacity(10);
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
-    accounts.push(AccountMeta::new(*options_market_key, false));
+    accounts.push(AccountMeta::new_readonly(*options_market_key, false));
     accounts.push(AccountMeta::new(*exerciser_quote_asset_key, false));
     accounts.push(AccountMeta::new_readonly(*exerciser_authority_key, true));
     accounts.push(AccountMeta::new(

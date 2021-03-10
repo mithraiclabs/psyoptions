@@ -175,7 +175,7 @@ impl Processor {
         writer_registry.registry.push(option_writer);
         // increment registry_length
         writer_registry.registry_length += 1;
-        OptionWriterRegistry::pack(writer_registry, &mut writer_registry_data);
+        OptionWriterRegistry::pack(writer_registry, &mut writer_registry_data)?;
 
         Ok(())
     }

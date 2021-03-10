@@ -50,7 +50,7 @@ export const mintCoveredCallInstruction = async (
     { pubkey: underlyingAssetSrc, isSigner: false, isWritable: true },
     { pubkey: underlyingAssetPool, isSigner: false, isWritable: true },
     { pubkey: quoteAssetDest, isSigner: false, isWritable: false },
-    { pubkey: optionMarket, isSigner: false, isWritable: true },
+    { pubkey: optionMarket, isSigner: false, isWritable: false },
     { pubkey: authorityPubkey, isSigner: true, isWritable: false },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: writerRegistryPubkey, isSigner: false, isWritable: true },
