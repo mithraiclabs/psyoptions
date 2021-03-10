@@ -42,3 +42,8 @@ The program is currently deployed @ `{"programId":"CgetkVhjkbdB3sYpAHZBTWVzojroq
 2. Build the program `cargo build-bpf --manifest-path options/Cargo.toml`
 3. Set the target network `solana config set --url https://devnet.solana.com`
 4. Deploy the program `solana program deploy --program-id $PWD/options/deployed_programs/solana_options-devnet-keypair.json $PWD/options/target/deploy/solana_options.so`
+
+# Deploying the bindings to NPM
+1. Sign into mithraics npm account via cli
+2. build the new package `cd packages/js-bindings` `yarn build:package`
+3. publish to npm `npm publish --access public`
