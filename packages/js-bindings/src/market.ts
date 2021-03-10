@@ -25,7 +25,7 @@ export type OptionWriterRegistry = {
   optionMarketKey: PublicKey;
   registryLength: number;
   registry: OptionWriter[];
-}
+};
 
 export type OptionMarket = {
   accountType: Layout.AccountType;

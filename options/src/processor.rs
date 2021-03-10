@@ -11,6 +11,7 @@ use solana_program::{
     program_pack::Pack,
     pubkey::Pubkey,
     sysvar::Sysvar,
+    msg,
 };
 use spl_token::{
     instruction as token_instruction,
@@ -33,9 +34,9 @@ impl Processor {
         let option_market_data_acct = next_account_info(account_info_iter)?;
         let option_mint_authority = next_account_info(account_info_iter)?;
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
+        let option_writer_registry_acct = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
-        let option_writer_registry_acct = next_account_info(account_info_iter)?;
 
         if quote_asset_acct.key == underlying_asset_acct.key {
             return Err(OptionsError::QuoteAndUnderlyingAssetMustDiffer.into());
@@ -170,6 +171,8 @@ impl Processor {
             contract_token_acct_address: *minted_option_dest_acct.key,
         };
         // Add the writer to the registry
+        msg!("writer registry acct = {:?}", writer_registry_acct);
+        msg!("option_mint_authority_acct = {:?}", option_mint_authority_acct);
         let mut writer_registry_data = writer_registry_acct.try_borrow_mut_data()?;
         let mut writer_registry = OptionWriterRegistry::unpack(&writer_registry_data)?;
         writer_registry.registry.push(option_writer);

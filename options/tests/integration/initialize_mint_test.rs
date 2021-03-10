@@ -106,6 +106,10 @@ fn test_integration() {
         option_market.asset_pool_address,
         underlying_spl_pool.pubkey()
     );
+    assert_eq!(
+        option_market.writer_registry_address,
+        writer_registry_kp.pubkey()
+    );
     // assert the option writer registry initialized correctly
     let writer_registry_data = client
         .get_account_data(&writer_registry_kp.pubkey())
