@@ -20,7 +20,15 @@ export const OPTION_WRITER_LAYOUT = BufferLayout.struct(
   optionWriterStructArray,
 );
 
+export type OptionWriterRegistry = {
+  accountType: Layout.AccountType.Registry;
+  optionMarketKey: PublicKey;
+  registryLength: number;
+  registry: OptionWriter[];
+}
+
 export type OptionMarket = {
+  accountType: Layout.AccountType;
   optionMintAddress: PublicKey;
   underlyingAssetMintAddress: PublicKey;
   quoteAssetMintAddress: PublicKey;
@@ -28,11 +36,11 @@ export type OptionMarket = {
   quoteAmountPerContract: BN;
   expirationUnixTimestamp: number;
   underlyingAssetPoolAddress: PublicKey;
-  registryLength: number;
-  optionWriterRegistry: OptionWriter[];
+  writerRegistryAddress: PublicKey;
 };
 
 export type DecodedOptionMarket = {
+  accountType: Layout.AccountType.Market;
   optionMintAddress: PublicKey;
   underlyingAssetMintAddress: PublicKey;
   quoteAssetMintAddress: PublicKey;
@@ -40,11 +48,11 @@ export type DecodedOptionMarket = {
   quoteAmountPerContract: BN;
   expirationUnixTimestamp: number;
   underlyingAssetPoolAddress: PublicKey;
-  registryLength: number;
-  optionWriterRegistry: OptionWriter[];
+  writerRegistryAddress: PublicKey;
 };
 
 export const OPTION_MARKET_LAYOUT = BufferLayout.struct([
+  Layout.accountType('accountType'),
   Layout.publicKey('optionMintAddress'),
   Layout.publicKey('underlyingAssetMintAddress'),
   Layout.publicKey('quoteAssetMintAddress'),
@@ -52,8 +60,14 @@ export const OPTION_MARKET_LAYOUT = BufferLayout.struct([
   Layout.uint64('quoteAmountPerContract'),
   BufferLayout.ns64('expirationUnixTimestamp'),
   Layout.publicKey('underlyingAssetPoolAddress'),
+  Layout.publicKey('writerRegistryAddress'),
+]);
+
+export const OPTION_WRITER_REGISTRY_LAYOUT = BufferLayout.struct([
+  Layout.accountType('accountType'),
+  Layout.publicKey('optionMarketKey'),
   BufferLayout.u16('registryLength'),
-  BufferLayout.seq(OPTION_WRITER_LAYOUT, MAX_CONTRACTS, 'optionWriterRegistry'),
+  BufferLayout.seq(OPTION_WRITER_LAYOUT, MAX_CONTRACTS, 'registry'),
 ]);
 
 export class Market {
@@ -75,9 +89,6 @@ export class Market {
   /**
    * Get all the Markets the program has created.
    *
-   * TODO the RPC request to solana could have a massive response because the
-   * buffer sizes for a market are huge. We will need to break them out and
-   * refactor.
    * @param {Connection} connection
    * @param {PublicKey} programId
    */

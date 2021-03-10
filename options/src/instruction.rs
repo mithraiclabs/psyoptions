@@ -266,7 +266,7 @@ pub fn initialize_market(
         AccountMeta::new(*option_market_data_pubkey, false),
         AccountMeta::new_readonly(options_spl_authority_pubkey, false),
         AccountMeta::new(*underlying_asset_pool_pubkey, false),
-        AccountMeta::new(*writer_registry_pubkey, false),
+        AccountMeta::new_readonly(*writer_registry_pubkey, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
