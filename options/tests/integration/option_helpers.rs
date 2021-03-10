@@ -182,7 +182,7 @@ pub fn init_option_market(
         &payer_keys,
     )?;
 
-    let init_market_ix = solana_options::instruction::initiailize_market(
+    let init_market_ix = solana_options::instruction::initialize_market(
         &program_id,
         &underlying_spl.pubkey(),
         &quote_spl.pubkey(),

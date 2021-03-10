@@ -48,7 +48,7 @@ fn test_integration() {
     let amount_per_contract = 100;
     let quote_amount_per_contract = 500; // strike price of 5
     let expiry = 0;
-    let init_market_ix = solana_options::instruction::initiailize_market(
+    let init_market_ix = solana_options::instruction::initialize_market(
         &options_program_id,
         &underlying_spl.pubkey(),
         &quote_spl.pubkey(),
@@ -151,7 +151,7 @@ fn should_fail_with_same_quote_underlying_assets() {
     let amount_per_contract = 100;
     let quote_amount_per_contract = 500; // strike price of 5
     let expiry = 0;
-    let init_market_ix = solana_options::instruction::initiailize_market(
+    let init_market_ix = solana_options::instruction::initialize_market(
         &options_program_id,
         &underlying_spl.pubkey(),
         &underlying_spl.pubkey(),

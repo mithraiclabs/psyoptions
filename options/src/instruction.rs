@@ -236,7 +236,7 @@ impl OptionsInstruction {
 }
 
 /// Creates an `InitializeMarket` instruction
-pub fn initiailize_market(
+pub fn initialize_market(
     options_program_id: &Pubkey,
     underlying_asset_pubkey: &Pubkey,
     quote_asset_pubkey: &Pubkey,
