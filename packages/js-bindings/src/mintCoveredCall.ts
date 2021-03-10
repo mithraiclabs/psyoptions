@@ -24,6 +24,7 @@ export const mintCoveredCallInstruction = async (
   quoteAssetDest: PublicKey,
   optionMarket: PublicKey,
   authorityPubkey: PublicKey,
+  writerRegistryPubkey: PublicKey,
 ) => {
   const mintCoveredCallBuffer = Buffer.alloc(MINT_COVERED_CALL_LAYOUT.span);
   // Generate the program derived address needed
@@ -52,6 +53,7 @@ export const mintCoveredCallInstruction = async (
     { pubkey: optionMarket, isSigner: false, isWritable: true },
     { pubkey: authorityPubkey, isSigner: true, isWritable: false },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    { pubkey: writerRegistryPubkey, isSigner: false, isWritable: true },
     { pubkey: optionsSplAuthorityPubkey, isSigner: false, isWritable: false },
     { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
   ];
@@ -76,6 +78,7 @@ export const mintCoveredCall = async (
   // The following arguments should be read from the OptionMarket data account
   optionMintAddress: PublicKey,
   underlyingAssetPool: PublicKey,
+  writerRegistryPubkey: PublicKey,
 ) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
@@ -90,6 +93,7 @@ export const mintCoveredCall = async (
     quoteAssetDest,
     optionMarket,
     underlyingAssetAuthorityAccount.publicKey,
+    writerRegistryPubkey,
   );
   transaction.add(mintInstruction);
 
@@ -133,5 +137,6 @@ export const readMarketAndMintCoveredCall = async (
     underlyingAssetAuthorityAccount,
     optionMarketData.optionMintAddress,
     optionMarketData.underlyingAssetPoolAddress,
+    optionMarketData.writerRegistryAddress,
   );
 };
