@@ -1,6 +1,6 @@
 {
   "name": "@mithraic-labs/options-js-bindings",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Smart contract instructions bindings for mithraiclabs' solana options",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
