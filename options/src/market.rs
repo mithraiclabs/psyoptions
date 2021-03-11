@@ -6,7 +6,7 @@ use solana_program::{
     program_pack::{IsInitialized, Pack, Sealed},
     pubkey::Pubkey,
 };
-use std::{vec::Vec, mem::size_of};
+use std::{mem::size_of, vec::Vec};
 
 const PUBLIC_KEY_LEN: usize = 32;
 // If MAX_CONTRACTS is updated, please update the JS buffer layouts in the bindings package
@@ -16,11 +16,11 @@ const REGISTRY_LEN: usize = MAX_CONTRACTS * OptionWriter::LEN;
 #[repr(u8)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum AccountType {
-    Market=0,
-    Registry=1,
+    Market = 0,
+    Registry = 1,
 }
 impl AccountType {
-    fn to_le_bytes(&self) -> [u8;1] {
+    fn to_le_bytes(&self) -> [u8; 1] {
         match self {
             AccountType::Market => (0 as u8).to_le_bytes(),
             AccountType::Registry => (1 as u8).to_le_bytes(),
@@ -89,13 +89,19 @@ impl Pack for OptionWriterRegistry {
     const LEN: usize = size_of::<AccountType>() + PUBLIC_KEY_LEN + 2 + REGISTRY_LEN;
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         let src = array_ref![src, 0, OptionWriterRegistry::LEN];
-        let (at, oma, rl, r) = array_refs![src, size_of::<AccountType>(), PUBLIC_KEY_LEN, 2, REGISTRY_LEN];
+        let (_account_type_ref, option_market_address_ref, registry_length_ref, registry_ref) = array_refs![
+            src,
+            size_of::<AccountType>(),
+            PUBLIC_KEY_LEN,
+            2,
+            REGISTRY_LEN
+        ];
 
-        let registry_length = u16::from_le_bytes(*rl);
+        let registry_length = u16::from_le_bytes(*registry_length_ref);
         let mut registry: Vec<OptionWriter> = Vec::with_capacity(registry_length as usize);
         let mut offset = 0;
         for _i in 0..registry_length {
-            let option_writer_buff = array_ref![r, offset, OptionWriter::LEN];
+            let option_writer_buff = array_ref![registry_ref, offset, OptionWriter::LEN];
             let option_writer = OptionWriter::unpack_from_slice(option_writer_buff)?;
             registry.push(option_writer);
             offset += OptionWriter::LEN;
@@ -103,25 +109,37 @@ impl Pack for OptionWriterRegistry {
 
         Ok(OptionWriterRegistry {
             account_type: AccountType::Registry,
-            option_market_address: Pubkey::new(oma),
+            option_market_address: Pubkey::new(option_market_address_ref),
             registry_length,
             registry,
         })
     }
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let dest = array_mut_ref![dst, 0, OptionWriterRegistry::LEN];
-        let (at, oma, rl, r) = mut_array_refs![dest, size_of::<AccountType>(), PUBLIC_KEY_LEN, 2, REGISTRY_LEN];
+        let (account_type_ref, option_market_address_ref, registry_length_ref, registry_ref) = mut_array_refs![
+            dest,
+            size_of::<AccountType>(),
+            PUBLIC_KEY_LEN,
+            2,
+            REGISTRY_LEN
+        ];
 
-        at.copy_from_slice(&self.account_type.to_le_bytes());
-        oma.copy_from_slice(&self.option_market_address.to_bytes());
-        rl.copy_from_slice(&self.registry_length.to_le_bytes());
+        account_type_ref.copy_from_slice(&self.account_type.to_le_bytes());
+        option_market_address_ref.copy_from_slice(&self.option_market_address.to_bytes());
+        registry_length_ref.copy_from_slice(&self.registry_length.to_le_bytes());
         let mut offset = 0;
         // I'm not sure if there is a more memory efficient way to handle this. But I guess if the
         // method takes a reference to self (&self) we have to clone the vector in order to iterate
         // and write the data to the new slice without deleting the old data in the process.
         for option_writer in self.registry.clone() {
-            option_writer.pack_into_slice(&mut r[offset..offset + OptionWriter::LEN]);
+            option_writer.pack_into_slice(&mut registry_ref[offset..offset + OptionWriter::LEN]);
             offset += OptionWriter::LEN;
+        }
+        // 0 pad the rest of the registry
+        // A possible optimization would be to only zero pad a single OptionWriter::LEN,
+        // but that's only if it's safe to assume only a single OptionWriter could be removed at a time.
+        for i in offset..REGISTRY_LEN {
+            registry_ref[i] = 0;
         }
     }
 }
@@ -179,7 +197,8 @@ impl IsInitialized for OptionMarket {
 }
 impl Sealed for OptionMarket {}
 impl Pack for OptionMarket {
-    const LEN: usize = size_of::<AccountType>() + PUBLIC_KEY_LEN
+    const LEN: usize = size_of::<AccountType>()
+        + PUBLIC_KEY_LEN
         + PUBLIC_KEY_LEN
         + PUBLIC_KEY_LEN
         + 8
@@ -206,7 +225,7 @@ impl Pack for OptionMarket {
             option_mint: Pubkey::new(oma),
             underlying_asset_address: Pubkey::new(uaa),
             quote_asset_address: Pubkey::new(qaa),
-            amount_per_contract: u64::from_le_bytes(*apc), 
+            amount_per_contract: u64::from_le_bytes(*apc),
             quote_amount_per_contract: u64::from_le_bytes(*sp),
             expiration_unix_timestamp: UnixTimestamp::from_le_bytes(*eut),
             asset_pool_address: Pubkey::new(apa),
@@ -310,7 +329,13 @@ mod tests {
         OptionWriterRegistry::pack(option_writer_registry, &mut serialized_writer_registry)
             .unwrap();
         let serialized_ref = array_ref![serialized_writer_registry, 0, OptionWriterRegistry::LEN];
-        let (acct_type, oma, rl, r) = array_refs![serialized_ref, size_of::<AccountType>(), PUBLIC_KEY_LEN, 2, REGISTRY_LEN];
+        let (acct_type, oma, rl, r) = array_refs![
+            serialized_ref,
+            size_of::<AccountType>(),
+            PUBLIC_KEY_LEN,
+            2,
+            REGISTRY_LEN
+        ];
 
         assert_eq!(acct_type, &AccountType::Registry.to_le_bytes());
         assert_eq!(oma, &option_market_address.to_bytes());
@@ -343,7 +368,7 @@ mod tests {
             option_mint,
             underlying_asset_address,
             quote_asset_address,
-            amount_per_contract, 
+            amount_per_contract,
             quote_amount_per_contract,
             expiration_unix_timestamp,
             asset_pool_address,
@@ -380,5 +405,36 @@ mod tests {
             OptionMarket::unpack(&serialized_option_market).unwrap();
 
         assert_eq!(deserialized_options_market, cloned_option_market);
+    }
+
+    #[test]
+    fn test_remove_option_writer() {
+        let registry_length: u16 = 2;
+        let option_market_address = Pubkey::new_unique();
+        let option_writer_1 = generate_option_writer();
+        let option_writer_2 = generate_option_writer();
+        let registry = vec![option_writer_1.clone(), option_writer_2.clone()];
+
+        let option_writer_registry = OptionWriterRegistry {
+            account_type: AccountType::Registry,
+            option_market_address,
+            registry_length,
+            registry,
+        };
+        let single_writer_registry = OptionWriterRegistry::remove_option_writer(
+            option_writer_registry.clone(),
+            option_writer_2.clone(),
+        )
+        .unwrap();
+        let mut writer_reg_buf_2_writers = [0 as u8; OptionWriterRegistry::LEN];
+        OptionWriterRegistry::pack(option_writer_registry, &mut writer_reg_buf_2_writers).unwrap();
+        let mut writer_reg_buf_1_writer = writer_reg_buf_2_writers.clone();
+        OptionWriterRegistry::pack(single_writer_registry, &mut writer_reg_buf_1_writer).unwrap();
+        const REG_OFFSET: usize = size_of::<AccountType>() + PUBLIC_KEY_LEN + 2;
+        const REG_END: usize = OptionWriterRegistry::LEN - REG_OFFSET;
+        let single_writer_reg_ref = array_ref![writer_reg_buf_1_writer, REG_OFFSET, REG_END];
+        let double_writer_reg_ref = array_ref![writer_reg_buf_2_writers, REG_OFFSET, REG_END];
+
+        assert_ne!(single_writer_reg_ref, double_writer_reg_ref);
     }
 }
