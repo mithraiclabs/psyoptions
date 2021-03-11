@@ -1,5 +1,5 @@
 import { Connection, PublicKey } from '@solana/web3.js';
-import { DecodedOptionMarket, OptionWriter } from '../market';
+import { OptionMarket, OptionWriter } from '../market';
 import { getOptionMarketData } from './getOptionMarketData';
 import { getOptionWriterRegistry } from './getOptionWriterRegistry';
 
@@ -12,7 +12,7 @@ import { getOptionWriterRegistry } from './getOptionWriterRegistry';
 export const getRandomOptionWriter = async (
   connection: Connection,
   optionMarketKey: PublicKey,
-): Promise<[OptionWriter, DecodedOptionMarket]> => {
+): Promise<[OptionWriter, OptionMarket]> => {
   const optionMarketData = await getOptionMarketData(
     connection,
     optionMarketKey,

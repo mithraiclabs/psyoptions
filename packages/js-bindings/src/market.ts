@@ -28,18 +28,6 @@ export type OptionWriterRegistry = {
 };
 
 export type OptionMarket = {
-  accountType: Layout.AccountType;
-  optionMintAddress: PublicKey;
-  underlyingAssetMintAddress: PublicKey;
-  quoteAssetMintAddress: PublicKey;
-  amountPerContract: BN;
-  quoteAmountPerContract: BN;
-  expirationUnixTimestamp: number;
-  underlyingAssetPoolAddress: PublicKey;
-  writerRegistryAddress: PublicKey;
-};
-
-export type DecodedOptionMarket = {
   accountType: Layout.AccountType.Market;
   optionMintAddress: PublicKey;
   underlyingAssetMintAddress: PublicKey;
@@ -81,9 +69,7 @@ export class Market {
     this.programId = programId;
     this.pubkey = pubkey;
 
-    this.marketData = OPTION_MARKET_LAYOUT.decode(
-      accountData,
-    ) as DecodedOptionMarket;
+    this.marketData = OPTION_MARKET_LAYOUT.decode(accountData) as OptionMarket;
   }
 
   /**
