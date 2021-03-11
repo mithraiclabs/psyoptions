@@ -3,6 +3,7 @@ use crate::{
   solana_helpers,
   spl_helpers::{create_spl_account, mint_tokens_to_account},
 };
+use serial_test::serial;
 use solana_client::rpc_client::RpcClient;
 use solana_options::market::{OptionMarket, OptionWriter};
 use solana_program::program_pack::Pack;
@@ -11,7 +12,6 @@ use solana_sdk::{
   signature::{Keypair, Signer},
 };
 use spl_token::state::{Account, Mint};
-use serial_test::serial;
 
 #[test]
 #[serial]
@@ -31,6 +31,7 @@ fn test_mint_covered_call_integration() {
     asset_authority_keys,
     underlying_asset_pool_key,
     option_market_key,
+    writer_registry_key,
   ) = init_option_market(
     &client,
     &options_program_id,
@@ -89,6 +90,7 @@ fn test_mint_covered_call_integration() {
     &option_writer_quote_asset_keys.pubkey(),
     &option_market_key,
     &option_writer_keys.pubkey(),
+    &writer_registry_key,
   )
   .unwrap();
   let signers = vec![&option_writer_keys];
@@ -124,11 +126,12 @@ fn test_mint_covered_call_integration() {
   assert_eq!(option_writer_option_acct.amount, 1);
 
   // assert that the option market registry contains the proper entry
-  let option_market_data = client.get_account_data(&option_market_key).unwrap();
-  let option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
-  assert_eq!(option_market.registry_length, 1);
+  let writer_registry_data = client.get_account_data(&writer_registry_key).unwrap();
+  let writer_registry =
+    solana_options::market::OptionWriterRegistry::unpack(&writer_registry_data[..]).unwrap();
+  assert_eq!(writer_registry.registry_length, 1);
   assert_eq!(
-    option_market.option_writer_registry[0],
+    writer_registry.registry[0],
     OptionWriter {
       underlying_asset_acct_address: option_writer_underlying_asset_keys.pubkey(),
       quote_asset_acct_address: option_writer_quote_asset_keys.pubkey(),
@@ -156,6 +159,7 @@ fn test_mint_covered_call_fail_post_expiry() {
     asset_authority_keys,
     underlying_asset_pool_key,
     option_market_key,
+    writer_registry_key,
   ) = init_option_market(
     &client,
     &options_program_id,
@@ -214,6 +218,7 @@ fn test_mint_covered_call_fail_post_expiry() {
     &option_writer_quote_asset_keys.pubkey(),
     &option_market_key,
     &option_writer_keys.pubkey(),
+    &writer_registry_key,
   )
   .unwrap();
   let signers = vec![&option_writer_keys];
@@ -245,6 +250,7 @@ fn test_when_quote_asset_mint_dont_match_contract_market() {
     asset_authority_keys,
     underlying_asset_pool_key,
     option_market_key,
+    writer_registry_key,
   ) = init_option_market(
     &client,
     &options_program_id,
@@ -304,6 +310,7 @@ fn test_when_quote_asset_mint_dont_match_contract_market() {
     &option_writer_underlying_asset_keys.pubkey(),
     &option_market_key,
     &option_writer_keys.pubkey(),
+    &writer_registry_key
   )
   .unwrap();
   let signers = vec![&option_writer_keys];

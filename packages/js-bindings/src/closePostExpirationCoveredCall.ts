@@ -25,6 +25,7 @@ export const closePostExpirationCoveredCallInstruction = async (
   optionMintKey: PublicKey,
   optionMarketKey: PublicKey,
   underlyingAssetPoolKey: PublicKey,
+  optionWriterRegistryKey: PublicKey,
 ) => {
   const closePostExpirationBuffer = Buffer.alloc(
     CLOSE_POST_EXPIRATION_COVERED_CALL.span,
@@ -60,7 +61,7 @@ export const closePostExpirationCoveredCallInstruction = async (
   const keys: AccountMeta[] = [
     { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-    { pubkey: optionMarketKey, isSigner: false, isWritable: true },
+    { pubkey: optionMarketKey, isSigner: false, isWritable: false },
     {
       pubkey: optionWriterUnderlyingAssetKey,
       isSigner: false,
@@ -69,6 +70,7 @@ export const closePostExpirationCoveredCallInstruction = async (
     { pubkey: underlyingAssetPoolKey, isSigner: false, isWritable: true },
     { pubkey: optionMintAuthorityPubkey, isSigner: false, isWritable: false },
     { pubkey: optionMintKey, isSigner: false, isWritable: false },
+    { pubkey: optionWriterRegistryKey, isSigner: false, isWritable: true },
   ];
 
   return new TransactionInstruction({
@@ -88,6 +90,7 @@ export const closePostExpirationCoveredCall = async (
   optionMintKey: PublicKey,
   optionMarketKey: PublicKey,
   underlyingAssetPoolKey: PublicKey,
+  optionWriterRegistryKey: PublicKey,
 ) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
@@ -101,6 +104,7 @@ export const closePostExpirationCoveredCall = async (
     optionMintKey,
     optionMarketKey,
     underlyingAssetPoolKey,
+    optionWriterRegistryKey,
   );
   transaction.add(closePostExpiration);
   const signers = [payer];

@@ -1,6 +1,7 @@
 import { Connection, PublicKey } from '@solana/web3.js';
-import { DecodedOptionMarket, OptionWriter } from '../market';
+import { OptionMarket, OptionWriter } from '../market';
 import { getOptionMarketData } from './getOptionMarketData';
+import { getOptionWriterRegistry } from './getOptionWriterRegistry';
 
 /**
  * Returns a tuple containing a random option writer and the Option Market data
@@ -11,17 +12,18 @@ import { getOptionMarketData } from './getOptionMarketData';
 export const getRandomOptionWriter = async (
   connection: Connection,
   optionMarketKey: PublicKey,
-): Promise<[OptionWriter, DecodedOptionMarket]> => {
+): Promise<[OptionWriter, OptionMarket]> => {
   const optionMarketData = await getOptionMarketData(
     connection,
     optionMarketKey,
   );
+  const optionWriterRegistry = await getOptionWriterRegistry(
+    connection,
+    optionMarketData.writerRegistryAddress,
+  );
   const randRegistryIndex = Math.floor(
-    Math.random() * (optionMarketData.registryLength - 1),
+    Math.random() * (optionWriterRegistry.registryLength - 1),
   );
 
-  return [
-    optionMarketData.optionWriterRegistry[randRegistryIndex],
-    optionMarketData,
-  ];
+  return [optionWriterRegistry.registry[randRegistryIndex], optionMarketData];
 };

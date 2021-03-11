@@ -25,6 +25,7 @@ export const exerciseCoveredCallInstruction = async (
   optionWriterContractTokenKey: PublicKey,
   optionMintKey: PublicKey,
   optionMarketKey: PublicKey,
+  optionWriterRegistryKey: PublicKey,
   exerciserQuoteAssetKey: PublicKey,
   exerciserUnderlyingAssetKey: PublicKey,
   exerciserQuoteAssetAuthorityKey: PublicKey,
@@ -65,7 +66,7 @@ export const exerciseCoveredCallInstruction = async (
   const keys: AccountMeta[] = [
     { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-    { pubkey: optionMarketKey, isSigner: false, isWritable: true },
+    { pubkey: optionMarketKey, isSigner: false, isWritable: false },
     { pubkey: exerciserQuoteAssetKey, isSigner: false, isWritable: true },
     {
       pubkey: exerciserQuoteAssetAuthorityKey,
@@ -82,6 +83,11 @@ export const exerciseCoveredCallInstruction = async (
       pubkey: exerciserContractTokenAuthorityKey,
       isSigner: true,
       isWritable: false,
+    },
+    {
+      pubkey: optionWriterRegistryKey,
+      isSigner: false,
+      isWritable: true,
     },
   ];
 
@@ -101,6 +107,7 @@ export const exerciseCoveredCall = async (
   optionWriterContractTokenKey: PublicKey,
   optionMintKey: PublicKey,
   optionMarketKey: PublicKey,
+  optionWriterRegistryKey: PublicKey,
   exerciserQuoteAssetKey: PublicKey,
   exerciserUnderlyingAssetKey: PublicKey,
   exerciserQuoteAssetAuthorityAccount: Account,
@@ -119,6 +126,7 @@ export const exerciseCoveredCall = async (
     optionWriterContractTokenKey,
     optionMintKey,
     optionMarketKey,
+    optionWriterRegistryKey,
     exerciserQuoteAssetKey,
     exerciserUnderlyingAssetKey,
     exerciserQuoteAssetAuthorityAccount.publicKey,
@@ -180,6 +188,7 @@ export const exerciseCoveredCallWithRandomOptionWriter = async (
     optionWriterToExercise.contractTokenAcctAddress,
     optionMarketData.optionMintAddress,
     optionMarketKey,
+    optionMarketData.writerRegistryAddress,
     exerciserQuoteAssetKey,
     exerciserUnderlyingAssetKey,
     exerciserQuoteAssetAuthorityAccount,

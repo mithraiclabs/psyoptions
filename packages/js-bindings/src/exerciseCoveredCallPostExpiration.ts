@@ -24,6 +24,7 @@ export const exerciseCoveredCallPostExpirationInstruction = async (
   optionWriterQuoteAssetKey: PublicKey,
   optionWriterContractTokenKey: PublicKey,
   optionMarketKey: PublicKey,
+  optionWriterRegistry: PublicKey,
   exerciserQuoteAssetKey: PublicKey,
   exerciserQuoteAssetAuthorityKey: PublicKey,
   exerciserUnderlyingAssetKey: PublicKey,
@@ -63,7 +64,7 @@ export const exerciseCoveredCallPostExpirationInstruction = async (
   const keys: AccountMeta[] = [
     { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-    { pubkey: optionMarketKey, isSigner: false, isWritable: true },
+    { pubkey: optionMarketKey, isSigner: false, isWritable: false },
     { pubkey: exerciserQuoteAssetKey, isSigner: false, isWritable: true },
     {
       pubkey: exerciserQuoteAssetAuthorityKey,
@@ -75,6 +76,7 @@ export const exerciseCoveredCallPostExpirationInstruction = async (
     { pubkey: underlyingAssetPoolKey, isSigner: false, isWritable: true },
     { pubkey: optionMintAuthorityPubkey, isSigner: false, isWritable: false },
     { pubkey: optionMintKey, isSigner: false, isWritable: true },
+    { pubkey: optionWriterRegistry, isSigner: false, isWritable: true },
   ];
 
   return new TransactionInstruction({
@@ -92,6 +94,7 @@ export const exerciseCoveredCallPostExpiration = async (
   optionWriterQuoteAssetKey: PublicKey,
   optionWriterContractTokenKey: PublicKey,
   optionMarketKey: PublicKey,
+  optionWriterRegistry: PublicKey,
   exerciserQuoteAssetKey: PublicKey,
   exerciserQuoteAssetAuthorityAccount: Account,
   exerciserUnderlyingAssetKey: PublicKey,
@@ -108,6 +111,7 @@ export const exerciseCoveredCallPostExpiration = async (
     optionWriterQuoteAssetKey,
     optionWriterContractTokenKey,
     optionMarketKey,
+    optionWriterRegistry,
     exerciserQuoteAssetKey,
     exerciserQuoteAssetAuthorityAccount.publicKey,
     exerciserUnderlyingAssetKey,
@@ -158,6 +162,7 @@ export const exerciseCoveredCallPostExpirationWithRandomOptionWriter = async (
     optionWriterToExercise.quoteAssetAcctAddress,
     optionWriterToExercise.contractTokenAcctAddress,
     optionMarketKey,
+    optionMarketData.writerRegistryAddress,
     exerciserQuoteAssetKey,
     exerciserQuoteAssetAuthorityAccount,
     exerciserUnderlyingAssetKey,

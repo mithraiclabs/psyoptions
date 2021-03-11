@@ -9,7 +9,7 @@ import {
   Connection,
 } from '@solana/web3.js';
 import { AccountLayout, MintLayout } from '@solana/spl-token';
-import { OPTION_MARKET_LAYOUT } from './market';
+import { OPTION_MARKET_LAYOUT, OPTION_WRITER_REGISTRY_LAYOUT } from './market';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { TOKEN_PROGRAM_ID } from './utils';
 
@@ -45,6 +45,8 @@ export const initializeMarketInstruction = async (
   optionMarketDataAccount: PublicKey,
   // The public key for a new Account that will be the underlying asset pool
   underlyingAssetPoolAccount: PublicKey,
+  // The public key for the new OptionWriterRegistry account
+  optionWriterRegistryKey: PublicKey,
   amountPerContract: number,
   quoteAmountPerContract: number,
   expirationUnixTimestamp: number,
@@ -97,6 +99,7 @@ export const initializeMarketInstruction = async (
         isSigner: false,
         isWritable: false,
       },
+      { pubkey: optionWriterRegistryKey, isSigner: false, isWritable: false },
       { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
       { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     ],
@@ -127,6 +130,7 @@ export const initializeMarket = async (
   const optionMintAccount = new Account();
   const optionMarketDataAccount = new Account();
   const underlyingAssetPoolAccount = new Account();
+  const optionWriterRegistryAccount = new Account();
 
   const transaction = new Transaction();
 
@@ -142,6 +146,20 @@ export const initializeMarket = async (
       lamports: optionMintRentBalance,
       space: MintLayout.span,
       programId: TOKEN_PROGRAM_ID,
+    }),
+  );
+
+  // Create the OptionWriterRegistry account
+  const writerRegistryRentBalance = await connection.getMinimumBalanceForRentExemption(
+    OPTION_WRITER_REGISTRY_LAYOUT.span,
+  );
+  transaction.add(
+    SystemProgram.createAccount({
+      fromPubkey: payer.publicKey,
+      newAccountPubkey: optionWriterRegistryAccount.publicKey,
+      lamports: writerRegistryRentBalance,
+      space: OPTION_WRITER_REGISTRY_LAYOUT.span,
+      programId: programPubkey,
     }),
   );
 
@@ -184,6 +202,7 @@ export const initializeMarket = async (
     optionMintAccount.publicKey,
     optionMarketDataAccount.publicKey,
     underlyingAssetPoolAccount.publicKey,
+    optionWriterRegistryAccount.publicKey,
     amountPerContractU64,
     quoteAmountPerContractU64,
     expirationUnixTimestamp,
@@ -195,6 +214,7 @@ export const initializeMarket = async (
     optionMintAccount,
     underlyingAssetPoolAccount,
     optionMarketDataAccount,
+    optionWriterRegistryAccount,
   ];
   transaction.feePayer = payer.publicKey;
   const { blockhash } = await connection.getRecentBlockhash();

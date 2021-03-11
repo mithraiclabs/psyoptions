@@ -1,5 +1,5 @@
 import { Connection, PublicKey } from '@solana/web3.js';
-import { DecodedOptionMarket, OPTION_MARKET_LAYOUT } from '../market';
+import { OptionMarket, OPTION_MARKET_LAYOUT } from '../market';
 
 /**
  * Fetch and decode the Option Market Data account
@@ -7,7 +7,7 @@ import { DecodedOptionMarket, OPTION_MARKET_LAYOUT } from '../market';
 export const getOptionMarketData = async (
   connection: Connection,
   optionMarket: PublicKey,
-): Promise<DecodedOptionMarket> => {
+): Promise<OptionMarket> => {
   const info = await connection.getAccountInfo(optionMarket);
-  return OPTION_MARKET_LAYOUT.decode(info.data) as DecodedOptionMarket;
+  return OPTION_MARKET_LAYOUT.decode(info.data) as OptionMarket;
 };

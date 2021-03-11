@@ -41,6 +41,14 @@ class BNLayout extends BufferLayout.Blob {
     return super.encode(src.toArrayLike(Buffer, 'le', this.span), b, offset);
   }
 }
+
+// eslint-disable-next-line no-shadow
+export enum AccountType {
+  Market = 0,
+  Registry = 1,
+}
+
+export const accountType = (property: string) => BufferLayout.u8(property);
 /**
  * Layout for a public key
  */

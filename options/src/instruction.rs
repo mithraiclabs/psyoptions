@@ -236,13 +236,14 @@ impl OptionsInstruction {
 }
 
 /// Creates an `InitializeMarket` instruction
-pub fn initiailize_market(
+pub fn initialize_market(
     options_program_id: &Pubkey,
     underlying_asset_pubkey: &Pubkey,
     quote_asset_pubkey: &Pubkey,
     contract_spl_token_pubkey: &Pubkey,
     option_market_data_pubkey: &Pubkey,
     underlying_asset_pool_pubkey: &Pubkey,
+    writer_registry_pubkey: &Pubkey,
     amount_per_contract: u64,
     quote_amount_per_contract: u64,
     expiration_unix_timestamp: UnixTimestamp,
@@ -265,6 +266,7 @@ pub fn initiailize_market(
         AccountMeta::new(*option_market_data_pubkey, false),
         AccountMeta::new_readonly(options_spl_authority_pubkey, false),
         AccountMeta::new(*underlying_asset_pool_pubkey, false),
+        AccountMeta::new_readonly(*writer_registry_pubkey, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
@@ -286,16 +288,18 @@ pub fn mint_covered_call(
     quote_asset_dest: &Pubkey,
     option_market: &Pubkey,
     authority_pubkey: &Pubkey,
+    writer_registry_pubkey: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
-    let mut accounts = Vec::with_capacity(9);
+    let mut accounts = Vec::with_capacity(11);
     accounts.push(AccountMeta::new(*option_mint, false));
     accounts.push(AccountMeta::new(*minted_option_dest, false));
     accounts.push(AccountMeta::new(*underyling_asset_src, false));
     accounts.push(AccountMeta::new(*underlying_asset_pool, false));
     accounts.push(AccountMeta::new_readonly(*quote_asset_dest, false));
-    accounts.push(AccountMeta::new(*option_market, false));
+    accounts.push(AccountMeta::new_readonly(*option_market, false));
     accounts.push(AccountMeta::new_readonly(*authority_pubkey, true));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
+    accounts.push(AccountMeta::new(*writer_registry_pubkey, false));
 
     let (options_spl_authority_pubkey, bump_seed) =
         Pubkey::find_program_address(&[&option_mint.to_bytes()[..32]], &program_id);
@@ -318,6 +322,7 @@ pub fn exercise_post_expiration(
     option_writer: &OptionWriter,
     option_mint_key: &Pubkey,
     options_market_key: &Pubkey,
+    options_writer_registry_key: &Pubkey,
     exerciser_quote_asset_key: &Pubkey,
     exerciser_underlying_asset_key: &Pubkey,
     exerciser_authority_key: &Pubkey,
@@ -333,10 +338,10 @@ pub fn exercise_post_expiration(
     }
     .pack();
 
-    let mut accounts = Vec::with_capacity(9);
+    let mut accounts = Vec::with_capacity(10);
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
-    accounts.push(AccountMeta::new(*options_market_key, false));
+    accounts.push(AccountMeta::new_readonly(*options_market_key, false));
     accounts.push(AccountMeta::new(*exerciser_quote_asset_key, false));
     accounts.push(AccountMeta::new_readonly(*exerciser_authority_key, true));
     accounts.push(AccountMeta::new(
@@ -350,6 +355,7 @@ pub fn exercise_post_expiration(
         false,
     ));
     accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
+    accounts.push(AccountMeta::new(*options_writer_registry_key, false));
 
     Ok(Instruction {
         program_id: *program_id,
@@ -364,7 +370,8 @@ pub fn close_post_expiration(
     option_writer: &OptionWriter,
     options_market_key: &Pubkey,
     market_underlying_asset_pool_key: &Pubkey,
-    option_mint_key: &Pubkey
+    option_mint_key: &Pubkey,
+    options_writer_registry_key: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
 
     let cloned_writer = option_writer.clone();
@@ -378,10 +385,10 @@ pub fn close_post_expiration(
     }
     .pack();
 
-    let mut accounts = Vec::with_capacity(6);
+    let mut accounts = Vec::with_capacity(7);
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
-    accounts.push(AccountMeta::new(*options_market_key, false));
+    accounts.push(AccountMeta::new_readonly(*options_market_key, false));
     accounts.push(AccountMeta::new(
         option_writer.underlying_asset_acct_address,
         false,
@@ -392,6 +399,7 @@ pub fn close_post_expiration(
         false,
     ));
     accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
+    accounts.push(AccountMeta::new(*options_writer_registry_key, false));
 
     Ok(Instruction {
         program_id: *program_id,
@@ -406,6 +414,7 @@ pub fn exercise_covered_call(
     option_writer: &OptionWriter,
     option_mint_key: &Pubkey,
     options_market_key: &Pubkey,
+    options_writer_registry_key: &Pubkey,
     exerciser_quote_asset_key: &Pubkey,
     exerciser_underlying_asset_key: &Pubkey,
     exerciser_authority_key: &Pubkey,
@@ -426,7 +435,7 @@ pub fn exercise_covered_call(
     let mut accounts = Vec::with_capacity(10);
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
-    accounts.push(AccountMeta::new(*options_market_key, false));
+    accounts.push(AccountMeta::new_readonly(*options_market_key, false));
     accounts.push(AccountMeta::new(*exerciser_quote_asset_key, false));
     accounts.push(AccountMeta::new_readonly(*exerciser_authority_key, true));
     accounts.push(AccountMeta::new(
@@ -442,6 +451,7 @@ pub fn exercise_covered_call(
     accounts.push(AccountMeta::new(*option_mint_key, false));
     accounts.push(AccountMeta::new(*contract_token_key, false));
     accounts.push(AccountMeta::new_readonly(*contract_token_authority, true));
+    accounts.push(AccountMeta::new(*options_writer_registry_key, false));
 
     Ok(Instruction {
         program_id: *program_id,
