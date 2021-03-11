@@ -306,10 +306,10 @@ mod tests {
         };
         let cloned_option_writer_registry = option_writer_registry.clone();
 
-        let mut serialized_wariter_registry = [0 as u8; OptionWriterRegistry::LEN];
-        OptionWriterRegistry::pack(option_writer_registry, &mut serialized_wariter_registry)
+        let mut serialized_writer_registry = [0 as u8; OptionWriterRegistry::LEN];
+        OptionWriterRegistry::pack(option_writer_registry, &mut serialized_writer_registry)
             .unwrap();
-        let serialized_ref = array_ref![serialized_wariter_registry, 0, OptionWriterRegistry::LEN];
+        let serialized_ref = array_ref![serialized_writer_registry, 0, OptionWriterRegistry::LEN];
         let (acct_type, oma, rl, r) = array_refs![serialized_ref, size_of::<AccountType>(), PUBLIC_KEY_LEN, 2, REGISTRY_LEN];
 
         assert_eq!(acct_type, &AccountType::Registry.to_le_bytes());

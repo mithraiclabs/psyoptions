@@ -11,7 +11,6 @@ use solana_program::{
     program_pack::Pack,
     pubkey::Pubkey,
     sysvar::Sysvar,
-    msg,
 };
 use spl_token::{
     instruction as token_instruction,
@@ -171,8 +170,6 @@ impl Processor {
             contract_token_acct_address: *minted_option_dest_acct.key,
         };
         // Add the writer to the registry
-        msg!("writer registry acct = {:?}", writer_registry_acct);
-        msg!("option_mint_authority_acct = {:?}", option_mint_authority_acct);
         let mut writer_registry_data = writer_registry_acct.try_borrow_mut_data()?;
         let mut writer_registry = OptionWriterRegistry::unpack(&writer_registry_data)?;
         writer_registry.registry.push(option_writer);
