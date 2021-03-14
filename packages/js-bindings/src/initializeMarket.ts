@@ -1,3 +1,4 @@
+import BigNumber from 'bignumber.js';
 import { struct, nu64, ns64 } from 'buffer-layout';
 import {
   PublicKey,
@@ -47,7 +48,10 @@ export const initializeMarketInstruction = async (
   underlyingAssetPoolAccount: PublicKey,
   // The public key for the new OptionWriterRegistry account
   optionWriterRegistryKey: PublicKey,
+  // The amount of underlying asset per contract
   amountPerContract: number,
+  // The amount of quote asset required to swap for the underlying asset
+  // i.e. amountPerContract * strike price
   quoteAmountPerContract: number,
   expirationUnixTimestamp: number,
 ) => {
@@ -120,8 +124,8 @@ export const initializeMarket = async (
   quoteAssetMint: PublicKey,
   underlyingAssetDecimals: number,
   quoteAssetDecimals: number,
-  amountPerContract: number,
-  strikePrice: number,
+  amountPerContract: BigNumber,
+  quoteAmountPerContract: BigNumber,
   expirationUnixTimestamp: number,
 ) => {
   const programPubkey =
@@ -189,11 +193,13 @@ export const initializeMarket = async (
     }),
   );
 
-  // TODO -- do we need BN here?
-  const amountPerContractU64 =
-    amountPerContract * 10 ** underlyingAssetDecimals;
-  const quoteAmountPerContractU64 =
-    amountPerContract * strikePrice * 10 ** quoteAssetDecimals;
+  // TODO -- can we encode these to the buffer without converting back to the built-in number type?
+  const amountPerContractU64 = amountPerContract
+    .multipliedBy(new BigNumber(10).pow(underlyingAssetDecimals))
+    .toNumber();
+  const quoteAmountPerContractU64 = quoteAmountPerContract
+    .multipliedBy(new BigNumber(10).pow(quoteAssetDecimals))
+    .toNumber();
 
   const initMarketInstruction = await initializeMarketInstruction(
     programPubkey,
