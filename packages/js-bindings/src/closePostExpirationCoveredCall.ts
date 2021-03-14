@@ -136,6 +136,7 @@ export const closePostExpirationOption = async (
   optionWriterContractTokenKey: PublicKey,
   optionMintKey: PublicKey,
   optionMarketKey: PublicKey,
+  optionWriterRegistryKey: PublicKey,
 ) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
@@ -153,6 +154,7 @@ export const closePostExpirationOption = async (
     optionMintKey,
     optionMarketKey,
     optionMarketData.underlyingAssetPoolAddress,
+    optionWriterRegistryKey,
   );
   transaction.add(closePostExpiration);
   const signers = [payer];
