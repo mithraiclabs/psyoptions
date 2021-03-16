@@ -11,6 +11,7 @@ import { struct, u8 } from 'buffer-layout';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { optionWriterStructArray } from './market';
 import { TOKEN_PROGRAM_ID } from './utils';
+import { getOptionMarketData } from './utils/getOptionMarketData';
 
 export const CLOSE_POST_EXPIRATION_COVERED_CALL = struct([
   ...optionWriterStructArray,
@@ -104,6 +105,55 @@ export const closePostExpirationCoveredCall = async (
     optionMintKey,
     optionMarketKey,
     underlyingAssetPoolKey,
+    optionWriterRegistryKey,
+  );
+  transaction.add(closePostExpiration);
+  const signers = [payer];
+  transaction.feePayer = payer.publicKey;
+  const { blockhash } = await connection.getRecentBlockhash();
+  transaction.recentBlockhash = blockhash;
+
+  return { transaction, signers };
+};
+
+/**
+ * Fetches the underlying asset pool address from on chain for convenience
+ * @param connection
+ * @param payer
+ * @param programId
+ * @param optionWriterUnderlyingAssetKey
+ * @param optionWriterQuoteAssetKey
+ * @param optionWriterContractTokenKey
+ * @param optionMintKey
+ * @param optionMarketKey
+ */
+export const closePostExpirationOption = async (
+  connection: Connection,
+  payer: Account,
+  programId: PublicKey | string,
+  optionWriterUnderlyingAssetKey: PublicKey,
+  optionWriterQuoteAssetKey: PublicKey,
+  optionWriterContractTokenKey: PublicKey,
+  optionMintKey: PublicKey,
+  optionMarketKey: PublicKey,
+  optionWriterRegistryKey: PublicKey,
+) => {
+  const programPubkey =
+    programId instanceof PublicKey ? programId : new PublicKey(programId);
+  const optionMarketData = await getOptionMarketData(
+    connection,
+    optionMarketKey,
+  );
+
+  const transaction = new Transaction();
+  const closePostExpiration = await closePostExpirationCoveredCallInstruction(
+    programPubkey,
+    optionWriterUnderlyingAssetKey,
+    optionWriterQuoteAssetKey,
+    optionWriterContractTokenKey,
+    optionMintKey,
+    optionMarketKey,
+    optionMarketData.underlyingAssetPoolAddress,
     optionWriterRegistryKey,
   );
   transaction.add(closePostExpiration);
