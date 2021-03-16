@@ -10,7 +10,7 @@ use std::{mem::size_of, vec::Vec};
 
 const PUBLIC_KEY_LEN: usize = 32;
 // If MAX_CONTRACTS is updated, please update the JS buffer layouts in the bindings package
-const MAX_CONTRACTS: usize = 10;
+const MAX_CONTRACTS: usize = 1000;
 const REGISTRY_LEN: usize = MAX_CONTRACTS * OptionWriter::LEN;
 
 #[repr(u8)]
@@ -135,12 +135,14 @@ impl Pack for OptionWriterRegistry {
             option_writer.pack_into_slice(&mut registry_ref[offset..offset + OptionWriter::LEN]);
             offset += OptionWriter::LEN;
         }
-        // 0 pad the rest of the registry
-        // A possible optimization would be to only zero pad a single OptionWriter::LEN,
-        // but that's only if it's safe to assume only a single OptionWriter could be removed at a time.
-        for i in offset..REGISTRY_LEN {
-            registry_ref[i] = 0;
-        }
+        // At the momeny only a single OptionWriter could be removed at a time.
+        let blank_portion = array_mut_ref![
+            registry_ref,
+            offset,
+            OptionWriter::LEN
+        ];
+        let blank = [0; OptionWriter::LEN];
+        blank_portion.copy_from_slice(&blank)
     }
 }
 
