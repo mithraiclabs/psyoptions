@@ -108,7 +108,7 @@ pub fn test_sucessful_close_post_expiration() {
     &options_program_id,
     option_writer,
     &option_market_key,
-    &option_market.asset_pool_address,
+    &option_market.underlying_asset_pool,
     &option_mint_keys.pubkey(),
     &writer_registry_key,
   )
@@ -169,7 +169,7 @@ pub fn test_sucessful_close_post_expiration() {
   let updated_writer_underlying_asset_acct = Account::unpack(&writer_underlying_asset_acct_data[..]).unwrap();
   assert_eq!(
     updated_writer_underlying_asset_acct.amount,
-    writer_underlying_asset_acct.amount + option_market.amount_per_contract
+    writer_underlying_asset_acct.amount + option_market.underlying_amount_per_contract
   );
 }
 
@@ -255,7 +255,7 @@ pub fn test_panic_when_expiration_has_not_passed() {
     &options_program_id,
     option_writer,
     &option_market_key,
-    &option_market.asset_pool_address,
+    &option_market.underlying_asset_pool,
     &option_mint_keys.pubkey(),
     &writer_registry_key,
   )

@@ -96,19 +96,19 @@ fn test_integration() {
     let option_market =
         solana_options::market::OptionMarket::unpack(&option_market_data[..]).unwrap();
     assert_eq!(
-        option_market.underlying_asset_address,
+        option_market.underlying_asset_mint,
         underlying_spl.pubkey()
     );
-    assert_eq!(option_market.quote_asset_address, quote_spl.pubkey());
-    assert_eq!(option_market.amount_per_contract, amount_per_contract);
+    assert_eq!(option_market.quote_asset_mint, quote_spl.pubkey());
+    assert_eq!(option_market.underlying_amount_per_contract, amount_per_contract);
     assert_eq!(option_market.quote_amount_per_contract, quote_amount_per_contract);
     assert_eq!(option_market.expiration_unix_timestamp, expiry);
     assert_eq!(
-        option_market.asset_pool_address,
+        option_market.underlying_asset_pool,
         underlying_spl_pool.pubkey()
     );
     assert_eq!(
-        option_market.writer_registry_address,
+        option_market.quote_asset_pool,
         writer_registry_kp.pubkey()
     );
     // assert the option writer registry initialized correctly

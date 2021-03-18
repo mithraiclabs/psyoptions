@@ -1,43 +1,40 @@
 use crate::{
+    error::OptionsError,
     instruction::OptionsInstruction,
-    market::{AccountType, OptionWriterRegistry, OptionMarket, OptionWriter},
-    error::OptionsError
+    market::{AccountType, OptionMarket, OptionWriter, OptionWriterRegistry},
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
-    clock::{UnixTimestamp, Clock},
+    clock::{Clock, UnixTimestamp},
     entrypoint::ProgramResult,
     program::{invoke, invoke_signed},
     program_pack::Pack,
     pubkey::Pubkey,
     sysvar::Sysvar,
 };
-use spl_token::{
-    instruction as token_instruction,
-    state::Account as TokenAccount
-};
+use spl_token::{instruction as token_instruction, state::Account as TokenAccount};
 
 pub struct Processor {}
 impl Processor {
     pub fn process_init_market(
         _program_id: &Pubkey,
         accounts: &[AccountInfo],
-        amount_per_contract: u64,
+        underlying_amount_per_contract: u64,
         quote_amount_per_contract: u64,
         expiration_unix_timestamp: UnixTimestamp,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
-        let underlying_asset_acct = next_account_info(account_info_iter)?;
-        let quote_asset_acct = next_account_info(account_info_iter)?;
+        let underlying_asset_mint_acct = next_account_info(account_info_iter)?;
+        let quote_asset_mint_acct = next_account_info(account_info_iter)?;
         let option_mint_acct = next_account_info(account_info_iter)?;
         let option_market_data_acct = next_account_info(account_info_iter)?;
         let option_mint_authority = next_account_info(account_info_iter)?;
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
-        let option_writer_registry_acct = next_account_info(account_info_iter)?;
+        let quote_asset_pool_acct = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
 
-        if quote_asset_acct.key == underlying_asset_acct.key {
+        if quote_asset_mint_acct.key == underlying_asset_mint_acct.key {
             return Err(OptionsError::QuoteAndUnderlyingAssetMustDiffer.into());
         }
         // Initialize the Mint for the SPL token that will denote an Options contract
@@ -61,14 +58,14 @@ impl Processor {
         let init_underlying_pool_ix = token_instruction::initialize_account(
             &spl_token::id(),
             underlying_asset_pool_acct.key,
-            underlying_asset_acct.key,
+            underlying_asset_mint_acct.key,
             option_mint_authority.key,
         )?;
         invoke(
             &init_underlying_pool_ix,
             &[
                 underlying_asset_pool_acct.clone(),
-                underlying_asset_acct.clone(),
+                underlying_asset_mint_acct.clone(),
                 option_mint_authority.clone(),
                 rent_info.clone(),
                 spl_program_acct.clone(),
@@ -78,15 +75,14 @@ impl Processor {
         // Add all relevant data to the OptionMarket data accountz
         OptionMarket::pack(
             OptionMarket {
-                account_type: AccountType::Market,
                 option_mint: *option_mint_acct.key,
-                underlying_asset_address: *underlying_asset_acct.key,
-                quote_asset_address: *quote_asset_acct.key,
-                amount_per_contract,
+                underlying_asset_mint: *underlying_asset_mint_acct.key,
+                quote_asset_mint: *quote_asset_mint_acct.key,
+                underlying_amount_per_contract,
                 quote_amount_per_contract,
                 expiration_unix_timestamp,
-                asset_pool_address: *underlying_asset_pool_acct.key,
-                writer_registry_address: *option_writer_registry_acct.key,
+                underlying_asset_pool: *underlying_asset_pool_acct.key,
+                quote_asset_pool: *quote_asset_pool_acct.key,
             },
             &mut option_market_data_acct.data.borrow_mut(),
         )?;
@@ -117,10 +113,11 @@ impl Processor {
             return Err(OptionsError::CantMintExpired.into());
         }
 
-        // Verify that the mint of the provided quote asset account matches the mint of the 
+        // Verify that the mint of the provided quote asset account matches the mint of the
         //  option's quote asset mint
-        let quote_asset_dest_acct_info = TokenAccount::unpack(&quote_asset_dest_acct.data.borrow())?;
-        if quote_asset_dest_acct_info.mint != option_market.quote_asset_address {
+        let quote_asset_dest_acct_info =
+            TokenAccount::unpack(&quote_asset_dest_acct.data.borrow())?;
+        if quote_asset_dest_acct_info.mint != option_market.quote_asset_mint {
             return Err(OptionsError::IncorrectQuoteAssetKey.into());
         }
 
@@ -131,7 +128,7 @@ impl Processor {
             &underlying_asset_pool_acct.key,
             &authority_acct.key,
             &[],
-            option_market.amount_per_contract,
+            option_market.underlying_amount_per_contract,
         )?;
         invoke(
             &transfer_tokens_ix,
@@ -180,7 +177,11 @@ impl Processor {
         Ok(())
     }
 
-    pub fn process_exercise_covered_call(accounts: &[AccountInfo], option_writer: OptionWriter, bump_seed: u8) -> ProgramResult {
+    pub fn process_exercise_covered_call(
+        accounts: &[AccountInfo],
+        option_writer: OptionWriter,
+        bump_seed: u8,
+    ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let clock_sysvar_info = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
@@ -228,11 +229,11 @@ impl Processor {
         // transfer the quote asset from the Exerciser to the OptionWriter
         let transer_quote_tokens_ix = token_instruction::transfer(
             &spl_program_acct.key,
-            &exerciser_quote_asset_acct.key, 
-            &option_writer_quote_asset_acct.key, 
-            &exerciser_authority_acct.key, 
-            &[], 
-            option_market.quote_amount_per_contract
+            &exerciser_quote_asset_acct.key,
+            &option_writer_quote_asset_acct.key,
+            &exerciser_authority_acct.key,
+            &[],
+            option_market.quote_amount_per_contract,
         )?;
         invoke(
             &transer_quote_tokens_ix,
@@ -240,8 +241,8 @@ impl Processor {
                 spl_program_acct.clone(),
                 exerciser_quote_asset_acct.clone(),
                 option_writer_quote_asset_acct.clone(),
-                exerciser_authority_acct.clone()
-            ]
+                exerciser_authority_acct.clone(),
+            ],
         )?;
 
         // transfer underlying asset from the pool to the exerciser's account
@@ -251,7 +252,7 @@ impl Processor {
             &exerciser_underlying_asset_acct.key,
             &options_spl_authority_acct.key,
             &[],
-            option_market.amount_per_contract,
+            option_market.underlying_amount_per_contract,
         )?;
         invoke_signed(
             &transfer_underlying_tokens_ix,
@@ -261,18 +262,23 @@ impl Processor {
                 options_spl_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]]
+            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
         )?;
 
-        // Remove the option writer and decrement the 
+        // Remove the option writer and decrement the
         let mut writer_registry_data = writer_registry_acct.try_borrow_mut_data()?;
         let writer_registry = OptionWriterRegistry::unpack(&writer_registry_data)?;
-        let updated_writer_registry = OptionWriterRegistry::remove_option_writer(writer_registry, option_writer)?;
+        let updated_writer_registry =
+            OptionWriterRegistry::remove_option_writer(writer_registry, option_writer)?;
         OptionWriterRegistry::pack(updated_writer_registry, &mut writer_registry_data)?;
         Ok(())
     }
 
-    pub fn process_exercise_post_expiration(accounts: &[AccountInfo], option_writer: OptionWriter, bump_seed: u8) -> ProgramResult {
+    pub fn process_exercise_post_expiration(
+        accounts: &[AccountInfo],
+        option_writer: OptionWriter,
+        bump_seed: u8,
+    ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let clock_sysvar_info = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
@@ -298,11 +304,11 @@ impl Processor {
         // transfer the quote asset from the Exerciser to the OptionWriter
         let transer_quote_tokens_ix = token_instruction::transfer(
             &spl_program_acct.key,
-            &exerciser_quote_asset_acct.key, 
-            &option_writer_quote_asset_acct.key, 
-            &exerciser_authority_acct.key, 
-            &[], 
-            option_market.quote_amount_per_contract
+            &exerciser_quote_asset_acct.key,
+            &option_writer_quote_asset_acct.key,
+            &exerciser_authority_acct.key,
+            &[],
+            option_market.quote_amount_per_contract,
         )?;
         invoke(
             &transer_quote_tokens_ix,
@@ -310,8 +316,8 @@ impl Processor {
                 spl_program_acct.clone(),
                 exerciser_quote_asset_acct.clone(),
                 option_writer_quote_asset_acct.clone(),
-                exerciser_authority_acct.clone()
-            ]
+                exerciser_authority_acct.clone(),
+            ],
         )?;
 
         // transfer underlying asset from the pool to the exerciser's account
@@ -321,7 +327,7 @@ impl Processor {
             &exerciser_underlying_asset_acct.key,
             &options_spl_authority_acct.key,
             &[],
-            option_market.amount_per_contract,
+            option_market.underlying_amount_per_contract,
         )?;
         invoke_signed(
             &transfer_underlying_tokens_ix,
@@ -331,18 +337,23 @@ impl Processor {
                 options_spl_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]]
+            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
         )?;
 
-        // Remove the option writer and decrement the 
+        // Remove the option writer and decrement the
         let mut writer_registry_data = writer_registry_acct.try_borrow_mut_data()?;
         let writer_registry = OptionWriterRegistry::unpack(&writer_registry_data)?;
-        let updated_writer_registry = OptionWriterRegistry::remove_option_writer(writer_registry, option_writer)?;
+        let updated_writer_registry =
+            OptionWriterRegistry::remove_option_writer(writer_registry, option_writer)?;
         OptionWriterRegistry::pack(updated_writer_registry, &mut writer_registry_data)?;
         Ok(())
     }
 
-    pub fn process_close_post_expiration(accounts: &[AccountInfo], option_writer: OptionWriter, bump_seed: u8) -> ProgramResult {
+    pub fn process_close_post_expiration(
+        accounts: &[AccountInfo],
+        option_writer: OptionWriter,
+        bump_seed: u8,
+    ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let clock_sysvar_info = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
@@ -369,7 +380,7 @@ impl Processor {
             &option_writer_underlying_asset_acct.key,
             &options_spl_authority_acct.key,
             &[],
-            option_market.amount_per_contract,
+            option_market.underlying_amount_per_contract,
         )?;
         invoke_signed(
             &transfer_underlying_tokens_ix,
@@ -379,13 +390,14 @@ impl Processor {
                 options_spl_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]]
+            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
         )?;
 
-        // Remove the option writer and decrement the 
+        // Remove the option writer and decrement the
         let mut writer_registry_data = writer_registry_acct.try_borrow_mut_data()?;
         let writer_registry = OptionWriterRegistry::unpack(&writer_registry_data)?;
-        let updated_writer_registry = OptionWriterRegistry::remove_option_writer(writer_registry, option_writer)?;
+        let updated_writer_registry =
+            OptionWriterRegistry::remove_option_writer(writer_registry, option_writer)?;
         OptionWriterRegistry::pack(updated_writer_registry, &mut writer_registry_data)?;
         Ok(())
     }
@@ -407,16 +419,19 @@ impl Processor {
             ),
             OptionsInstruction::MintCoveredCall { bump_seed } => {
                 Self::process_mint_covered_call(accounts, bump_seed)
-            },
-            OptionsInstruction::ExercisePostExpiration {option_writer, bump_seed} => {
-                Self::process_exercise_post_expiration(accounts, option_writer, bump_seed)
             }
-            OptionsInstruction::ExerciseCoveredCall { option_writer, bump_seed } => {
-                Self::process_exercise_covered_call(accounts, option_writer, bump_seed)
-            }
-            OptionsInstruction::ClosePostExpiration { option_writer, bump_seed } => {
-                Self::process_close_post_expiration(accounts, option_writer, bump_seed)
-            }
+            OptionsInstruction::ExercisePostExpiration {
+                option_writer,
+                bump_seed,
+            } => Self::process_exercise_post_expiration(accounts, option_writer, bump_seed),
+            OptionsInstruction::ExerciseCoveredCall {
+                option_writer,
+                bump_seed,
+            } => Self::process_exercise_covered_call(accounts, option_writer, bump_seed),
+            OptionsInstruction::ClosePostExpiration {
+                option_writer,
+                bump_seed,
+            } => Self::process_close_post_expiration(accounts, option_writer, bump_seed),
         }
     }
 }

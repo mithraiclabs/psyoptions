@@ -113,7 +113,7 @@ pub fn test_sucessful_exercise_post_expiration() {
     &exerciser_quote_asset_keys.pubkey(),
     &exerciser_underlying_asset_keys.pubkey(),
     &exerciser_authority_keys.pubkey(),
-    &option_market.asset_pool_address,
+    &option_market.underlying_asset_pool,
   )
   .unwrap();
   let underlying_asset_pool_acct_data =
@@ -172,7 +172,7 @@ pub fn test_sucessful_exercise_post_expiration() {
     Account::unpack(&exerciser_underlying_asset_acct_data[..]).unwrap();
   assert_eq!(
     exerciser_underlying_asset_acct.amount,
-    option_market.amount_per_contract
+    option_market.underlying_amount_per_contract
   );
   // assert that the exerciser's quote asset account is less the amount required to close the contract
   let exerciser_quote_asset_acct_data = client
@@ -275,7 +275,7 @@ pub fn test_panic_when_expiration_has_not_passed() {
     &exerciser_quote_asset_keys.pubkey(),
     &exerciser_underlying_asset_keys.pubkey(),
     &exerciser_authority_keys.pubkey(),
-    &option_market.asset_pool_address,
+    &option_market.underlying_asset_pool,
   )
   .unwrap();
   // Send the transaction
