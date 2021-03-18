@@ -1878,6 +1878,7 @@ dependencies = [
  "arrayref",
  "bincode",
  "indicatif",
+ "lazy_static",
  "serial_test",
  "solana-client",
  "solana-faucet",

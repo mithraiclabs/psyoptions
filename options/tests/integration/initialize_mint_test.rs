@@ -1,4 +1,5 @@
 use crate::{
+    PROGRAM_KEY,
     option_helpers, solana_helpers,
     spl_helpers::{create_spl_account_uninitialized, create_spl_mint_account},
 };
@@ -18,7 +19,7 @@ fn test_integration() {
         "http://localhost:8899".to_string(),
         CommitmentConfig::processed(),
     );
-    let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
+    let options_program_id = &PROGRAM_KEY;
 
     let payer_keys = solana_helpers::create_account_with_lamports(&client, 10000000000);
     let options_spl_mint = Keypair::new();
@@ -127,7 +128,7 @@ fn should_fail_with_same_quote_underlying_assets() {
         "http://localhost:8899".to_string(),
         CommitmentConfig::processed(),
     );
-    let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
+    let options_program_id = &PROGRAM_KEY;
 
     let payer_keys = solana_helpers::create_account_with_lamports(&client, 10000000000);
     let options_spl_mint = Keypair::new();

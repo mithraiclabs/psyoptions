@@ -1,4 +1,5 @@
 use crate::{
+  PROGRAM_KEY,
   option_helpers::init_option_market,
   solana_helpers,
   spl_helpers::{create_spl_account, mint_tokens_to_account},
@@ -20,7 +21,7 @@ fn test_mint_covered_call_integration() {
     "http://localhost:8899".to_string(),
     CommitmentConfig::processed(),
   );
-  let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
+  let options_program_id = &PROGRAM_KEY;
   let amount_per_contract = 100;
   let quote_amount_per_contract = 500;
   let expiry = 999_999_999_999_999_999;
@@ -148,7 +149,7 @@ fn test_mint_covered_call_fail_post_expiry() {
     "http://localhost:8899".to_string(),
     CommitmentConfig::processed(),
   );
-  let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
+  let options_program_id = &PROGRAM_KEY;
   let amount_per_contract = 100;
   let quote_amount_per_contract = 500; // strike price of 5
   let expiry = 10;
@@ -239,7 +240,7 @@ fn test_when_quote_asset_mint_dont_match_contract_market() {
     "http://localhost:8899".to_string(),
     CommitmentConfig::processed(),
   );
-  let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
+  let options_program_id = &PROGRAM_KEY;
   let amount_per_contract = 100;
   let quote_amount_per_contract = 500; // strike price of 5
   let expiry = 999_999_999_999_999_999;

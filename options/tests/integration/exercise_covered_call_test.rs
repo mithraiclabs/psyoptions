@@ -1,4 +1,5 @@
 use crate::{
+  PROGRAM_KEY,
   option_helpers::{create_and_add_option_writer, create_exerciser, init_option_market},
   solana_helpers,
 };
@@ -24,7 +25,7 @@ pub fn test_sucessful_exercise_covered_call() {
     "http://localhost:8899".to_string(),
     CommitmentConfig::processed(),
   );
-  let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
+  let options_program_id = &PROGRAM_KEY;
   let amount_per_contract = 100;
   let quote_amount_per_contract = 500;
   let expiry = 999_999_999_999_999_999;
@@ -192,7 +193,7 @@ pub fn test_panic_when_expiration_has_not_passed() {
     "http://localhost:8899".to_string(),
     CommitmentConfig::processed(),
   );
-  let options_program_id = solana_helpers::load_bpf_program(&client, "solana_options");
+  let options_program_id = &PROGRAM_KEY;
   let amount_per_contract = 100;
   let quote_amount_per_contract = 500; // strike price of 5
   // Get the current network clock time to use as the basis for the expiration
