@@ -1,7 +1,7 @@
 use crate::{
     error::OptionsError,
     instruction::OptionsInstruction,
-    market::{AccountType, OptionMarket, OptionWriter, OptionWriterRegistry},
+    market::{OptionMarket, OptionWriter, OptionWriterRegistry},
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -72,7 +72,22 @@ impl Processor {
             ],
         )?;
 
-        // Add all relevant data to the OptionMarket data accountz
+        // Inititlize SPL account to hold quote asset
+        let init_quote_asset_pool_ix = token_instruction::initialize_account(
+            &spl_token::id(),
+            quote_asset_pool_acct.key,
+            quote_asset_mint_acct.key,
+            option_mint_authority.key,
+        )?;
+        invoke(&init_quote_asset_pool_ix, &[
+            quote_asset_pool_acct.clone(),
+            quote_asset_mint_acct.clone(),
+            option_mint_authority.clone(),
+            rent_info.clone(),
+            spl_program_acct.clone(),
+        ])?;
+
+        // Add all relevant data to the OptionMarket data account
         OptionMarket::pack(
             OptionMarket {
                 option_mint: *option_mint_acct.key,
@@ -407,13 +422,13 @@ impl Processor {
 
         match instruction {
             OptionsInstruction::InitializeMarket {
-                amount_per_contract,
+                underlying_amount_per_contract,
                 quote_amount_per_contract,
                 expiration_unix_timestamp,
             } => Self::process_init_market(
                 program_id,
                 accounts,
-                amount_per_contract,
+                underlying_amount_per_contract,
                 quote_amount_per_contract,
                 expiration_unix_timestamp,
             ),

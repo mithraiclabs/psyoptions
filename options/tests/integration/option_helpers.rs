@@ -94,12 +94,10 @@ pub fn create_accounts_for_options_market(
     options_program_id: &Pubkey,
     spl_mint: &Keypair,
     options_market: &Keypair,
-    option_writer_registry: &Keypair,
     payer_keys: &Keypair,
 ) -> Result<(), ClientError> {
     create_spl_mint_account_uninitialized(client, spl_mint, payer_keys)?;
     create_options_market(client, options_program_id, options_market, payer_keys)?;
-    create_writer_registry_acct(client, options_program_id, option_writer_registry, payer_keys)?;
     
     Ok(())
 }
@@ -178,7 +176,6 @@ pub fn init_option_market(
         &program_id,
         &options_spl_mint,
         &options_market_keys,
-        &writer_registry_kp,
         &payer_keys,
     )?;
 
