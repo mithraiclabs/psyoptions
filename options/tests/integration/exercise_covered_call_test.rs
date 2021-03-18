@@ -1,7 +1,6 @@
 use crate::{
-  PROGRAM_KEY,
   option_helpers::{create_and_add_option_writer, create_exerciser, init_option_market},
-  solana_helpers,
+  solana_helpers, PROGRAM_KEY,
 };
 use serial_test::serial;
 use solana_client::rpc_client::RpcClient;
@@ -82,7 +81,6 @@ pub fn test_sucessful_exercise_covered_call() {
 
   let option_market_data = client.get_account_data(&option_market_key).unwrap();
   let option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
-  
   // create an option exerciser with SPL accounts we can check
   let (exerciser_authority_keys, exerciser_quote_asset_keys, exerciser_underlying_asset_keys) =
     create_exerciser(
@@ -104,7 +102,7 @@ pub fn test_sucessful_exercise_covered_call() {
     &exerciser_quote_asset_keys.pubkey(),
     &exerciser_underlying_asset_keys.pubkey(),
     &exerciser_authority_keys.pubkey(),
-    &option_market.asset_pool_address,
+    &option_market.underlying_asset_pool,
     &contract_token_keys.pubkey(),
     &contract_token_authority_keys.pubkey(),
   )
@@ -148,10 +146,7 @@ pub fn test_sucessful_exercise_covered_call() {
   );
   // assert that the 1 OptionWriter is removed from the OptionMarket.option_writer_registry
   // TODO make this more robust/exhaustive
-  assert_ne!(
-    *option_writer,
-    updated_wrtier_registry.registry[0]
-  );
+  assert_ne!(*option_writer, updated_wrtier_registry.registry[0]);
 
   // assert that the underlying_asset_pool size decreased by amount_per_contract
   let underlying_asset_pool_acct_data =
@@ -171,7 +166,7 @@ pub fn test_sucessful_exercise_covered_call() {
     Account::unpack(&exerciser_underlying_asset_acct_data[..]).unwrap();
   assert_eq!(
     exerciser_underlying_asset_acct.amount,
-    option_market.amount_per_contract
+    option_market.underlying_amount_per_contract
   );
   // assert that the exerciser's quote asset account is less the amount required to close the contract
   let exerciser_quote_asset_acct_data = client
@@ -196,7 +191,7 @@ pub fn test_panic_when_expiration_has_not_passed() {
   let options_program_id = &PROGRAM_KEY;
   let amount_per_contract = 100;
   let quote_amount_per_contract = 500; // strike price of 5
-  // Get the current network clock time to use as the basis for the expiration
+                                       // Get the current network clock time to use as the basis for the expiration
   let sysvar_clock_acct = client.get_account(&clock::id()).unwrap();
   let accounts = &mut [(clock::id(), sysvar_clock_acct)];
   let sysvar_clock_acct_info = &create_account_infos(accounts)[0];
@@ -277,7 +272,7 @@ pub fn test_panic_when_expiration_has_not_passed() {
     &exerciser_quote_asset_keys.pubkey(),
     &exerciser_underlying_asset_keys.pubkey(),
     &exerciser_authority_keys.pubkey(),
-    &option_market.asset_pool_address,
+    &option_market.underlying_asset_pool,
     &contract_token_keys.pubkey(),
     &contract_token_authority_keys.pubkey(),
   )

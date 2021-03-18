@@ -25,11 +25,12 @@ pub enum OptionsInstruction {
     ///   3. `[writeable]` Option Market
     ///   4. `[]` Option Mint Authority
     ///   5. `[writeable]` Underlying Asset Pool (uninitialized)
+    ///   5. `[writeable]` Quote Asset Pool (uninitialized)
     ///   6. `[]` Rent Sysvar
     ///   7. `[]` Spl Token Program
     InitializeMarket {
         /// The amount of the **underlying asset** that derives a single contract
-        amount_per_contract: u64,
+        underlying_amount_per_contract: u64,
         /// Pre-computed quote amount for the new market, equal to strike price * amount_per_contract
         quote_amount_per_contract: u64,
         /// The Unix timestamp at which the contracts in this market expire
@@ -106,11 +107,11 @@ impl OptionsInstruction {
             .ok_or(ProgramError::InvalidInstructionData)?;
         Ok(match tag {
             0 => {
-                let (amount_per_contract, rest) = Self::unpack_u64(rest)?;
+                let (underlying_amount_per_contract, rest) = Self::unpack_u64(rest)?;
                 let (quote_amount_per_contract, rest) = Self::unpack_u64(rest)?;
                 let (expiration_unix_timestamp, _rest) = Self::unpack_timestamp(rest)?;
                 Self::InitializeMarket {
-                    amount_per_contract,
+                    underlying_amount_per_contract,
                     quote_amount_per_contract,
                     expiration_unix_timestamp,
                 }
@@ -152,12 +153,12 @@ impl OptionsInstruction {
         let mut buf = Vec::with_capacity(size_of::<Self>());
         match self {
             &Self::InitializeMarket {
-                ref amount_per_contract,
+                ref underlying_amount_per_contract,
                 ref quote_amount_per_contract,
                 ref expiration_unix_timestamp,
             } => {
                 buf.push(0);
-                buf.extend_from_slice(&amount_per_contract.to_le_bytes());
+                buf.extend_from_slice(&underlying_amount_per_contract.to_le_bytes());
                 buf.extend_from_slice(&quote_amount_per_contract.to_le_bytes());
                 buf.extend_from_slice(&expiration_unix_timestamp.to_le_bytes());
             }
@@ -237,41 +238,41 @@ impl OptionsInstruction {
 
 /// Creates an `InitializeMarket` instruction
 pub fn initialize_market(
-    options_program_id: &Pubkey,
-    underlying_asset_pubkey: &Pubkey,
-    quote_asset_pubkey: &Pubkey,
-    contract_spl_token_pubkey: &Pubkey,
-    option_market_data_pubkey: &Pubkey,
-    underlying_asset_pool_pubkey: &Pubkey,
-    writer_registry_pubkey: &Pubkey,
-    amount_per_contract: u64,
+    program_id: &Pubkey,
+    underlying_asset_mint: &Pubkey,
+    quote_asset_mint: &Pubkey,
+    option_mint: &Pubkey,
+    option_market: &Pubkey,
+    underlying_asset_pool: &Pubkey,
+    quote_asset_pool: &Pubkey,
+    underlying_amount_per_contract: u64,
     quote_amount_per_contract: u64,
     expiration_unix_timestamp: UnixTimestamp,
 ) -> Result<Instruction, ProgramError> {
-    let (options_spl_authority_pubkey, _bump_seed) = Pubkey::find_program_address(
-        &[&contract_spl_token_pubkey.to_bytes()[..32]],
-        &options_program_id,
+    let (option_mint_authority, _bump_seed) = Pubkey::find_program_address(
+        &[&option_mint.to_bytes()[..32]],
+        &program_id,
     );
     let data = OptionsInstruction::InitializeMarket {
-        amount_per_contract,
+        underlying_amount_per_contract,
         quote_amount_per_contract,
         expiration_unix_timestamp,
     }
     .pack();
 
     let accounts = vec![
-        AccountMeta::new_readonly(*underlying_asset_pubkey, false),
-        AccountMeta::new_readonly(*quote_asset_pubkey, false),
-        AccountMeta::new(*contract_spl_token_pubkey, false),
-        AccountMeta::new(*option_market_data_pubkey, false),
-        AccountMeta::new_readonly(options_spl_authority_pubkey, false),
-        AccountMeta::new(*underlying_asset_pool_pubkey, false),
-        AccountMeta::new_readonly(*writer_registry_pubkey, false),
+        AccountMeta::new_readonly(*underlying_asset_mint, false),
+        AccountMeta::new_readonly(*quote_asset_mint, false),
+        AccountMeta::new(*option_mint, false),
+        AccountMeta::new(*option_market, false),
+        AccountMeta::new_readonly(option_mint_authority, false),
+        AccountMeta::new(*underlying_asset_pool, false),
+        AccountMeta::new(*quote_asset_pool, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
     Ok(Instruction {
-        program_id: *options_program_id,
+        program_id: *program_id,
         accounts,
         data,
     })
@@ -466,11 +467,11 @@ mod tests {
 
     #[test]
     fn test_pack_unpack_init_market() {
-        let amount_per_contract: u64 = 100;
+        let underlying_amount_per_contract: u64 = 100;
         let quote_amount_per_contract: u64 = 500; // strike price of 5
         let expiration_unix_timestamp: UnixTimestamp = 1607743435;
         let check = OptionsInstruction::InitializeMarket {
-            amount_per_contract,
+            underlying_amount_per_contract,
             quote_amount_per_contract,
             expiration_unix_timestamp,
         };
@@ -478,7 +479,7 @@ mod tests {
         // add the tag to the expected buffer
         let mut expect = Vec::from([0u8]);
         // add the other instruction inputs to expected buffer
-        expect.extend_from_slice(&amount_per_contract.to_le_bytes());
+        expect.extend_from_slice(&underlying_amount_per_contract.to_le_bytes());
         expect.extend_from_slice(&quote_amount_per_contract.to_le_bytes());
         expect.extend_from_slice(&expiration_unix_timestamp.to_le_bytes());
         assert_eq!(packed, expect);
