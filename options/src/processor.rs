@@ -27,6 +27,7 @@ impl Processor {
         let underlying_asset_mint_acct = next_account_info(account_info_iter)?;
         let quote_asset_mint_acct = next_account_info(account_info_iter)?;
         let option_mint_acct = next_account_info(account_info_iter)?;
+        let writer_token_mint_acct = next_account_info(account_info_iter)?;
         let option_market_data_acct = next_account_info(account_info_iter)?;
         let option_mint_authority = next_account_info(account_info_iter)?;
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
@@ -37,8 +38,8 @@ impl Processor {
         if quote_asset_mint_acct.key == underlying_asset_mint_acct.key {
             return Err(OptionsError::QuoteAndUnderlyingAssetMustDiffer.into());
         }
-        // Initialize the Mint for the SPL token that will denote an Options contract
-        let init_token_mint_ix = token_instruction::initialize_mint(
+        // Initialize the Option Mint, the SPL token that will denote an options contract
+        let init_option_mint_ix = token_instruction::initialize_mint(
             &spl_token::id(),
             option_mint_acct.key,
             option_mint_authority.key,
@@ -46,9 +47,26 @@ impl Processor {
             0,
         )?;
         invoke(
-            &init_token_mint_ix,
+            &init_option_mint_ix,
             &[
                 option_mint_acct.clone(),
+                rent_info.clone(),
+                spl_program_acct.clone(),
+            ],
+        )?;
+
+        // Initialize the Writer Token Mint, the SPL token that will denote a writte options contract
+        let init_writer_token_mint_ix = token_instruction::initialize_mint(
+            &spl_token::id(),
+            writer_token_mint_acct.key,
+            option_mint_authority.key,
+            None,
+            0,
+        )?;
+        invoke(
+            &init_writer_token_mint_ix,
+            &[
+                writer_token_mint_acct.clone(),
                 rent_info.clone(),
                 spl_program_acct.clone(),
             ],

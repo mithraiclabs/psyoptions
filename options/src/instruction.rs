@@ -21,12 +21,13 @@ pub enum OptionsInstruction {
     ///   0. `[]` Underlying Asset Mint
     ///   1. `[]` Quote Asset Mint
     ///   2. `[writeable]` Option Mint (uninitialized)
-    ///   3. `[writeable]` Option Market
-    ///   4. `[]` Option Mint Authority
-    ///   5. `[writeable]` Underlying Asset Pool (uninitialized)
-    ///   5. `[writeable]` Quote Asset Pool (uninitialized)
-    ///   6. `[]` Rent Sysvar
-    ///   7. `[]` Spl Token Program
+    ///   3. `[writeable]` Writer Token Mint (uninitialized)
+    ///   4. `[writeable]` Option Market
+    ///   5. `[]` Option Mint Authority
+    ///   6. `[writeable]` Underlying Asset Pool (uninitialized)
+    ///   7. `[writeable]` Quote Asset Pool (uninitialized)
+    ///   8. `[]` Rent Sysvar
+    ///   9. `[]` Spl Token Program
     InitializeMarket {
         /// The amount of the **underlying asset** that derives a single contract
         underlying_amount_per_contract: u64,
@@ -212,6 +213,7 @@ pub fn initialize_market(
     underlying_asset_mint: &Pubkey,
     quote_asset_mint: &Pubkey,
     option_mint: &Pubkey,
+    writer_token_mint: &Pubkey,
     option_market: &Pubkey,
     underlying_asset_pool: &Pubkey,
     quote_asset_pool: &Pubkey,
@@ -234,6 +236,7 @@ pub fn initialize_market(
         AccountMeta::new_readonly(*underlying_asset_mint, false),
         AccountMeta::new_readonly(*quote_asset_mint, false),
         AccountMeta::new(*option_mint, false),
+        AccountMeta::new(*writer_token_mint, false),
         AccountMeta::new(*option_market, false),
         AccountMeta::new_readonly(option_mint_authority, false),
         AccountMeta::new(*underlying_asset_pool, false),

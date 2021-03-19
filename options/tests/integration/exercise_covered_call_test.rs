@@ -33,6 +33,7 @@ pub fn test_sucessful_exercise_covered_call() {
     underlying_asset_mint_keys,
     quote_asset_mint_keys,
     option_mint_keys,
+    writer_token_mint_keys,
     asset_authority_keys,
     underlying_asset_pool_key,
     quote_asset_pool_key,
@@ -47,13 +48,18 @@ pub fn test_sucessful_exercise_covered_call() {
   .unwrap();
 
   // Add 2 option writers to it
-  let (contract_token_keys, contract_token_authority_keys) = create_and_add_option_writer(
+  let (
+    option_writer_option_mint_keys,
+    option_writer_writer_token_keys,
+    contract_token_authority_keys,
+  ) = create_and_add_option_writer(
     &client,
     &options_program_id,
     &underlying_asset_mint_keys,
     &asset_authority_keys,
     &quote_asset_mint_keys,
     &option_mint_keys,
+    &writer_token_mint_keys,
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
@@ -66,6 +72,7 @@ pub fn test_sucessful_exercise_covered_call() {
     &asset_authority_keys,
     &quote_asset_mint_keys,
     &option_mint_keys,
+    &writer_token_mint_keys,
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
@@ -94,7 +101,7 @@ pub fn test_sucessful_exercise_covered_call() {
     &exerciser_underlying_asset_keys.pubkey(),
     &exerciser_authority_keys.pubkey(),
     &option_market.underlying_asset_pool,
-    &contract_token_keys.pubkey(),
+    &option_writer_option_mint_keys.pubkey(),
     &contract_token_authority_keys.pubkey(),
   )
   .unwrap();
@@ -182,6 +189,7 @@ pub fn test_panic_when_expiration_has_not_passed() {
     underlying_asset_mint_keys,
     quote_asset_mint_keys,
     option_mint_keys,
+    writer_token_mint_keys,
     asset_authority_keys,
     underlying_asset_pool_key,
     quote_asset_pool_key,
@@ -196,18 +204,20 @@ pub fn test_panic_when_expiration_has_not_passed() {
   .unwrap();
 
   // Add 2 option writers to it
-  let (contract_token_keys, contract_token_authority_keys) = create_and_add_option_writer(
-    &client,
-    &options_program_id,
-    &underlying_asset_mint_keys,
-    &asset_authority_keys,
-    &quote_asset_mint_keys,
-    &option_mint_keys,
-    &underlying_asset_pool_key,
-    &option_market_key,
-    amount_per_contract,
-  )
-  .unwrap();
+  let (option_writer_option_mint_keys, option_writer_writer_token_keys, option_mint_authority_keys) =
+    create_and_add_option_writer(
+      &client,
+      &options_program_id,
+      &underlying_asset_mint_keys,
+      &asset_authority_keys,
+      &quote_asset_mint_keys,
+      &option_mint_keys,
+      &writer_token_mint_keys,
+      &underlying_asset_pool_key,
+      &option_market_key,
+      amount_per_contract,
+    )
+    .unwrap();
   create_and_add_option_writer(
     &client,
     &options_program_id,
@@ -215,6 +225,7 @@ pub fn test_panic_when_expiration_has_not_passed() {
     &asset_authority_keys,
     &quote_asset_mint_keys,
     &option_mint_keys,
+    &writer_token_mint_keys,
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
@@ -244,12 +255,12 @@ pub fn test_panic_when_expiration_has_not_passed() {
     &exerciser_underlying_asset_keys.pubkey(),
     &exerciser_authority_keys.pubkey(),
     &option_market.underlying_asset_pool,
-    &contract_token_keys.pubkey(),
-    &contract_token_authority_keys.pubkey(),
+    &option_writer_option_mint_keys.pubkey(),
+    &option_mint_authority_keys.pubkey(),
   )
   .unwrap();
   // Send the transaction
-  let signers = vec![&exerciser_authority_keys, &contract_token_authority_keys];
+  let signers = vec![&exerciser_authority_keys, &option_mint_authority_keys];
   solana_helpers::send_and_confirm_transaction(
     &client,
     exercise_covered_call_ix,

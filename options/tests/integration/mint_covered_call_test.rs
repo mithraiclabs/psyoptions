@@ -29,6 +29,7 @@ fn test_mint_covered_call_integration() {
     underlying_asset_mint_keys,
     quote_asset_mint_keys,
     option_mint_keys,
+    writer_token_mint_keys,
     asset_authority_keys,
     underlying_asset_pool_key,
     quote_asset_pool_key,
@@ -80,6 +81,14 @@ fn test_mint_covered_call_integration() {
     &option_mint_keys.pubkey(),
     &option_writer_keys,
   );
+  let option_writer_writer_token_keys = Keypair::new();
+  let _option_writer_writer_token_acct = create_spl_account(
+    &client,
+    &option_writer_option_keys,
+    &option_writer_keys.pubkey(),
+    &option_mint_keys.pubkey(),
+    &option_writer_keys,
+  );
 
   // send TX to mint a covered call
   let mint_covered_call_ix = solana_options::instruction::mint_covered_call(
@@ -117,6 +126,11 @@ fn test_mint_covered_call_integration() {
   let option_mint = Mint::unpack(&option_mint_data[..]).unwrap();
   assert_eq!(option_mint.supply, 1);
 
+  // assert that the total supply of writer tokens has incremented to 1
+  let option_mint_data = client.get_account_data(&option_mint_keys.pubkey()).unwrap();
+  let option_mint = Mint::unpack(&option_mint_data[..]).unwrap();
+  assert_eq!(option_mint.supply, 1);
+
   // assert option writer's Option account has balance of 1
   let option_writer_option_acct_data = client
     .get_account_data(&option_writer_option_keys.pubkey())
@@ -142,6 +156,7 @@ fn test_mint_covered_call_fail_post_expiry() {
     underlying_asset_mint_keys,
     quote_asset_mint_keys,
     option_mint_keys,
+    writer_token_mint_keys,
     asset_authority_keys,
     underlying_asset_pool_key,
     quote_asset_pool_key,
@@ -232,6 +247,7 @@ fn test_when_quote_asset_mint_dont_match_contract_market() {
     underlying_asset_mint_keys,
     quote_asset_mint_keys,
     option_mint_keys,
+    writer_token_mint_keys,
     asset_authority_keys,
     underlying_asset_pool_key,
     quote_asset_pool_key,
