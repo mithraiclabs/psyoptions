@@ -9,14 +9,9 @@ import {
 } from '@solana/web3.js';
 import { struct, u8 } from 'buffer-layout';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
-import { optionWriterStructArray } from './market';
 import { TOKEN_PROGRAM_ID } from './utils';
-import { getRandomOptionWriter } from './utils/getRandomOptionWriter';
 
-export const EXERCISE_COVERED_CALL_LAYOUT = struct([
-  ...optionWriterStructArray,
-  u8('bumpSeed'),
-]);
+export const EXERCISE_COVERED_CALL_LAYOUT = struct([u8('bumpSeed')]);
 
 export const exerciseCoveredCallInstruction = async (
   programId: PublicKey,
