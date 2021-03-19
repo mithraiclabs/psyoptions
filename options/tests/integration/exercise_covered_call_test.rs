@@ -51,6 +51,7 @@ pub fn test_sucessful_exercise_covered_call() {
   let (
     option_writer_option_mint_keys,
     option_writer_writer_token_keys,
+    option_writer_underlying_asset_keys,
     contract_token_authority_keys,
   ) = create_and_add_option_writer(
     &client,
@@ -204,20 +205,24 @@ pub fn test_panic_when_expiration_has_not_passed() {
   .unwrap();
 
   // Add 2 option writers to it
-  let (option_writer_option_mint_keys, option_writer_writer_token_keys, option_mint_authority_keys) =
-    create_and_add_option_writer(
-      &client,
-      &options_program_id,
-      &underlying_asset_mint_keys,
-      &asset_authority_keys,
-      &quote_asset_mint_keys,
-      &option_mint_keys,
-      &writer_token_mint_keys,
-      &underlying_asset_pool_key,
-      &option_market_key,
-      amount_per_contract,
-    )
-    .unwrap();
+  let (
+    option_writer_option_mint_keys,
+    option_writer_writer_token_keys,
+    _option_writer_underlying_asset_keys,
+    option_mint_authority_keys,
+  ) = create_and_add_option_writer(
+    &client,
+    &options_program_id,
+    &underlying_asset_mint_keys,
+    &asset_authority_keys,
+    &quote_asset_mint_keys,
+    &option_mint_keys,
+    &writer_token_mint_keys,
+    &underlying_asset_pool_key,
+    &option_market_key,
+    amount_per_contract,
+  )
+  .unwrap();
   create_and_add_option_writer(
     &client,
     &options_program_id,

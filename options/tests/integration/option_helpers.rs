@@ -204,7 +204,7 @@ pub fn create_and_add_option_writer(
     underlying_asset_pool_key: &Pubkey,
     option_market_key: &Pubkey,
     amount_per_contract: u64,
-) -> Result<(Keypair, Keypair, Keypair), ClientError> {
+) -> Result<(Keypair, Keypair, Keypair, Keypair), ClientError> {
     let option_writer_keys = create_account_with_lamports(&client, 1_000_000_000_000_000);
     let option_writer_underlying_asset_keys = Keypair::new();
     let _option_writer_underlying_asset_acct = create_spl_account(
@@ -243,10 +243,10 @@ pub fn create_and_add_option_writer(
         &option_mint_keys.pubkey(),
         &option_writer_keys,
     );
-    let option_writer_writer_token_mint_keys = Keypair::new();
+    let option_writer_writer_token_keys = Keypair::new();
     let _option_writer_option_acct = create_spl_account(
         &client,
-        &option_writer_option_keys,
+        &option_writer_writer_token_keys,
         &option_writer_keys.pubkey(),
         &writer_token_mint_keys.pubkey(),
         &option_writer_keys,
@@ -258,7 +258,7 @@ pub fn create_and_add_option_writer(
         &option_mint_keys.pubkey(),
         &option_writer_option_keys.pubkey(),
         &writer_token_mint_keys.pubkey(),
-        &option_writer_writer_token_mint_keys.pubkey(),
+        &option_writer_writer_token_keys.pubkey(),
         &option_writer_underlying_asset_keys.pubkey(),
         &underlying_asset_pool_key,
         &option_market_key,
@@ -275,7 +275,8 @@ pub fn create_and_add_option_writer(
     .unwrap();
     Ok((
         option_writer_option_keys,
-        option_writer_writer_token_mint_keys,
+        option_writer_writer_token_keys,
+        option_writer_underlying_asset_keys,
         option_writer_keys,
     ))
 }
