@@ -127,6 +127,11 @@ fn test_initialize_market() {
         .unwrap();
     let option_market =
         solana_options::market::OptionMarket::unpack(&option_market_data[..]).unwrap();
+    assert_eq!(option_market.option_mint, option_mint_keys.pubkey());
+    assert_eq!(
+        option_market.writer_token_mint,
+        writer_token_mint_keys.pubkey()
+    );
     assert_eq!(
         option_market.underlying_asset_mint,
         underlying_mint_keys.pubkey()
