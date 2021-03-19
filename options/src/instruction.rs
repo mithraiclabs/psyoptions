@@ -41,11 +41,12 @@ pub enum OptionsInstruction {
     ///
     ///   0. `[writeable]` Option Mint
     ///   1. `[writeable]` Destination account for minted Option
-    ///   2. `[writeable]` Source account for `OptionWriter`'s underlying asset
-    ///   3. `[writeable]` Destination account for underlying asset pool
-    ///   4. `[writeable]` Destination account for `OptionWriter`'s quote asset
+    ///   2. `[writeable]` Writer Token Mint
+    ///   3. `[writeable]` Destination account for minted Writer Token
+    ///   4. `[writeable]` Source account for `OptionWriter`'s underlying asset
+    ///   5. `[writeable]` Destination account for underlying asset pool
     ///   6. `[writeable]` `OptionMarket` data account
-    ///   7. `[signer]` Authority account for the various `OptionWriter` accounts
+    ///   7. `[signer]` Authority account for underlying asset source
     ///   8. `[]` SPL Token Program
     ///   9. `[]` Program Derived Address for the authority over the Option Mint
     ///   10. `[]` SysVar clock account
@@ -257,26 +258,28 @@ pub fn mint_covered_call(
     program_id: &Pubkey,
     option_mint: &Pubkey,
     minted_option_dest: &Pubkey,
+    writer_token_mint: &Pubkey,
+    minted_writer_token_dest: &Pubkey,
     underyling_asset_src: &Pubkey,
     underlying_asset_pool: &Pubkey,
-    quote_asset_dest: &Pubkey,
     option_market: &Pubkey,
     authority_pubkey: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
     let mut accounts = Vec::with_capacity(11);
     accounts.push(AccountMeta::new(*option_mint, false));
     accounts.push(AccountMeta::new(*minted_option_dest, false));
+    accounts.push(AccountMeta::new(*writer_token_mint, false));
+    accounts.push(AccountMeta::new(*minted_writer_token_dest, false));
     accounts.push(AccountMeta::new(*underyling_asset_src, false));
     accounts.push(AccountMeta::new(*underlying_asset_pool, false));
-    accounts.push(AccountMeta::new_readonly(*quote_asset_dest, false));
     accounts.push(AccountMeta::new_readonly(*option_market, false));
     accounts.push(AccountMeta::new_readonly(*authority_pubkey, true));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
 
-    let (options_spl_authority_pubkey, bump_seed) =
+    let (option_mint_authority_pubkey, bump_seed) =
         Pubkey::find_program_address(&[&option_mint.to_bytes()[..32]], &program_id);
     accounts.push(AccountMeta::new_readonly(
-        options_spl_authority_pubkey,
+        option_mint_authority_pubkey,
         false,
     ));
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));

@@ -257,9 +257,10 @@ pub fn create_and_add_option_writer(
         &options_program_id,
         &option_mint_keys.pubkey(),
         &option_writer_option_keys.pubkey(),
+        &writer_token_mint_keys.pubkey(),
+        &option_writer_writer_token_mint_keys.pubkey(),
         &option_writer_underlying_asset_keys.pubkey(),
         &underlying_asset_pool_key,
-        &option_writer_quote_asset_keys.pubkey(),
         &option_market_key,
         &option_writer_keys.pubkey(),
     )

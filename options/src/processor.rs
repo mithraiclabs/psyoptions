@@ -126,9 +126,10 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let option_mint_acct = next_account_info(account_info_iter)?;
         let minted_option_dest_acct = next_account_info(account_info_iter)?;
+        let writer_token_mint_acct = next_account_info(account_info_iter)?;
+        let writer_token_dest_acct = next_account_info(account_info_iter)?;
         let underyling_asset_src_acct = next_account_info(account_info_iter)?;
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
-        let quote_asset_dest_acct = next_account_info(account_info_iter)?;
         let option_market_acct = next_account_info(account_info_iter)?;
         let authority_acct = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
@@ -143,14 +144,6 @@ impl Processor {
         // Verify that the expiration date for the options market has not passed
         if clock.unix_timestamp > option_market.expiration_unix_timestamp {
             return Err(OptionsError::CantMintExpired.into());
-        }
-
-        // Verify that the mint of the provided quote asset account matches the mint of the
-        //  option's quote asset mint
-        let quote_asset_dest_acct_info =
-            TokenAccount::unpack(&quote_asset_dest_acct.data.borrow())?;
-        if quote_asset_dest_acct_info.mint != option_market.quote_asset_mint {
-            return Err(OptionsError::IncorrectQuoteAssetKey.into());
         }
 
         // transfer the amount per contract of underlying asset from the src to the pool
@@ -172,8 +165,8 @@ impl Processor {
             ],
         )?;
 
-        // mint an option contract token to the user
-        let mint_to_ix = token_instruction::mint_to(
+        // mint an option token to the user
+        let mint_option_ix = token_instruction::mint_to(
             &spl_program_acct.key,
             &option_mint_acct.key,
             &minted_option_dest_acct.key,
@@ -182,11 +175,32 @@ impl Processor {
             1,
         )?;
         invoke_signed(
-            &mint_to_ix,
+            &mint_option_ix,
             &[
                 option_mint_authority_acct.clone(),
                 minted_option_dest_acct.clone(),
                 option_mint_acct.clone(),
+                spl_program_acct.clone(),
+            ],
+            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+        )?;
+
+        // // mint an writer token to the user
+        let mint_writer_token_ix = token_instruction::mint_to(
+            &spl_program_acct.key,
+            &writer_token_mint_acct.key,
+            &writer_token_dest_acct.key,
+            &option_mint_authority_acct.key,
+            &[],
+            1,
+        )?;
+        // TODO fix error here
+        invoke_signed(
+            &mint_writer_token_ix,
+            &[
+                option_mint_authority_acct.clone(),
+                writer_token_dest_acct.clone(),
+                writer_token_mint_acct.clone(),
                 spl_program_acct.clone(),
             ],
             &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
