@@ -1,7 +1,7 @@
 use crate::{
     error::OptionsError,
     instruction::OptionsInstruction,
-    market::{OptionMarket, OptionWriter, OptionWriterRegistry},
+    market::{OptionMarket},
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -114,7 +114,6 @@ impl Processor {
         let option_market_acct = next_account_info(account_info_iter)?;
         let authority_acct = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
-        let writer_registry_acct = next_account_info(account_info_iter)?;
         let option_mint_authority_acct = next_account_info(account_info_iter)?;
         let clock_sysvar_info = next_account_info(account_info_iter)?;
         // Get the amount of underlying asset for transfer
@@ -175,26 +174,11 @@ impl Processor {
             &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
         )?;
 
-        // add writer account to registry
-        let option_writer = OptionWriter {
-            underlying_asset_acct_address: *underyling_asset_src_acct.key,
-            quote_asset_acct_address: *quote_asset_dest_acct.key,
-            contract_token_acct_address: *minted_option_dest_acct.key,
-        };
-        // Add the writer to the registry
-        let mut writer_registry_data = writer_registry_acct.try_borrow_mut_data()?;
-        let mut writer_registry = OptionWriterRegistry::unpack(&writer_registry_data)?;
-        writer_registry.registry.push(option_writer);
-        // increment registry_length
-        writer_registry.registry_length += 1;
-        OptionWriterRegistry::pack(writer_registry, &mut writer_registry_data)?;
-
         Ok(())
     }
 
     pub fn process_exercise_covered_call(
         accounts: &[AccountInfo],
-        option_writer: OptionWriter,
         bump_seed: u8,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
@@ -210,7 +194,6 @@ impl Processor {
         let option_mint_acct = next_account_info(account_info_iter)?;
         let contract_token_acct = next_account_info(account_info_iter)?;
         let contract_token_authority_acct = next_account_info(account_info_iter)?;
-        let writer_registry_acct = next_account_info(account_info_iter)?;
 
         let option_market_data = option_market_acct.try_borrow_data()?;
         let option_market = OptionMarket::unpack(&option_market_data)?;
@@ -280,18 +263,11 @@ impl Processor {
             &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
         )?;
 
-        // Remove the option writer and decrement the
-        let mut writer_registry_data = writer_registry_acct.try_borrow_mut_data()?;
-        let writer_registry = OptionWriterRegistry::unpack(&writer_registry_data)?;
-        let updated_writer_registry =
-            OptionWriterRegistry::remove_option_writer(writer_registry, option_writer)?;
-        OptionWriterRegistry::pack(updated_writer_registry, &mut writer_registry_data)?;
         Ok(())
     }
 
     pub fn process_exercise_post_expiration(
         accounts: &[AccountInfo],
-        option_writer: OptionWriter,
         bump_seed: u8,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
@@ -305,7 +281,6 @@ impl Processor {
         let market_underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let options_spl_authority_acct = next_account_info(account_info_iter)?;
         let option_mint_acct = next_account_info(account_info_iter)?;
-        let writer_registry_acct = next_account_info(account_info_iter)?;
 
         let option_market_data = option_market_acct.try_borrow_data()?;
         let option_market = OptionMarket::unpack(&option_market_data)?;
@@ -355,18 +330,11 @@ impl Processor {
             &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
         )?;
 
-        // Remove the option writer and decrement the
-        let mut writer_registry_data = writer_registry_acct.try_borrow_mut_data()?;
-        let writer_registry = OptionWriterRegistry::unpack(&writer_registry_data)?;
-        let updated_writer_registry =
-            OptionWriterRegistry::remove_option_writer(writer_registry, option_writer)?;
-        OptionWriterRegistry::pack(updated_writer_registry, &mut writer_registry_data)?;
         Ok(())
     }
 
     pub fn process_close_post_expiration(
         accounts: &[AccountInfo],
-        option_writer: OptionWriter,
         bump_seed: u8,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
@@ -377,7 +345,6 @@ impl Processor {
         let market_underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let options_spl_authority_acct = next_account_info(account_info_iter)?;
         let option_mint_acct = next_account_info(account_info_iter)?;
-        let writer_registry_acct = next_account_info(account_info_iter)?;
 
         let option_market_data = option_market_acct.try_borrow_data()?;
         let option_market = OptionMarket::unpack(&option_market_data)?;
@@ -408,12 +375,6 @@ impl Processor {
             &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
         )?;
 
-        // Remove the option writer and decrement the
-        let mut writer_registry_data = writer_registry_acct.try_borrow_mut_data()?;
-        let writer_registry = OptionWriterRegistry::unpack(&writer_registry_data)?;
-        let updated_writer_registry =
-            OptionWriterRegistry::remove_option_writer(writer_registry, option_writer)?;
-        OptionWriterRegistry::pack(updated_writer_registry, &mut writer_registry_data)?;
         Ok(())
     }
 
@@ -436,17 +397,14 @@ impl Processor {
                 Self::process_mint_covered_call(accounts, bump_seed)
             }
             OptionsInstruction::ExercisePostExpiration {
-                option_writer,
                 bump_seed,
-            } => Self::process_exercise_post_expiration(accounts, option_writer, bump_seed),
+            } => Self::process_exercise_post_expiration(accounts, bump_seed),
             OptionsInstruction::ExerciseCoveredCall {
-                option_writer,
                 bump_seed,
-            } => Self::process_exercise_covered_call(accounts, option_writer, bump_seed),
+            } => Self::process_exercise_covered_call(accounts, bump_seed),
             OptionsInstruction::ClosePostExpiration {
-                option_writer,
                 bump_seed,
-            } => Self::process_close_post_expiration(accounts, option_writer, bump_seed),
+            } => Self::process_close_post_expiration(accounts, bump_seed),
         }
     }
 }

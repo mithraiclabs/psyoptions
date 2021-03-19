@@ -4,7 +4,7 @@ use crate::{
   solana_helpers
 };
 use solana_client::rpc_client::RpcClient;
-use solana_options::market::{OptionMarket, OptionWriterRegistry};
+use solana_options::market::{OptionMarket};
 use solana_program::{
   clock::Clock,
   program_pack::Pack,
@@ -46,8 +46,8 @@ pub fn test_sucessful_exercise_post_expiration() {
     option_mint_keys,
     asset_authority_keys,
     underlying_asset_pool_key,
+    quote_asset_pool_key,
     option_market_key,
-    writer_registry_key
   ) = init_option_market(
     &client,
     &options_program_id,
@@ -68,7 +68,6 @@ pub fn test_sucessful_exercise_post_expiration() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
-    &writer_registry_key,
   )
   .unwrap();
   create_and_add_option_writer(
@@ -81,14 +80,8 @@ pub fn test_sucessful_exercise_post_expiration() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
-    &writer_registry_key,
   )
   .unwrap();
-
-  // pick one of the option writers from the OptionMarket account
-  let writer_registry_data = client.get_account_data(&writer_registry_key).unwrap();
-  let writer_registry = OptionWriterRegistry::unpack(&writer_registry_data[..]).unwrap();
-  let option_writer = &writer_registry.registry[0];
 
   let option_market_data = client.get_account_data(&option_market_key).unwrap();
   let option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
@@ -106,10 +99,8 @@ pub fn test_sucessful_exercise_post_expiration() {
   // generate the exercise_post_expiration instruction
   let exercise_post_exirpation_ix = solana_options::instruction::exercise_post_expiration(
     &options_program_id,
-    option_writer,
     &option_mint_keys.pubkey(),
     &option_market_key,
-    &writer_registry_key,
     &exerciser_quote_asset_keys.pubkey(),
     &exerciser_underlying_asset_keys.pubkey(),
     &exerciser_authority_keys.pubkey(),
@@ -139,20 +130,6 @@ pub fn test_sucessful_exercise_post_expiration() {
     signers,
   )
   .unwrap();
-
-  let writer_registry_data = client.get_account_data(&writer_registry_key).unwrap();
-  let updated_wrtier_registry = OptionWriterRegistry::unpack(&writer_registry_data[..]).unwrap();
-  // assert that the OptionMarket.registry_length decremented
-  assert_eq!(
-    updated_wrtier_registry.registry_length,
-    writer_registry.registry_length - 1
-  );
-  // assert that the 1 OptionWriter is removed from the OptionMarket.option_writer_registry
-  // TODO make this more robust/exhaustive
-  assert_ne!(
-    *option_writer,
-    updated_wrtier_registry.registry[0]
-  );
 
   // assert that the underlying_asset_pool size decreased by amount_per_contract
   let underlying_asset_pool_acct_data =
@@ -208,8 +185,8 @@ pub fn test_panic_when_expiration_has_not_passed() {
     option_mint_keys,
     asset_authority_keys,
     underlying_asset_pool_key,
+    quote_asset_pool_key,
     option_market_key,
-    writer_registry_key,
   ) = init_option_market(
     &client,
     &options_program_id,
@@ -230,7 +207,6 @@ pub fn test_panic_when_expiration_has_not_passed() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
-    &writer_registry_key,
   )
   .unwrap();
   create_and_add_option_writer(
@@ -243,14 +219,8 @@ pub fn test_panic_when_expiration_has_not_passed() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
-    &writer_registry_key,
   )
   .unwrap();
-
-  // pick one of the option writers from the OptionMarket account
-  let writer_registry_data = client.get_account_data(&writer_registry_key).unwrap();
-  let writer_registry = OptionWriterRegistry::unpack(&writer_registry_data[..]).unwrap();
-  let option_writer = &writer_registry.registry[0];
 
   let option_market_data = client.get_account_data(&option_market_key).unwrap();
   let option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
@@ -268,10 +238,8 @@ pub fn test_panic_when_expiration_has_not_passed() {
   // generate the exercise_post_expiration instruction
   let exercise_post_exirpation_ix = solana_options::instruction::exercise_post_expiration(
     &options_program_id,
-    option_writer,
     &option_mint_keys.pubkey(),
     &option_market_key,
-    &writer_registry_key,
     &exerciser_quote_asset_keys.pubkey(),
     &exerciser_underlying_asset_keys.pubkey(),
     &exerciser_authority_keys.pubkey(),
