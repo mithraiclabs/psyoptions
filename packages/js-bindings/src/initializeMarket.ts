@@ -29,39 +29,51 @@ import { TOKEN_PROGRAM_ID } from './utils';
  * UnixTimestamp is really an alias for i64 type.
  */
 export const INITIALIZE_MARKET_LAYOUT = struct([
-  nu64('amountPerContract'),
+  nu64('underlyingAmountPerContract'),
   nu64('quoteAmountPerContract'),
   ns64('expirationUnixTimestamp'),
 ]);
 
-export const initializeMarketInstruction = async (
-  programId: PublicKey, // the deployed program account
+export const initializeMarketInstruction = async ({
+  programId,
+  underlyingAssetMintKey,
+  quoteAssetMintKey,
+  optionMintKey,
+  writerTokenMintKey,
+  optionMarketKey,
+  underlyingAssetPoolKey,
+  quoteAssetPoolKey,
+  underlyingAmountPerContract,
+  quoteAmountPerContract,
+  expirationUnixTimestamp,
+}: {
+  programId: PublicKey; // the deployed program account
   // The public key of the SPL Token Mint for the underlying asset
-  underlyingAssetMintKey: PublicKey,
+  underlyingAssetMintKey: PublicKey;
   // The public key of the SPL Token Mint for the quote asset
-  quoteAssetMintKey: PublicKey,
+  quoteAssetMintKey: PublicKey;
   // The public key of the SPL Token Mint for the new option SPL token
-  optionMintKey: PublicKey,
+  optionMintKey: PublicKey;
   // The public key of the SPL Token Mint for the Writer Token
-  writerTokenMintKey: PublicKey,
+  writerTokenMintKey: PublicKey;
   // The public key for a new Account that will store the data for the options market
-  optionMarketKey: PublicKey,
+  optionMarketKey: PublicKey;
   // The public key for a new Account that will be the underlying asset pool
-  underlyingAssetPoolKey: PublicKey,
+  underlyingAssetPoolKey: PublicKey;
   // The public key for the new Account that will be the quote asset pool
-  quoteAssetPoolKey: PublicKey,
+  quoteAssetPoolKey: PublicKey;
   // The amount of underlying asset per contract
-  underlyingAmountPerContract: number,
+  underlyingAmountPerContract: number;
   // The amount of quote asset required to swap for the underlying asset
   // i.e. amountPerContract * strike price
-  quoteAmountPerContract: number,
-  expirationUnixTimestamp: number,
-): Promise<TransactionInstruction> => {
+  quoteAmountPerContract: number;
+  expirationUnixTimestamp: number;
+}): Promise<TransactionInstruction> => {
   // Create a u8 buffer that conforms to the InitializeMarket structure
   const initializeMarketBuffer = Buffer.alloc(INITIALIZE_MARKET_LAYOUT.span);
   INITIALIZE_MARKET_LAYOUT.encode(
     {
-      amountPerContract: underlyingAmountPerContract,
+      underlyingAmountPerContract,
       quoteAmountPerContract,
       expirationUnixTimestamp,
     },
@@ -118,20 +130,31 @@ export const initializeMarketInstruction = async (
   });
 };
 
-export const initializeMarket = async (
-  connection: Connection,
-  payer: Account,
-  programId: PublicKey | string, // the deployed program account
+export const initializeMarket = async ({
+  connection,
+  payer,
+  programId,
+  underlyingAssetMintKey,
+  quoteAssetMintKey,
+  underlyingAssetDecimals,
+  quoteAssetDecimals,
+  underlyingAmountPerContract,
+  quoteAmountPerContract,
+  expirationUnixTimestamp,
+}: {
+  connection: Connection;
+  payer: Account;
+  programId: PublicKey | string; // the deployed program account
   // The public key of the SPL Token Mint for the underlying asset
-  underlyingAssetMint: PublicKey,
+  underlyingAssetMintKey: PublicKey;
   // The public key of the SPL Token Mint for the quote asset
-  quoteAssetMint: PublicKey,
-  underlyingAssetDecimals: number,
-  quoteAssetDecimals: number,
-  amountPerContract: BigNumber,
-  quoteAmountPerContract: BigNumber,
-  expirationUnixTimestamp: number,
-) => {
+  quoteAssetMintKey: PublicKey;
+  underlyingAssetDecimals: number;
+  quoteAssetDecimals: number;
+  underlyingAmountPerContract: BigNumber;
+  quoteAmountPerContract: BigNumber;
+  expirationUnixTimestamp: number;
+}) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
 
@@ -204,26 +227,26 @@ export const initializeMarket = async (
   );
 
   // TODO -- can we encode these to the buffer without converting back to the built-in number type?
-  const amountPerContractU64 = amountPerContract
+  const amountPerContractU64 = underlyingAmountPerContract
     .multipliedBy(new BigNumber(10).pow(underlyingAssetDecimals))
     .toNumber();
   const quoteAmountPerContractU64 = quoteAmountPerContract
     .multipliedBy(new BigNumber(10).pow(quoteAssetDecimals))
     .toNumber();
 
-  const initMarketInstruction = await initializeMarketInstruction(
-    programPubkey,
-    underlyingAssetMint,
-    quoteAssetMint,
-    optionMintAccount.publicKey,
-    writerTokenMintAccount.publicKey,
-    optionMarketDataAccount.publicKey,
-    underlyingAssetPoolAccount.publicKey,
-    quoteAssetPoolAccount.publicKey,
-    amountPerContractU64,
-    quoteAmountPerContractU64,
+  const initMarketInstruction = await initializeMarketInstruction({
+    programId: programPubkey,
+    underlyingAssetMintKey,
+    quoteAssetMintKey,
+    optionMintKey: optionMintAccount.publicKey,
+    writerTokenMintKey: writerTokenMintAccount.publicKey,
+    optionMarketKey: optionMarketDataAccount.publicKey,
+    underlyingAssetPoolKey: underlyingAssetPoolAccount.publicKey,
+    quoteAssetPoolKey: quoteAssetPoolAccount.publicKey,
+    underlyingAmountPerContract: amountPerContractU64,
+    quoteAmountPerContract: quoteAmountPerContractU64,
     expirationUnixTimestamp,
-  );
+  });
 
   transaction.add(initMarketInstruction);
   const signers = [

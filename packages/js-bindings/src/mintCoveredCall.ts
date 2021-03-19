@@ -14,18 +14,28 @@ import { getOptionMarketData } from './utils/getOptionMarketData';
 
 export const MINT_COVERED_CALL_LAYOUT = struct([u8('bumpSeed')]);
 
-export const mintCoveredCallInstruction = async (
-  programId: PublicKey,
+export const mintCoveredCallInstruction = async ({
+  authorityPubkey,
+  programId,
+  optionMarketKey,
+  optionMintKey,
+  mintedOptionDestKey,
+  writerTokenDestKey,
+  writerTokenMintKey,
+  underlyingAssetPoolKey,
+  underlyingAssetSrcKey,
+}: {
+  programId: PublicKey;
   // The SPL Mint for the tokens that denote an option contract
-  optionMintKey: PublicKey,
-  mintedOptionDestKey: PublicKey,
-  writerTokenMintKey: PublicKey,
-  writerTokenDestKey: PublicKey,
-  underlyingAssetSrcKey: PublicKey,
-  underlyingAssetPoolKey: PublicKey,
-  optionMarketKey: PublicKey,
-  authorityPubkey: PublicKey,
-) => {
+  optionMintKey: PublicKey;
+  mintedOptionDestKey: PublicKey;
+  writerTokenMintKey: PublicKey;
+  writerTokenDestKey: PublicKey;
+  underlyingAssetSrcKey: PublicKey;
+  underlyingAssetPoolKey: PublicKey;
+  optionMarketKey: PublicKey;
+  authorityPubkey: PublicKey;
+}) => {
   const mintCoveredCallBuffer = Buffer.alloc(MINT_COVERED_CALL_LAYOUT.span);
   // Generate the program derived address needed
   const [
@@ -65,27 +75,39 @@ export const mintCoveredCallInstruction = async (
   });
 };
 
-export const mintCoveredCall = async (
-  connection: Connection,
-  payer: Account,
-  programId: PublicKey | string,
-  mintedOptionDestKey: PublicKey,
-  underlyingAssetSrcKey: PublicKey,
-  optionMarketKey: PublicKey,
+export const mintCoveredCall = async ({
+  authorityAccount,
+  connection,
+  payer,
+  programId,
+  mintedOptionDestKey,
+  underlyingAssetSrcKey,
+  underlyingAssetPoolKey,
+  optionMintKey,
+  optionMarketKey,
+  writerTokenMintKey,
+  writerTokenDestKey,
+}: {
+  connection: Connection;
+  payer: Account;
+  programId: PublicKey | string;
+  mintedOptionDestKey: PublicKey;
+  underlyingAssetSrcKey: PublicKey;
+  optionMarketKey: PublicKey;
   // The OptionWriter's account that has authority over their underlying asset account
-  authorityAccount: Account,
+  authorityAccount: Account;
   // The following arguments should be read from the OptionMarket data account
-  optionMintKey: PublicKey,
-  underlyingAssetPoolKey: PublicKey,
-  writerTokenMintKey: PublicKey,
-  writerTokenDestKey: PublicKey,
-) => {
+  optionMintKey: PublicKey;
+  underlyingAssetPoolKey: PublicKey;
+  writerTokenMintKey: PublicKey;
+  writerTokenDestKey: PublicKey;
+}) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
 
   const transaction = new Transaction();
-  const mintInstruction = await mintCoveredCallInstruction(
-    programPubkey,
+  const mintInstruction = await mintCoveredCallInstruction({
+    programId: programPubkey,
     optionMintKey,
     mintedOptionDestKey,
     writerTokenMintKey,
@@ -93,8 +115,8 @@ export const mintCoveredCall = async (
     underlyingAssetSrcKey,
     underlyingAssetPoolKey,
     optionMarketKey,
-    authorityAccount.publicKey,
-  );
+    authorityPubkey: authorityAccount.publicKey,
+  });
   transaction.add(mintInstruction);
 
   const signers = [payer];
@@ -113,30 +135,42 @@ export const mintCoveredCall = async (
  * This is method is for convenience if the client does not have the
  * OptionMarket data already available.
  */
-export const readMarketAndMintCoveredCall = async (
-  connection: Connection,
-  payer: Account,
-  programId: PublicKey | string,
-  mintedOptionDest: PublicKey,
-  writerTokenDestKey: PublicKey,
-  underlyingAssetSrc: PublicKey,
-  optionMarket: PublicKey,
+export const readMarketAndMintCoveredCall = async ({
+  connection,
+  payer,
+  programId,
+  mintedOptionDestKey,
+  writerTokenDestKey,
+  underlyingAssetAuthorityAccount,
+  underlyingAssetSrcKey,
+  optionMarketKey,
+}: {
+  connection: Connection;
+  payer: Account;
+  programId: PublicKey | string;
+  mintedOptionDestKey: PublicKey;
+  writerTokenDestKey: PublicKey;
+  underlyingAssetSrcKey: PublicKey;
+  optionMarketKey: PublicKey;
   // The OptionWriter's account that has authority over their underlying asset account
-  underlyingAssetAuthorityAccount: Account,
-) => {
-  const optionMarketData = await getOptionMarketData(connection, optionMarket);
+  underlyingAssetAuthorityAccount: Account;
+}) => {
+  const optionMarketData = await getOptionMarketData(
+    connection,
+    optionMarketKey,
+  );
 
-  return mintCoveredCall(
+  return mintCoveredCall({
     connection,
     payer,
     programId,
-    mintedOptionDest,
-    underlyingAssetSrc,
-    optionMarket,
-    underlyingAssetAuthorityAccount,
-    optionMarketData.optionMintAddress,
-    optionMarketData.underlyingAssetPoolAddress,
-    optionMarketData.writerTokenMintKey,
+    mintedOptionDestKey,
+    underlyingAssetSrcKey,
+    optionMarketKey,
+    authorityAccount: underlyingAssetAuthorityAccount,
+    optionMintKey: optionMarketData.optionMintAddress,
+    underlyingAssetPoolKey: optionMarketData.underlyingAssetPoolAddress,
+    writerTokenMintKey: optionMarketData.writerTokenMintKey,
     writerTokenDestKey,
-  );
+  });
 };
