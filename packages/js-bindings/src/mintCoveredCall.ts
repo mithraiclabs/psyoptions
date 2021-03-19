@@ -17,21 +17,21 @@ export const MINT_COVERED_CALL_LAYOUT = struct([u8('bumpSeed')]);
 export const mintCoveredCallInstruction = async (
   programId: PublicKey,
   // The SPL Mint for the tokens that denote an option contract
-  optionMint: PublicKey,
-  mintedOptionDest: PublicKey,
-  underlyingAssetSrc: PublicKey,
-  underlyingAssetPool: PublicKey,
-  quoteAssetDest: PublicKey,
-  optionMarket: PublicKey,
+  optionMintKey: PublicKey,
+  mintedOptionDestKey: PublicKey,
+  writerTokenMintKey: PublicKey,
+  writerTokenDestKey: PublicKey,
+  underlyingAssetSrcKey: PublicKey,
+  underlyingAssetPoolKey: PublicKey,
+  optionMarketKey: PublicKey,
   authorityPubkey: PublicKey,
-  writerRegistryPubkey: PublicKey,
 ) => {
   const mintCoveredCallBuffer = Buffer.alloc(MINT_COVERED_CALL_LAYOUT.span);
   // Generate the program derived address needed
   const [
-    optionsSplAuthorityPubkey,
+    optionMintAuthorityPubkey,
     bumpSeed,
-  ] = await PublicKey.findProgramAddress([optionMint.toBuffer()], programId);
+  ] = await PublicKey.findProgramAddress([optionMintKey.toBuffer()], programId);
   MINT_COVERED_CALL_LAYOUT.encode({ bumpSeed }, mintCoveredCallBuffer, 0);
 
   /*
@@ -45,16 +45,16 @@ export const mintCoveredCallInstruction = async (
   const data = Buffer.concat([tagBuffer, mintCoveredCallBuffer]);
 
   const keys: AccountMeta[] = [
-    { pubkey: optionMint, isSigner: false, isWritable: true },
-    { pubkey: mintedOptionDest, isSigner: false, isWritable: true },
-    { pubkey: underlyingAssetSrc, isSigner: false, isWritable: true },
-    { pubkey: underlyingAssetPool, isSigner: false, isWritable: true },
-    { pubkey: quoteAssetDest, isSigner: false, isWritable: false },
-    { pubkey: optionMarket, isSigner: false, isWritable: false },
+    { pubkey: optionMintKey, isSigner: false, isWritable: true },
+    { pubkey: mintedOptionDestKey, isSigner: false, isWritable: true },
+    { pubkey: writerTokenMintKey, isSigner: false, isWritable: true },
+    { pubkey: writerTokenDestKey, isSigner: false, isWritable: true },
+    { pubkey: underlyingAssetSrcKey, isSigner: false, isWritable: true },
+    { pubkey: underlyingAssetPoolKey, isSigner: false, isWritable: true },
+    { pubkey: optionMarketKey, isSigner: false, isWritable: false },
     { pubkey: authorityPubkey, isSigner: true, isWritable: false },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-    { pubkey: writerRegistryPubkey, isSigner: false, isWritable: true },
-    { pubkey: optionsSplAuthorityPubkey, isSigner: false, isWritable: false },
+    { pubkey: optionMintAuthorityPubkey, isSigner: false, isWritable: false },
     { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
   ];
 
@@ -69,16 +69,16 @@ export const mintCoveredCall = async (
   connection: Connection,
   payer: Account,
   programId: PublicKey | string,
-  mintedOptionDest: PublicKey,
-  underlyingAssetSrc: PublicKey,
-  quoteAssetDest: PublicKey,
-  optionMarket: PublicKey,
+  mintedOptionDestKey: PublicKey,
+  underlyingAssetSrcKey: PublicKey,
+  optionMarketKey: PublicKey,
   // The OptionWriter's account that has authority over their underlying asset account
-  underlyingAssetAuthorityAccount: Account,
+  authorityAccount: Account,
   // The following arguments should be read from the OptionMarket data account
-  optionMintAddress: PublicKey,
-  underlyingAssetPool: PublicKey,
-  writerRegistryPubkey: PublicKey,
+  optionMintKey: PublicKey,
+  underlyingAssetPoolKey: PublicKey,
+  writerTokenMintKey: PublicKey,
+  writerTokenDestKey: PublicKey,
 ) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
@@ -86,14 +86,14 @@ export const mintCoveredCall = async (
   const transaction = new Transaction();
   const mintInstruction = await mintCoveredCallInstruction(
     programPubkey,
-    optionMintAddress,
-    mintedOptionDest,
-    underlyingAssetSrc,
-    underlyingAssetPool,
-    quoteAssetDest,
-    optionMarket,
-    underlyingAssetAuthorityAccount.publicKey,
-    writerRegistryPubkey,
+    optionMintKey,
+    mintedOptionDestKey,
+    writerTokenMintKey,
+    writerTokenDestKey,
+    underlyingAssetSrcKey,
+    underlyingAssetPoolKey,
+    optionMarketKey,
+    authorityAccount.publicKey,
   );
   transaction.add(mintInstruction);
 
@@ -101,8 +101,8 @@ export const mintCoveredCall = async (
   transaction.feePayer = payer.publicKey;
   const { blockhash } = await connection.getRecentBlockhash();
   transaction.recentBlockhash = blockhash;
-  if (payer.publicKey !== underlyingAssetAuthorityAccount.publicKey) {
-    signers.push(underlyingAssetAuthorityAccount);
+  if (payer.publicKey !== authorityAccount.publicKey) {
+    signers.push(authorityAccount);
     transaction.partialSign(...signers.slice(1));
   }
 
@@ -118,8 +118,8 @@ export const readMarketAndMintCoveredCall = async (
   payer: Account,
   programId: PublicKey | string,
   mintedOptionDest: PublicKey,
+  writerTokenDestKey: PublicKey,
   underlyingAssetSrc: PublicKey,
-  quoteAssetDest: PublicKey,
   optionMarket: PublicKey,
   // The OptionWriter's account that has authority over their underlying asset account
   underlyingAssetAuthorityAccount: Account,
@@ -132,11 +132,11 @@ export const readMarketAndMintCoveredCall = async (
     programId,
     mintedOptionDest,
     underlyingAssetSrc,
-    quoteAssetDest,
     optionMarket,
     underlyingAssetAuthorityAccount,
     optionMarketData.optionMintAddress,
     optionMarketData.underlyingAssetPoolAddress,
-    optionMarketData.writerRegistryAddress,
+    optionMarketData.writerTokenMintKey,
+    writerTokenDestKey,
   );
 };

@@ -109,6 +109,7 @@ impl Processor {
         OptionMarket::pack(
             OptionMarket {
                 option_mint: *option_mint_acct.key,
+                writer_token_mint: *writer_token_mint_acct.key,
                 underlying_asset_mint: *underlying_asset_mint_acct.key,
                 quote_asset_mint: *quote_asset_mint_acct.key,
                 underlying_amount_per_contract,
@@ -194,7 +195,6 @@ impl Processor {
             &[],
             1,
         )?;
-        // TODO fix error here
         invoke_signed(
             &mint_writer_token_ix,
             &[

@@ -173,7 +173,7 @@ fn test_mint_covered_call_fail_post_expiry() {
     writer_token_mint_keys,
     asset_authority_keys,
     underlying_asset_pool_key,
-    quote_asset_pool_key,
+    _quote_asset_pool_key,
     option_market_key,
   ) = init_option_market(
     &client,

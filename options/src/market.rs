@@ -16,6 +16,8 @@ const PUBLIC_KEY_LEN: usize = 32;
 pub struct OptionMarket {
     /// The SPL Token mint address for the tokens that denote an option
     pub option_mint: Pubkey,
+    /// The SPL Token mint address for Writer Tokens that denote a written option
+    pub writer_token_mint: Pubkey,
     /// The SPL Token Address that is held in the program's pool when an option is written
     pub underlying_asset_mint: Pubkey,
     /// The SPL Token Address that denominates the strike price
@@ -43,6 +45,7 @@ impl Pack for OptionMarket {
     const LEN: usize = PUBLIC_KEY_LEN
         + PUBLIC_KEY_LEN
         + PUBLIC_KEY_LEN
+        + PUBLIC_KEY_LEN
         + 8
         + 8
         + 8
@@ -52,6 +55,7 @@ impl Pack for OptionMarket {
         let src = array_ref![src, 0, OptionMarket::LEN];
         let (
             option_mint,
+            writer_token_mint,
             underlying_asset_mint,
             quote_asset_mint,
             underlying_amount_per_contract,
@@ -64,6 +68,7 @@ impl Pack for OptionMarket {
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
+            PUBLIC_KEY_LEN,
             8,
             8,
             8,
@@ -72,6 +77,7 @@ impl Pack for OptionMarket {
         ];
         Ok(OptionMarket {
             option_mint: Pubkey::new(option_mint),
+            writer_token_mint: Pubkey::new(writer_token_mint),
             underlying_asset_mint: Pubkey::new(underlying_asset_mint),
             quote_asset_mint: Pubkey::new(quote_asset_mint),
             underlying_amount_per_contract: u64::from_le_bytes(*underlying_amount_per_contract),
@@ -85,6 +91,7 @@ impl Pack for OptionMarket {
         let dest = array_mut_ref![dst, 0, OptionMarket::LEN];
         let (
             option_mint_ref,
+            writer_token_mint_ref,
             underlying_asset_mint_ref,
             quote_asset_mint_ref,
             underlying_amount_per_contract_ref,
@@ -97,6 +104,7 @@ impl Pack for OptionMarket {
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
+            PUBLIC_KEY_LEN,
             8,
             8,
             8,
@@ -104,6 +112,7 @@ impl Pack for OptionMarket {
             PUBLIC_KEY_LEN
         ];
         option_mint_ref.copy_from_slice(&self.option_mint.to_bytes());
+        writer_token_mint_ref.copy_from_slice(&self.writer_token_mint.to_bytes());
         underlying_asset_mint_ref.copy_from_slice(&self.underlying_asset_mint.to_bytes());
         quote_asset_mint_ref.copy_from_slice(&self.quote_asset_mint.to_bytes());
         underlying_amount_per_contract_ref
@@ -124,6 +133,7 @@ mod tests {
     #[test]
     fn test_pack_unpck_option_market() {
         let option_mint = Pubkey::new_unique();
+        let writer_token_mint = Pubkey::new_unique();
         let underlying_asset_mint = Pubkey::new_unique();
         let quote_asset_mint = Pubkey::new_unique();
         let underlying_amount_per_contract: u64 = 100;
@@ -134,6 +144,7 @@ mod tests {
 
         let option_market = OptionMarket {
             option_mint,
+            writer_token_mint,
             underlying_asset_mint,
             quote_asset_mint,
             underlying_amount_per_contract,
@@ -147,8 +158,19 @@ mod tests {
         let mut serialized_option_market = [0 as u8; OptionMarket::LEN];
         OptionMarket::pack(option_market, &mut serialized_option_market).unwrap();
         let serialized_ref = array_ref![serialized_option_market, 0, OptionMarket::LEN];
-        let (oma, uaa, qaa, apc, sp, eut, apa, wra) = array_refs![
+        let (
+            option_mint_ref,
+            writer_token_mint_ref,
+            underlying_asset_mint_ref,
+            quote_asset_mint_ref,
+            underlying_amount_per_contract_ref,
+            quote_amount_per_contract_ref,
+            expiration_unix_timestamp_ref,
+            underlying_asset_pool_ref,
+            quote_asset_pool_ref,
+        ) = array_refs![
             serialized_ref,
+            PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
@@ -158,14 +180,24 @@ mod tests {
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN
         ];
-        assert_eq!(oma, &option_mint.to_bytes());
-        assert_eq!(uaa, &underlying_asset_mint.to_bytes());
-        assert_eq!(qaa, &quote_asset_mint.to_bytes());
-        assert_eq!(apc, &underlying_amount_per_contract.to_le_bytes());
-        assert_eq!(sp, &quote_amount_per_contract.to_le_bytes());
-        assert_eq!(eut, &expiration_unix_timestamp.to_le_bytes());
-        assert_eq!(apa, &underlying_asset_pool.to_bytes());
-        assert_eq!(wra, &quote_asset_pool.to_bytes());
+        assert_eq!(option_mint_ref, &option_mint.to_bytes());
+        assert_eq!(writer_token_mint_ref, &writer_token_mint.to_bytes());
+        assert_eq!(underlying_asset_mint_ref, &underlying_asset_mint.to_bytes());
+        assert_eq!(quote_asset_mint_ref, &quote_asset_mint.to_bytes());
+        assert_eq!(
+            underlying_amount_per_contract_ref,
+            &underlying_amount_per_contract.to_le_bytes()
+        );
+        assert_eq!(
+            quote_amount_per_contract_ref,
+            &quote_amount_per_contract.to_le_bytes()
+        );
+        assert_eq!(
+            expiration_unix_timestamp_ref,
+            &expiration_unix_timestamp.to_le_bytes()
+        );
+        assert_eq!(underlying_asset_pool_ref, &underlying_asset_pool.to_bytes());
+        assert_eq!(quote_asset_pool_ref, &quote_asset_pool.to_bytes());
 
         let deserialized_options_market: OptionMarket =
             OptionMarket::unpack(&serialized_option_market).unwrap();
