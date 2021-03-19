@@ -1,26 +1,23 @@
 use crate::{
-  PROGRAM_KEY,
   option_helpers::{create_and_add_option_writer, create_exerciser, init_option_market},
-  solana_helpers
+  solana_helpers, PROGRAM_KEY,
 };
+use serial_test::serial;
 use solana_client::rpc_client::RpcClient;
-use solana_options::market::{OptionMarket};
+use solana_options::market::OptionMarket;
 use solana_program::{
   clock::Clock,
   program_pack::Pack,
   sysvar::{clock, Sysvar},
 };
 use solana_sdk::{
-  account::create_account_infos,
-  commitment_config::CommitmentConfig,
-  signature::Signer,
+  account::create_account_infos, commitment_config::CommitmentConfig, signature::Signer,
 };
-use spl_token::state::{Account, Mint};
+use spl_token::state::Account;
 use std::{
   thread,
-  time::{Duration, SystemTime, UNIX_EPOCH},
+  time::{Duration, SystemTime},
 };
-use serial_test::serial;
 
 #[test]
 #[serial]
@@ -33,7 +30,7 @@ pub fn test_sucessful_exercise_post_expiration() {
   let options_program_id = &PROGRAM_KEY;
   let amount_per_contract = 100;
   let quote_amount_per_contract = 500; // strike price of 5
-  // Get the current network clock time to use as the basis for the expiration
+                                       // Get the current network clock time to use as the basis for the expiration
   let sysvar_clock_acct = client.get_account(&clock::id()).unwrap();
   let accounts = &mut [(clock::id(), sysvar_clock_acct)];
   let sysvar_clock_acct_info = &create_account_infos(accounts)[0];
@@ -44,6 +41,7 @@ pub fn test_sucessful_exercise_post_expiration() {
     underlying_asset_mint_keys,
     quote_asset_mint_keys,
     option_mint_keys,
+    writer_token_mint_keys,
     asset_authority_keys,
     underlying_asset_pool_key,
     quote_asset_pool_key,
@@ -65,6 +63,7 @@ pub fn test_sucessful_exercise_post_expiration() {
     &asset_authority_keys,
     &quote_asset_mint_keys,
     &option_mint_keys,
+    &writer_token_mint_keys,
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
@@ -77,6 +76,7 @@ pub fn test_sucessful_exercise_post_expiration() {
     &asset_authority_keys,
     &quote_asset_mint_keys,
     &option_mint_keys,
+    &writer_token_mint_keys,
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
@@ -159,8 +159,7 @@ pub fn test_sucessful_exercise_post_expiration() {
     Account::unpack(&exerciser_quote_asset_acct_data[..]).unwrap();
   assert_eq!(
     updated_exerciser_quote_asset_acct.amount,
-    exerciser_quote_asset_acct.amount
-      - option_market.quote_amount_per_contract
+    exerciser_quote_asset_acct.amount - option_market.quote_amount_per_contract
   );
 }
 
@@ -183,6 +182,7 @@ pub fn test_panic_when_expiration_has_not_passed() {
     underlying_asset_mint_keys,
     quote_asset_mint_keys,
     option_mint_keys,
+    writer_token_mint_keys,
     asset_authority_keys,
     underlying_asset_pool_key,
     quote_asset_pool_key,
@@ -204,6 +204,7 @@ pub fn test_panic_when_expiration_has_not_passed() {
     &asset_authority_keys,
     &quote_asset_mint_keys,
     &option_mint_keys,
+    &writer_token_mint_keys,
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
@@ -216,6 +217,7 @@ pub fn test_panic_when_expiration_has_not_passed() {
     &asset_authority_keys,
     &quote_asset_mint_keys,
     &option_mint_keys,
+    &writer_token_mint_keys,
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,

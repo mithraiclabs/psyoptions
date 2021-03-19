@@ -23,7 +23,8 @@ fn test_initialize_market() {
     let options_program_id = &PROGRAM_KEY;
 
     let payer_keys = solana_helpers::create_account_with_lamports(&client, 10000000000);
-    let options_spl_mint = Keypair::new();
+    let option_mint_keys = Keypair::new();
+    let writer_token_mint_keys = Keypair::new();
     let options_market_keys = Keypair::new();
 
     let underlying_mint_keys = Keypair::new();
@@ -40,7 +41,8 @@ fn test_initialize_market() {
     option_helpers::create_accounts_for_options_market(
         &client,
         &options_program_id,
-        &options_spl_mint,
+        &option_mint_keys,
+        &writer_token_mint_keys,
         &options_market_keys,
         &payer_keys,
     )
@@ -54,7 +56,8 @@ fn test_initialize_market() {
         &options_program_id,
         &underlying_mint_keys.pubkey(),
         &quote_mint_keys.pubkey(),
-        &options_spl_mint.pubkey(),
+        &option_mint_keys.pubkey(),
+        &writer_token_mint_keys.pubkey(),
         &options_market_keys.pubkey(),
         &underlying_asset_pool_keys.pubkey(),
         &quote_asset_pool_keys.pubkey(),
@@ -73,22 +76,36 @@ fn test_initialize_market() {
     )
     .unwrap();
 
-    let (options_spl_authority_pubkey, _bump_seed) = Pubkey::find_program_address(
-        &[&options_spl_mint.pubkey().to_bytes()[..32]],
+    let (option_authority_pubkey, _bump_seed) = Pubkey::find_program_address(
+        &[&option_mint_keys.pubkey().to_bytes()[..32]],
         &options_program_id,
     );
 
-    // assert program id is the mint authority
-    let option_mint_data = client.get_account_data(&options_spl_mint.pubkey()).unwrap();
+    // assert program id is the option mint authority
+    let option_mint_data = client.get_account_data(&option_mint_keys.pubkey()).unwrap();
     let option_mint = Mint::unpack(&option_mint_data[..]).unwrap();
     assert_eq!(
         option_mint.mint_authority,
-        COption::Some(options_spl_authority_pubkey)
+        COption::Some(option_authority_pubkey)
     );
     assert_eq!(option_mint.supply, 0);
     assert_eq!(option_mint.decimals, 0);
     assert!(option_mint.is_initialized);
     assert_eq!(option_mint.freeze_authority, COption::None);
+
+    // assert program id is the writer token mint authority
+    let writer_token_mint_data = client
+        .get_account_data(&writer_token_mint_keys.pubkey())
+        .unwrap();
+    let writer_token_mint = Mint::unpack(&writer_token_mint_data[..]).unwrap();
+    assert_eq!(
+        writer_token_mint.mint_authority,
+        COption::Some(option_authority_pubkey)
+    );
+    assert_eq!(writer_token_mint.supply, 0);
+    assert_eq!(writer_token_mint.decimals, 0);
+    assert!(writer_token_mint.is_initialized);
+    assert_eq!(writer_token_mint.freeze_authority, COption::None);
 
     // assert underlying asset pool is initialized
     let underlying_asset_pool_acct_data = client
@@ -145,6 +162,7 @@ fn should_fail_with_same_quote_underlying_assets() {
 
     let payer_keys = solana_helpers::create_account_with_lamports(&client, 10000000000);
     let option_mint_keys = Keypair::new();
+    let writer_token_mint_keys = Keypair::new();
     let options_market_keys = Keypair::new();
 
     let underlying_mint_keys = Keypair::new();
@@ -159,6 +177,7 @@ fn should_fail_with_same_quote_underlying_assets() {
         &client,
         &options_program_id,
         &option_mint_keys,
+        &writer_token_mint_keys,
         &options_market_keys,
         &payer_keys,
     )
@@ -173,6 +192,7 @@ fn should_fail_with_same_quote_underlying_assets() {
         &underlying_mint_keys.pubkey(),
         &underlying_mint_keys.pubkey(),
         &option_mint_keys.pubkey(),
+        &writer_token_mint_keys.pubkey(),
         &options_market_keys.pubkey(),
         &underlying_asset_pool_keys.pubkey(),
         &quote_asset_pool_keys.pubkey(),
