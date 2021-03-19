@@ -6,7 +6,7 @@ use crate::{
     },
 };
 use solana_client::{client_error::ClientError, rpc_client::RpcClient};
-use solana_options::market::{OptionMarket, OptionWriterRegistry};
+use solana_options::market::OptionMarket;
 use solana_program::{
     clock::UnixTimestamp, program_pack::Pack, pubkey::Pubkey, system_instruction,
 };
@@ -16,42 +16,6 @@ use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
-
-fn create_writer_registry_acct(
-    client: &RpcClient,
-    options_program_id: &Pubkey,
-    option_wrtier_registry: &Keypair,
-    payer_keys: &Keypair,
-) -> Result<(), ClientError> {
-    let data_len = OptionWriterRegistry::LEN;
-
-    let min_balance = client.get_minimum_balance_for_rent_exemption(data_len)?;
-
-    let instruction = system_instruction::create_account(
-        &payer_keys.pubkey(),
-        &option_wrtier_registry.pubkey(),
-        min_balance,
-        data_len as u64,
-        options_program_id,
-    );
-
-    let message = Message::new(&[instruction], Some(&payer_keys.pubkey()));
-
-    let (blockhash, _, _) = client
-        .get_recent_blockhash_with_commitment(CommitmentConfig::processed())?
-        .value;
-
-    let mut transaction = Transaction::new_unsigned(message.clone());
-    transaction.try_sign(&[payer_keys, option_wrtier_registry], blockhash)?;
-
-    client.send_and_confirm_transaction_with_spinner_and_commitment(
-        &transaction,
-        CommitmentConfig::processed(),
-    )?;
-    println!("Created Options Market account {}", option_wrtier_registry.pubkey());
-
-    Ok(())
-}
 
 fn create_options_market(
     client: &RpcClient,
@@ -149,6 +113,7 @@ pub fn create_option_writer_accounts(
 /// - Option Mint Keypair
 /// - Underyling/Quote Mint Authority Keypair
 /// - Underlying Asset Pool Pubkey
+/// - Quote Asset Pool Pubkey
 /// - Option Market Pubkey
 pub fn init_option_market(
     client: &RpcClient,
@@ -164,12 +129,13 @@ pub fn init_option_market(
     let underlying_spl = Keypair::new();
     let quote_spl = Keypair::new();
     let underlying_spl_pool = Keypair::new();
-    let writer_registry_kp = Keypair::new();
+    let quote_spl_pool = Keypair::new();
 
     // create the spl mints to be used in the options market
     create_spl_mint_account(&client, &underlying_spl, &payer_keys).unwrap();
     create_spl_mint_account(&client, &quote_spl, &payer_keys).unwrap();
     create_spl_account_uninitialized(&client, &underlying_spl_pool, &payer_keys).unwrap();
+    create_spl_account_uninitialized(&client, &quote_spl_pool, &payer_keys).unwrap();
 
     create_accounts_for_options_market(
         &client,
@@ -186,7 +152,7 @@ pub fn init_option_market(
         &options_spl_mint.pubkey(),
         &options_market_keys.pubkey(),
         &underlying_spl_pool.pubkey(),
-        &writer_registry_kp.pubkey(),
+        &quote_spl_pool.pubkey(),
         amount_per_contract,
         quote_amount_per_contract,
         expiry,
@@ -200,8 +166,8 @@ pub fn init_option_market(
         options_spl_mint,
         payer_keys,
         underlying_spl_pool.pubkey(),
+        quote_spl_pool.pubkey(),
         options_market_keys.pubkey(),
-        writer_registry_kp.pubkey(),
     ))
 }
 /// Creates and seeds the necessary accounts for an entity, then mints a
@@ -220,7 +186,6 @@ pub fn create_and_add_option_writer(
     underlying_asset_pool_key: &Pubkey,
     option_market_key: &Pubkey,
     amount_per_contract: u64,
-    writer_registry_key: &Pubkey,
 ) -> Result<(Keypair, Keypair), ClientError> {
     let option_writer_keys = create_account_with_lamports(&client, 1_000_000_000_000_000);
     let option_writer_underlying_asset_keys = Keypair::new();
@@ -271,7 +236,6 @@ pub fn create_and_add_option_writer(
         &option_writer_quote_asset_keys.pubkey(),
         &option_market_key,
         &option_writer_keys.pubkey(),
-        &writer_registry_key,
     )
     .unwrap();
     let signers = vec![&option_writer_keys];

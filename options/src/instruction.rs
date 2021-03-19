@@ -1,4 +1,3 @@
-use crate::market::OptionWriter;
 use arrayref::array_ref;
 use solana_program::{
     clock::UnixTimestamp,
@@ -64,8 +63,7 @@ pub enum OptionsInstruction {
     /// 8. `[]` Option Mint Authority
     /// 9. `[]` Option Mint
     ExercisePostExpiration {
-        option_writer: OptionWriter,
-        bump_seed: u8,
+        bump_seed: u8
     },
     /// Exercise an Options token representing a Covered Call
     ///
@@ -82,7 +80,6 @@ pub enum OptionsInstruction {
     ///   10. `[writeable]` Option Token Account
     ///   11. `[signer]` Option Token Account Authority
     ExerciseCoveredCall {
-        option_writer: OptionWriter,
         bump_seed: u8,
     },
     /// Close a single option contract post expiration
@@ -94,7 +91,6 @@ pub enum OptionsInstruction {
     /// 5. `[]` Option Mint Authority
     /// 6. `[]` Option Mint
     ClosePostExpiration {
-        option_writer: OptionWriter,
         bump_seed: u8,
     }
 }
@@ -121,26 +117,20 @@ impl OptionsInstruction {
                 Self::MintCoveredCall { bump_seed }
             }
             2 => {
-                let (option_writer, rest) = Self::unpack_option_writer(rest)?;
                 let (bump_seed, _rest) = Self::unpack_u8(rest)?;
                 Self::ExercisePostExpiration {
-                    option_writer,
                     bump_seed,
                 }
             }
             3 => {
-                let (option_writer, rest) = Self::unpack_option_writer(rest)?;
                 let (bump_seed, _rest) = Self::unpack_u8(rest)?;
                 Self::ExerciseCoveredCall {
-                    option_writer,
                     bump_seed
                 }
             }
             4 => {
-                let (option_writer, rest) = Self::unpack_option_writer(rest)?;
                 let (bump_seed, _rest) = Self::unpack_u8(rest)?;
                 Self::ClosePostExpiration {
-                    option_writer,
                     bump_seed
                 }
             }
@@ -167,27 +157,17 @@ impl OptionsInstruction {
                 buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
             &Self::ExercisePostExpiration {
-                ref option_writer,
                 ref bump_seed,
             } => {
                 buf.push(2);
-                let mut option_writer_slice = [0u8; OptionWriter::LEN];
-                option_writer.pack_into_slice(&mut option_writer_slice);
-                buf.extend_from_slice(&option_writer_slice);
                 buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
-            &Self::ExerciseCoveredCall { ref option_writer, ref bump_seed } => {
+            &Self::ExerciseCoveredCall { ref bump_seed } => {
                 buf.push(3);
-                let mut option_writer_slice = [0u8; OptionWriter::LEN];
-                option_writer.pack_into_slice(&mut option_writer_slice);
-                buf.extend_from_slice(&option_writer_slice);
                 buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
-            &Self::ClosePostExpiration { ref option_writer, ref bump_seed } => {
+            &Self::ClosePostExpiration { ref bump_seed } => {
                 buf.push(4);
-                let mut option_writer_slice = [0u8; OptionWriter::LEN];
-                option_writer.pack_into_slice(&mut option_writer_slice);
-                buf.extend_from_slice(&option_writer_slice);
                 buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
         };
@@ -220,16 +200,6 @@ impl OptionsInstruction {
             let num_arr = array_ref![num_buf, 0, 1];
             let num = u8::from_le_bytes(*num_arr);
             Ok((num, rest))
-        } else {
-            Err(ProgramError::InvalidInstructionData)
-        }
-    }
-    fn unpack_option_writer(input: &[u8]) -> Result<(OptionWriter, &[u8]), ProgramError> {
-        if input.len() >= OptionWriter::LEN {
-            let (writer_buf, rest) = input.split_at(OptionWriter::LEN);
-            let writer_arr = array_ref![writer_buf, 0, OptionWriter::LEN];
-            let option_writer = OptionWriter::unpack(writer_arr)?;
-            Ok((option_writer, rest))
         } else {
             Err(ProgramError::InvalidInstructionData)
         }
@@ -289,7 +259,6 @@ pub fn mint_covered_call(
     quote_asset_dest: &Pubkey,
     option_market: &Pubkey,
     authority_pubkey: &Pubkey,
-    writer_registry_pubkey: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
     let mut accounts = Vec::with_capacity(11);
     accounts.push(AccountMeta::new(*option_mint, false));
@@ -300,7 +269,6 @@ pub fn mint_covered_call(
     accounts.push(AccountMeta::new_readonly(*option_market, false));
     accounts.push(AccountMeta::new_readonly(*authority_pubkey, true));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
-    accounts.push(AccountMeta::new(*writer_registry_pubkey, false));
 
     let (options_spl_authority_pubkey, bump_seed) =
         Pubkey::find_program_address(&[&option_mint.to_bytes()[..32]], &program_id);
@@ -320,21 +288,17 @@ pub fn mint_covered_call(
 /// Creates a `ExercisePostExpiration` instruction
 pub fn exercise_post_expiration(
     program_id: &Pubkey,
-    option_writer: &OptionWriter,
     option_mint_key: &Pubkey,
     options_market_key: &Pubkey,
-    options_writer_registry_key: &Pubkey,
     exerciser_quote_asset_key: &Pubkey,
     exerciser_underlying_asset_key: &Pubkey,
     exerciser_authority_key: &Pubkey,
     market_underlying_asset_pool_key: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
-    let cloned_writer = option_writer.clone();
 
     let (options_spl_authority_pubkey, bump_seed) =
         Pubkey::find_program_address(&[&option_mint_key.to_bytes()[..32]], &program_id);
     let data = OptionsInstruction::ExercisePostExpiration {
-        option_writer: cloned_writer,
         bump_seed,
     }
     .pack();
@@ -345,10 +309,6 @@ pub fn exercise_post_expiration(
     accounts.push(AccountMeta::new_readonly(*options_market_key, false));
     accounts.push(AccountMeta::new(*exerciser_quote_asset_key, false));
     accounts.push(AccountMeta::new_readonly(*exerciser_authority_key, true));
-    accounts.push(AccountMeta::new(
-        option_writer.quote_asset_acct_address,
-        false,
-    ));
     accounts.push(AccountMeta::new(*exerciser_underlying_asset_key, false));
     accounts.push(AccountMeta::new(*market_underlying_asset_pool_key, false));
     accounts.push(AccountMeta::new_readonly(
@@ -356,7 +316,6 @@ pub fn exercise_post_expiration(
         false,
     ));
     accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
-    accounts.push(AccountMeta::new(*options_writer_registry_key, false));
 
     Ok(Instruction {
         program_id: *program_id,
@@ -368,20 +327,15 @@ pub fn exercise_post_expiration(
 /// Creates a `ClosePostExpiration` instruction
 pub fn close_post_expiration(
     program_id: &Pubkey,
-    option_writer: &OptionWriter,
     options_market_key: &Pubkey,
     market_underlying_asset_pool_key: &Pubkey,
     option_mint_key: &Pubkey,
-    options_writer_registry_key: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
-
-    let cloned_writer = option_writer.clone();
 
     let (options_spl_authority_pubkey, bump_seed) =
         Pubkey::find_program_address(&[&option_mint_key.to_bytes()[..32]], &program_id);
 
     let data = OptionsInstruction::ClosePostExpiration {
-        option_writer: cloned_writer,
         bump_seed
     }
     .pack();
@@ -390,17 +344,12 @@ pub fn close_post_expiration(
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
     accounts.push(AccountMeta::new_readonly(*options_market_key, false));
-    accounts.push(AccountMeta::new(
-        option_writer.underlying_asset_acct_address,
-        false,
-    ));
     accounts.push(AccountMeta::new(*market_underlying_asset_pool_key, false));
     accounts.push(AccountMeta::new_readonly(
         options_spl_authority_pubkey,
         false,
     ));
     accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
-    accounts.push(AccountMeta::new(*options_writer_registry_key, false));
 
     Ok(Instruction {
         program_id: *program_id,
@@ -412,10 +361,8 @@ pub fn close_post_expiration(
 /// Creates a `ExerciseCoveredCall` instruction
 pub fn exercise_covered_call(
     program_id: &Pubkey,
-    option_writer: &OptionWriter,
     option_mint_key: &Pubkey,
     options_market_key: &Pubkey,
-    options_writer_registry_key: &Pubkey,
     exerciser_quote_asset_key: &Pubkey,
     exerciser_underlying_asset_key: &Pubkey,
     exerciser_authority_key: &Pubkey,
@@ -423,12 +370,10 @@ pub fn exercise_covered_call(
     contract_token_key: &Pubkey,
     contract_token_authority: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
-    let cloned_writer = option_writer.clone();
 
     let (options_spl_authority_pubkey, bump_seed) =
         Pubkey::find_program_address(&[&option_mint_key.to_bytes()[..32]], &program_id);
     let data = OptionsInstruction::ExerciseCoveredCall {
-        option_writer: cloned_writer,
         bump_seed,
     }
     .pack();
@@ -439,10 +384,6 @@ pub fn exercise_covered_call(
     accounts.push(AccountMeta::new_readonly(*options_market_key, false));
     accounts.push(AccountMeta::new(*exerciser_quote_asset_key, false));
     accounts.push(AccountMeta::new_readonly(*exerciser_authority_key, true));
-    accounts.push(AccountMeta::new(
-        option_writer.quote_asset_acct_address,
-        false,
-    ));
     accounts.push(AccountMeta::new(*exerciser_underlying_asset_key, false));
     accounts.push(AccountMeta::new(*market_underlying_asset_pool_key, false));
     accounts.push(AccountMeta::new_readonly(
@@ -452,7 +393,6 @@ pub fn exercise_covered_call(
     accounts.push(AccountMeta::new(*option_mint_key, false));
     accounts.push(AccountMeta::new(*contract_token_key, false));
     accounts.push(AccountMeta::new_readonly(*contract_token_authority, true));
-    accounts.push(AccountMeta::new(*options_writer_registry_key, false));
 
     Ok(Instruction {
         program_id: *program_id,
@@ -502,22 +442,12 @@ mod tests {
     #[test]
     fn test_pack_unpack_exercise_covered_call() {
         let bump_seed = 1;
-        let option_writer = OptionWriter {
-            underlying_asset_acct_address: Pubkey::new_unique(),
-            quote_asset_acct_address: Pubkey::new_unique(),
-            contract_token_acct_address: Pubkey::new_unique()
-        };
-        let cloned_option_wrtier = option_writer.clone();
         let check = OptionsInstruction::ExerciseCoveredCall {
-            option_writer,
             bump_seed
         };
         let packed = check.pack();
         // add the tag to the expected buffer
-        let mut option_writer_slice = [0u8; OptionWriter::LEN];
-        cloned_option_wrtier.pack_into_slice(&mut option_writer_slice);
         let mut expect = Vec::from([3u8]);
-        expect.extend_from_slice(&option_writer_slice);
         expect.push(bump_seed);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
@@ -528,22 +458,12 @@ mod tests {
     #[test]
     fn test_pack_unpack_close_post_expiration() {
         let bump_seed = 1;
-        let option_writer = OptionWriter {
-            underlying_asset_acct_address: Pubkey::new_unique(),
-            quote_asset_acct_address: Pubkey::new_unique(),
-            contract_token_acct_address: Pubkey::new_unique()
-        };
-        let cloned_option_wrtier = option_writer.clone();
         let check = OptionsInstruction::ClosePostExpiration {
-            option_writer,
             bump_seed
         };
         let packed = check.pack();
         // add the tag to the expected buffer
-        let mut option_writer_slice = [0u8; OptionWriter::LEN];
-        cloned_option_wrtier.pack_into_slice(&mut option_writer_slice);
         let mut expect = Vec::from([4u8]);
-        expect.extend_from_slice(&option_writer_slice);
         expect.push(bump_seed);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
