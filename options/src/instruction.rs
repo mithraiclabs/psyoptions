@@ -307,18 +307,17 @@ pub fn close_pre_expiration(
     }
     .pack();
 
-    let mut accounts = Vec::with_capacity(12);
+    let mut accounts = Vec::with_capacity(11);
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
-    accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
     accounts.push(AccountMeta::new_readonly(*options_market, false));
-    accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
+    accounts.push(AccountMeta::new(*option_mint_key, false));
     accounts.push(AccountMeta::new_readonly(
         option_mint_authority,
         false,
     ));
     accounts.push(AccountMeta::new(*option_token_source, false));
     accounts.push(AccountMeta::new_readonly(*option_token_source_authority, true));
-    accounts.push(AccountMeta::new_readonly(*writer_token_mint, false));
+    accounts.push(AccountMeta::new(*writer_token_mint, false));
     accounts.push(AccountMeta::new(*writer_token_source, false));
     accounts.push(AccountMeta::new_readonly(*writer_token_source_authority, true));
     accounts.push(AccountMeta::new(*underlying_asset_dest, false));

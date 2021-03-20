@@ -295,7 +295,61 @@ impl Processor {
         Ok(())
     }
 
-    pub fn process_close_pre_expiration(_accounts: &[AccountInfo], _bump_seed: u8) -> ProgramResult {
+    pub fn process_close_pre_expiration(accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let spl_program_acct = next_account_info(account_info_iter)?;
+        let option_market_acct = next_account_info(account_info_iter)?;
+        let option_mint_acct = next_account_info(account_info_iter)?;
+        let option_mint_authority_acct = next_account_info(account_info_iter)?;
+        let option_token_src_acct = next_account_info(account_info_iter)?;
+        let option_token_src_auth_acct = next_account_info(account_info_iter)?;
+        let writer_token_mint_acct = next_account_info(account_info_iter)?;
+        let writer_token_source_acct = next_account_info(account_info_iter)?;
+        let writer_token_source_authority_acct = next_account_info(account_info_iter)?;
+        let underlying_asset_dest_acct = next_account_info(account_info_iter)?;
+        let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
+
+        
+        // Burn Writer Token
+        let burn_writer_token_ix = token_instruction::burn(
+            &spl_program_acct.key,
+            &writer_token_source_acct.key,
+            &writer_token_mint_acct.key,
+            &writer_token_source_authority_acct.key,
+            &[],
+            1,
+        )?;
+        invoke_signed(
+            &burn_writer_token_ix,
+            &[
+                writer_token_source_acct.clone(),
+                writer_token_mint_acct.clone(),
+                writer_token_source_authority_acct.clone(),
+                spl_program_acct.clone(),
+            ],
+            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+        )?;
+
+        // Burn Option Token
+        let burn_option_token_ix = token_instruction::burn(
+            &spl_program_acct.key,
+            &option_token_src_acct.key,
+            &option_mint_acct.key,
+            &option_token_src_auth_acct.key,
+            &[],
+            1,
+        )?;
+        invoke_signed(
+            &burn_option_token_ix,
+            &[
+                option_token_src_acct.clone(),
+                option_mint_acct.clone(),
+                option_token_src_auth_acct.clone(),
+                spl_program_acct.clone(),
+            ],
+            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+        )?;
+
         Ok(())
     }
 
