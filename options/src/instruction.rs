@@ -88,7 +88,7 @@ pub enum OptionsInstruction {
     /// Close a single option contract prior to expiration.
     /// Burns the _option token_ and the _writer token_ and returns the 
     /// underlying asset back to the writer (or address specified). 
-    ClosePreExpiration {
+    ClosePosition {
         bump_seed: u8,
     }
 }
@@ -128,7 +128,7 @@ impl OptionsInstruction {
             }
             4 => {
                 let (bump_seed, _rest) = Self::unpack_u8(rest)?;
-                Self::ClosePreExpiration {
+                Self::ClosePosition {
                     bump_seed
                 }
             }
@@ -162,7 +162,7 @@ impl OptionsInstruction {
                 buf.push(3);
                 buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
-            &Self::ClosePreExpiration { ref bump_seed } => {
+            &Self::ClosePosition { ref bump_seed } => {
                 buf.push(4);
                 buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
@@ -286,8 +286,8 @@ pub fn mint_covered_call(
     })
 }
 
-/// Creates a `ClosePreExpiration` instruction
-pub fn close_pre_expiration(
+/// Creates a `ClosePosition` instruction
+pub fn close_position(
     program_id: &Pubkey,
     options_market: &Pubkey,
     underlying_asset_pool: &Pubkey,
@@ -302,7 +302,7 @@ pub fn close_pre_expiration(
     let (option_mint_authority, bump_seed) =
         Pubkey::find_program_address(&[&option_mint_key.to_bytes()[..32]], &program_id);
 
-    let data = OptionsInstruction::ClosePreExpiration {
+    let data = OptionsInstruction::ClosePosition {
         bump_seed
     }
     .pack();
@@ -487,9 +487,9 @@ mod tests {
     }
 
     #[test]
-    fn test_pack_unpack_close_pre_expiration() {
+    fn test_pack_unpack_close_position() {
         let bump_seed = 1;
-        let check = OptionsInstruction::ClosePreExpiration {
+        let check = OptionsInstruction::ClosePosition {
             bump_seed
         };
         let packed = check.pack();

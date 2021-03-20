@@ -22,7 +22,7 @@ use std::{thread, time::Duration};
 #[test]
 #[serial]
 /// Option Writer closing out should receive underlying asset
-pub fn test_sucessful_close_pre_expiration() {
+pub fn test_sucessful_close_position() {
   // Create the options market
   let client = RpcClient::new_with_commitment(
     "http://localhost:8899".to_string(),
@@ -91,8 +91,8 @@ pub fn test_sucessful_close_pre_expiration() {
   .unwrap();
   let option_market_data = client.get_account_data(&option_market_key).unwrap();
   let option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
-  // generate the exercise_pre_expiration instruction
-  let close_pre_exirpation_ix = solana_options::instruction::close_pre_expiration(
+  // generate the close_position instruction
+  let close_position_ix = solana_options::instruction::close_position(
     &options_program_id,
     &option_market_key,
     &option_market.underlying_asset_pool,
@@ -148,7 +148,7 @@ pub fn test_sucessful_close_pre_expiration() {
   let signers = vec![&option_writer_keys];
   solana_helpers::send_and_confirm_transaction(
     &client,
-    close_pre_exirpation_ix,
+    close_position_ix,
     &option_writer_keys.pubkey(),
     signers,
   )
@@ -287,7 +287,7 @@ pub fn test_panic_when_non_underlying_asset_pool_is_used() {
   let (option_mint_authority, bump_seed) =
     Pubkey::find_program_address(&[&option_mint_keys.pubkey().to_bytes()[..32]], &program_id);
 
-  let data = OptionsInstruction::ClosePreExpiration { bump_seed }.pack();
+  let data = OptionsInstruction::ClosePosition { bump_seed }.pack();
 
   let mut accounts = Vec::with_capacity(11);
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
@@ -305,8 +305,8 @@ pub fn test_panic_when_non_underlying_asset_pool_is_used() {
     accounts.push(AccountMeta::new(option_writer_underlying_asset_keys.pubkey(), false));
     accounts.push(AccountMeta::new(quote_asset_pool_key, false));
 
-  // generate the close_pre_expiration instruction
-  let close_pre_exirpation_ix = Instruction {
+  // generate the close_position instruction
+  let close_position_ix = Instruction {
     program_id: **program_id,
     data,
     accounts,
@@ -315,7 +315,7 @@ pub fn test_panic_when_non_underlying_asset_pool_is_used() {
   let signers = vec![&option_writer_keys];
   solana_helpers::send_and_confirm_transaction(
     &client,
-    close_pre_exirpation_ix,
+    close_position_ix,
     &option_writer_keys.pubkey(),
     signers,
   )
