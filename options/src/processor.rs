@@ -295,6 +295,10 @@ impl Processor {
         Ok(())
     }
 
+    pub fn process_close_pre_expiration(_accounts: &[AccountInfo], _bump_seed: u8) -> ProgramResult {
+        Ok(())
+    }
+
     pub fn process_close_post_expiration(accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let option_market_acct = next_account_info(account_info_iter)?;
@@ -386,6 +390,9 @@ impl Processor {
             }
             OptionsInstruction::ClosePostExpiration { bump_seed } => {
                 Self::process_close_post_expiration(accounts, bump_seed)
+            }
+            OptionsInstruction::ClosePreExpiration { bump_seed } => {
+                Self::process_close_pre_expiration(accounts, bump_seed)
             }
         }
     }

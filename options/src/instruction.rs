@@ -84,6 +84,12 @@ pub enum OptionsInstruction {
     /// 9. `[]` SPL Token Program
     ClosePostExpiration {
         bump_seed: u8,
+    },
+    /// Close a single option contract prior to expiration.
+    /// Burns the _option token_ and the _writer token_ and returns the 
+    /// underlying asset back to the writer (or address specified). 
+    ClosePreExpiration {
+        bump_seed: u8,
     }
 }
 
@@ -120,6 +126,12 @@ impl OptionsInstruction {
                     bump_seed
                 }
             }
+            4 => {
+                let (bump_seed, _rest) = Self::unpack_u8(rest)?;
+                Self::ClosePreExpiration {
+                    bump_seed
+                }
+            }
             _ => return Err(ProgramError::InvalidInstructionData.into()),
         })
     }
@@ -148,6 +160,10 @@ impl OptionsInstruction {
             }
             &Self::ClosePostExpiration { ref bump_seed } => {
                 buf.push(3);
+                buf.extend_from_slice(&bump_seed.to_le_bytes());
+            }
+            &Self::ClosePreExpiration { ref bump_seed } => {
+                buf.push(4);
                 buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
         };
@@ -420,6 +436,21 @@ mod tests {
         let packed = check.pack();
         // add the tag to the expected buffer
         let mut expect = Vec::from([3u8]);
+        expect.push(bump_seed);
+        assert_eq!(packed, expect);
+        let unpacked = OptionsInstruction::unpack(&expect).unwrap();
+        assert_eq!(unpacked, check);
+    }
+
+    #[test]
+    fn test_pack_unpack_close_pre_expiration() {
+        let bump_seed = 1;
+        let check = OptionsInstruction::ClosePreExpiration {
+            bump_seed
+        };
+        let packed = check.pack();
+        // add the tag to the expected buffer
+        let mut expect = Vec::from([4u8]);
         expect.push(bump_seed);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
