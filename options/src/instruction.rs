@@ -84,14 +84,19 @@ pub enum OptionsInstruction {
     ExerciseCoveredCall {
         bump_seed: u8,
     },
-    /// Close a single option contract post expiration
-    /// 0. `[]` Sysvar clock
-    /// 1. `[]` SPL Token Program
-    /// 2. `[writeable]` Option Market
-    /// 3. `[writeable]` Option Writer Underlying Asset Destination
-    /// 4. `[writeable]` Underlying Asset Pool
-    /// 5. `[]` Option Mint Authority
-    /// 6. `[]` Option Mint
+    /// Close a single option contract post expiration.
+    /// Transfers the underlying asset back to the Option Writer
+    /// 
+    /// 0. `[]` Option Market
+    /// 1. `[]` Option Mint
+    /// 2. `[]` Option Mint Authority
+    /// 3. `[writeable]` Writer Token Mint
+    /// 4. `[writeable]` Writer Token Source (to be burned)
+    /// 5. `[signer]` Writer Token Source Authority
+    /// 6. `[writeable]` Option Writer Underlying Asset Destination
+    /// 7. `[writeable]` Underlying Asset Pool
+    /// 8. `[]` Sysvar clock
+    /// 9. `[]` SPL Token Program
     ClosePostExpiration {
         bump_seed: u8,
     }
@@ -333,12 +338,16 @@ pub fn exercise_post_expiration(
 /// Creates a `ClosePostExpiration` instruction
 pub fn close_post_expiration(
     program_id: &Pubkey,
-    options_market_key: &Pubkey,
-    market_underlying_asset_pool_key: &Pubkey,
+    options_market: &Pubkey,
+    underlying_asset_pool: &Pubkey,
     option_mint_key: &Pubkey,
+    writer_token_mint: &Pubkey,
+    writer_token_source: &Pubkey,
+    writer_token_source_authority: &Pubkey,
+    underlying_asset_dest: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
 
-    let (options_spl_authority_pubkey, bump_seed) =
+    let (option_mint_authority, bump_seed) =
         Pubkey::find_program_address(&[&option_mint_key.to_bytes()[..32]], &program_id);
 
     let data = OptionsInstruction::ClosePostExpiration {
@@ -346,16 +355,20 @@ pub fn close_post_expiration(
     }
     .pack();
 
-    let mut accounts = Vec::with_capacity(7);
-    accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
-    accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
-    accounts.push(AccountMeta::new_readonly(*options_market_key, false));
-    accounts.push(AccountMeta::new(*market_underlying_asset_pool_key, false));
+    let mut accounts = Vec::with_capacity(10);
+    accounts.push(AccountMeta::new_readonly(*options_market, false));
+    accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
     accounts.push(AccountMeta::new_readonly(
-        options_spl_authority_pubkey,
+        option_mint_authority,
         false,
     ));
-    accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
+    accounts.push(AccountMeta::new(*writer_token_mint, false));
+    accounts.push(AccountMeta::new(*writer_token_source, false));
+    accounts.push(AccountMeta::new_readonly(*writer_token_source_authority, true));
+    accounts.push(AccountMeta::new(*underlying_asset_dest, false));
+    accounts.push(AccountMeta::new(*underlying_asset_pool, false));
+    accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
+    accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
 
     Ok(Instruction {
         program_id: *program_id,

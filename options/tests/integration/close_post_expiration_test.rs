@@ -1,5 +1,5 @@
 use crate::{
-  option_helpers::{create_and_add_option_writer, create_exerciser, init_option_market},
+  option_helpers::{create_and_add_option_writer, init_option_market},
   solana_helpers, PROGRAM_KEY,
 };
 use serial_test::serial;
@@ -13,11 +13,12 @@ use solana_program::{
 use solana_sdk::{
   account::create_account_infos, commitment_config::CommitmentConfig, signature::Signer,
 };
-use spl_token::state::Account;
+use spl_token::state::{Account, Mint};
 use std::{thread, time::Duration};
 
 #[test]
 #[serial]
+/// Option Writer closing out should receive underlying asset
 pub fn test_sucessful_close_post_expiration() {
   // Create the options market
   let client = RpcClient::new_with_commitment(
@@ -25,7 +26,7 @@ pub fn test_sucessful_close_post_expiration() {
     CommitmentConfig::processed(),
   );
   let options_program_id = &PROGRAM_KEY;
-  let amount_per_contract = 100;
+  let underlying_amount_per_contract = 100;
   let quote_amount_per_contract = 500; // strike price of 5
                                        // Get the current network clock time to use as the basis for the expiration
   let sysvar_clock_acct = client.get_account(&clock::id()).unwrap();
@@ -41,19 +42,24 @@ pub fn test_sucessful_close_post_expiration() {
     writer_token_mint_keys,
     asset_authority_keys,
     underlying_asset_pool_key,
-    quote_asset_pool_key,
+    _quote_asset_pool_key,
     option_market_key,
   ) = init_option_market(
     &client,
     &options_program_id,
-    amount_per_contract,
+    underlying_amount_per_contract,
     quote_amount_per_contract,
     expiry,
   )
   .unwrap();
 
   // Add 2 option writers to it
-  create_and_add_option_writer(
+  let (
+    _option_writer_option_keys,
+    option_writer_writer_token_keys,
+    option_writer_underlying_asset_keys,
+    option_writer_keys,
+  ) = create_and_add_option_writer(
     &client,
     &options_program_id,
     &underlying_asset_mint_keys,
@@ -63,7 +69,7 @@ pub fn test_sucessful_close_post_expiration() {
     &writer_token_mint_keys,
     &underlying_asset_pool_key,
     &option_market_key,
-    amount_per_contract,
+    underlying_amount_per_contract,
   )
   .unwrap();
   create_and_add_option_writer(
@@ -76,45 +82,51 @@ pub fn test_sucessful_close_post_expiration() {
     &writer_token_mint_keys,
     &underlying_asset_pool_key,
     &option_market_key,
-    amount_per_contract,
+    underlying_amount_per_contract,
   )
   .unwrap();
-
   let option_market_data = client.get_account_data(&option_market_key).unwrap();
   let option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
-  // create an option exerciser with SPL accounts we can check
-  let (exerciser_authority_keys, _exerciser_quote_asset_keys, _exerciser_underlying_asset_keys) =
-    create_exerciser(
-      &client,
-      &asset_authority_keys,
-      &underlying_asset_mint_keys,
-      &quote_asset_mint_keys,
-      &option_market,
-    )
-    .unwrap();
-
   // generate the exercise_post_expiration instruction
   let close_post_exirpation_ix = solana_options::instruction::close_post_expiration(
     &options_program_id,
     &option_market_key,
     &option_market.underlying_asset_pool,
     &option_mint_keys.pubkey(),
+    &writer_token_mint_keys.pubkey(),
+    &option_writer_writer_token_keys.pubkey(),
+    &option_writer_keys.pubkey(),
+    &option_writer_underlying_asset_keys.pubkey(),
   )
   .unwrap();
   let underlying_asset_pool_acct_data =
     client.get_account_data(&underlying_asset_pool_key).unwrap();
   let initial_underlying_asset_pool_acct =
     Account::unpack(&underlying_asset_pool_acct_data[..]).unwrap();
+  let initial_writer_token_mint_data = client
+    .get_account_data(&writer_token_mint_keys.pubkey())
+    .unwrap();
+  let initial_writer_token_mint_act = Mint::unpack(&initial_writer_token_mint_data[..]).unwrap();
+  let initial_option_writer_writer_token_acct_data = client
+    .get_account_data(&option_writer_writer_token_keys.pubkey())
+    .unwrap();
+  let initial_option_writer_writer_token_acct =
+    Account::unpack(&initial_option_writer_writer_token_acct_data[..]).unwrap();
+  let initial_option_writer_underlying_asset_acct_data = client
+    .get_account_data(&option_writer_underlying_asset_keys.pubkey())
+    .unwrap();
+  let initial_option_writer_underlying_asset_acct =
+    Account::unpack(&initial_option_writer_underlying_asset_acct_data[..]).unwrap();
 
   // Sleep 20 seconds so the market is expired
   thread::sleep(Duration::from_secs(20));
 
   // Send the transaction
-  let signers = vec![&exerciser_authority_keys];
+  let signers = vec![&option_writer_keys];
   solana_helpers::send_and_confirm_transaction(
     &client,
     close_post_exirpation_ix,
-    &exerciser_authority_keys.pubkey(),
+    &option_writer_keys.pubkey(),
     signers,
   )
   .unwrap();
@@ -127,16 +139,50 @@ pub fn test_sucessful_close_post_expiration() {
     underlying_asset_pool_acct.mint,
     underlying_asset_mint_keys.pubkey()
   );
-  let expected_pool_amount = initial_underlying_asset_pool_acct.amount - amount_per_contract;
+  let expected_pool_amount =
+    initial_underlying_asset_pool_acct.amount - underlying_amount_per_contract;
   assert_eq!(underlying_asset_pool_acct.amount, expected_pool_amount);
 
-  // TODO assert that the option writer received the underlying asset
+  // assert the wwriter Token supply decreased (i.e. should burn not transfer)
+  let writer_token_mint_data = client
+    .get_account_data(&writer_token_mint_keys.pubkey())
+    .unwrap();
+  let writer_token_mint_acct = Mint::unpack(&writer_token_mint_data[..]).unwrap();
+  assert_eq!(
+    writer_token_mint_acct.supply,
+    initial_writer_token_mint_act.supply - 1
+  );
+
+  // assert that the option writer burned one Writer Token
+  let option_writer_writer_token_acct_data =
+    client.get_account_data(&option_writer_writer_token_keys.pubkey()).unwrap();
+  let option_writer_writer_token_acct =
+    Account::unpack(&option_writer_writer_token_acct_data[..]).unwrap();
+  assert_eq!(
+    option_writer_writer_token_acct.mint,
+    writer_token_mint_keys.pubkey()
+  );
+  assert_eq!(
+    option_writer_writer_token_acct.amount,
+    initial_option_writer_writer_token_acct.amount - 1
+  );
+
+  // assert that the option writer received the underlying asset
+  let option_writer_underlying_asset_acct_data = client
+    .get_account_data(&option_writer_underlying_asset_keys.pubkey())
+    .unwrap();
+  let option_writer_underlying_asset_acct =
+    Account::unpack(&option_writer_underlying_asset_acct_data[..]).unwrap();
+  assert_eq!(
+    option_writer_underlying_asset_acct.amount,
+    initial_option_writer_underlying_asset_acct.amount + underlying_amount_per_contract
+  )
 }
 
 #[test]
 #[serial]
 #[should_panic(expected = "Error processing Instruction 0: custom program error: 0x4")]
-pub fn test_panic_when_expiration_has_not_passed() {
+pub fn test_panic_when_expiration_has_not_passed_close_post_exp() {
   // Create the options market
   let client = RpcClient::new_with_commitment(
     "http://localhost:8899".to_string(),
@@ -154,7 +200,7 @@ pub fn test_panic_when_expiration_has_not_passed() {
     writer_token_mint_keys,
     asset_authority_keys,
     underlying_asset_pool_key,
-    quote_asset_pool_key,
+    _quote_asset_pool_key,
     option_market_key,
   ) = init_option_market(
     &client,
@@ -166,7 +212,12 @@ pub fn test_panic_when_expiration_has_not_passed() {
   .unwrap();
 
   // Add 2 option writers to it
-  create_and_add_option_writer(
+  let (
+    _option_writer_option_keys,
+    option_writer_writer_token_keys,
+    option_writer_underlying_asset_keys,
+    option_writer_keys,
+  ) = create_and_add_option_writer(
     &client,
     &options_program_id,
     &underlying_asset_mint_keys,
@@ -195,16 +246,6 @@ pub fn test_panic_when_expiration_has_not_passed() {
 
   let option_market_data = client.get_account_data(&option_market_key).unwrap();
   let option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
-  // create an option exerciser with SPL accounts we can check
-  let (exerciser_authority_keys, _exerciser_quote_asset_keys, _exerciser_underlying_asset_keys) =
-    create_exerciser(
-      &client,
-      &asset_authority_keys,
-      &underlying_asset_mint_keys,
-      &quote_asset_mint_keys,
-      &option_market,
-    )
-    .unwrap();
 
   // generate the exercise_post_expiration instruction
   let close_post_exirpation_ix = solana_options::instruction::close_post_expiration(
@@ -212,14 +253,18 @@ pub fn test_panic_when_expiration_has_not_passed() {
     &option_market_key,
     &option_market.underlying_asset_pool,
     &option_mint_keys.pubkey(),
+    &writer_token_mint_keys.pubkey(),
+    &option_writer_writer_token_keys.pubkey(),
+    &option_writer_keys.pubkey(),
+    &option_writer_underlying_asset_keys.pubkey(),
   )
   .unwrap();
   // Send the transaction
-  let signers = vec![&exerciser_authority_keys];
+  let signers = vec![&option_writer_keys];
   solana_helpers::send_and_confirm_transaction(
     &client,
     close_post_exirpation_ix,
-    &exerciser_authority_keys.pubkey(),
+    &option_writer_keys.pubkey(),
     signers,
   )
   .unwrap();
