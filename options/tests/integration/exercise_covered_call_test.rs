@@ -1,5 +1,8 @@
 use crate::{
-  option_helpers::{create_and_add_option_writer, create_exerciser, init_option_market},
+  option_helpers::{
+    create_and_add_option_writer, create_exerciser, init_option_market,
+    move_option_token_to_exerciser,
+  },
   solana_helpers, PROGRAM_KEY,
 };
 use serial_test::serial;
@@ -52,7 +55,7 @@ pub fn test_sucessful_exercise_covered_call() {
     option_writer_option_mint_keys,
     option_writer_writer_token_keys,
     option_writer_underlying_asset_keys,
-    contract_token_authority_keys,
+    writer_option_token_authority_keys,
   ) = create_and_add_option_writer(
     &client,
     &options_program_id,
@@ -93,6 +96,15 @@ pub fn test_sucessful_exercise_covered_call() {
     )
     .unwrap();
 
+  let exerciser_option_token_keys = move_option_token_to_exerciser(
+    &client,
+    &option_mint_keys.pubkey(),
+    &option_writer_option_mint_keys.pubkey(),
+    &writer_option_token_authority_keys,
+    &exerciser_authority_keys,
+    &writer_option_token_authority_keys,
+  )
+  .unwrap();
   // generate the exercise_covered_call instruction
   let exercise_covered_call_ix = solana_options::instruction::exercise_covered_call(
     &options_program_id,
@@ -103,8 +115,8 @@ pub fn test_sucessful_exercise_covered_call() {
     &exerciser_authority_keys.pubkey(),
     &option_market.underlying_asset_pool,
     &option_market.quote_asset_pool,
-    &option_writer_option_mint_keys.pubkey(),
-    &contract_token_authority_keys.pubkey(),
+    &exerciser_option_token_keys.pubkey(),
+    &exerciser_authority_keys.pubkey(),
   )
   .unwrap();
   let underlying_asset_pool_acct_data =
@@ -112,10 +124,8 @@ pub fn test_sucessful_exercise_covered_call() {
   let initial_underlying_asset_pool_acct =
     Account::unpack(&underlying_asset_pool_acct_data[..]).unwrap();
 
-  let quote_asset_pool_acct_data =
-    client.get_account_data(&quote_asset_pool_key).unwrap();
-  let initial_quote_asset_pool_acct =
-    Account::unpack(&quote_asset_pool_acct_data[..]).unwrap();
+  let quote_asset_pool_acct_data = client.get_account_data(&quote_asset_pool_key).unwrap();
+  let initial_quote_asset_pool_acct = Account::unpack(&quote_asset_pool_acct_data[..]).unwrap();
 
   // Hold some initial values in memory for assertions
   let exerciser_quote_asset_acct_data = client
@@ -128,7 +138,7 @@ pub fn test_sucessful_exercise_covered_call() {
   assert_eq!(option_mint.supply, 2);
 
   // Send the transaction
-  let signers = vec![&exerciser_authority_keys, &contract_token_authority_keys];
+  let signers = vec![&exerciser_authority_keys];
   solana_helpers::send_and_confirm_transaction(
     &client,
     exercise_covered_call_ix,
@@ -174,13 +184,9 @@ pub fn test_sucessful_exercise_covered_call() {
   );
 
   // assert that the quote asset pool recieved the Exercisor's assets
-  let quote_asset_pool_acct_data =
-    client.get_account_data(&quote_asset_pool_key).unwrap();
+  let quote_asset_pool_acct_data = client.get_account_data(&quote_asset_pool_key).unwrap();
   let quote_asset_pool_acct = Account::unpack(&quote_asset_pool_acct_data[..]).unwrap();
-  assert_eq!(
-    quote_asset_pool_acct.mint,
-    quote_asset_mint_keys.pubkey()
-  );
+  assert_eq!(quote_asset_pool_acct.mint, quote_asset_mint_keys.pubkey());
   let expected_pool_amount = initial_quote_asset_pool_acct.amount + quote_amount_per_contract;
   assert_eq!(quote_asset_pool_acct.amount, expected_pool_amount);
 }
@@ -226,7 +232,7 @@ pub fn test_panic_when_expiration_has_passed() {
     option_writer_option_mint_keys,
     option_writer_writer_token_keys,
     _option_writer_underlying_asset_keys,
-    option_mint_authority_keys,
+    writer_option_token_authority_keys,
   ) = create_and_add_option_writer(
     &client,
     &options_program_id,
@@ -257,15 +263,25 @@ pub fn test_panic_when_expiration_has_passed() {
   let option_market_data = client.get_account_data(&option_market_key).unwrap();
   let option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
   // create an option exerciser with SPL accounts we can check
-  let (exerciser_authority, exerciser_quote_asset, exerciser_underlying_asset) =
-    create_exerciser(
-      &client,
-      &asset_authority_keys,
-      &underlying_asset_mint_keys,
-      &quote_asset_mint_keys,
-      &option_market,
-    )
-    .unwrap();
+  let (exerciser_authority_keys, exerciser_quote_asset, exerciser_underlying_asset) = create_exerciser(
+    &client,
+    &asset_authority_keys,
+    &underlying_asset_mint_keys,
+    &quote_asset_mint_keys,
+    &option_market,
+  )
+  .unwrap();
+
+  let exerciser_option_token_keys = move_option_token_to_exerciser(
+    &client,
+    &option_mint_keys.pubkey(),
+    &option_writer_option_mint_keys.pubkey(),
+    &writer_option_token_authority_keys,
+    &exerciser_authority_keys,
+    &writer_option_token_authority_keys,
+  )
+  .unwrap();
+
   thread::sleep(Duration::from_secs(20));
 
   // generate the exercise_covered_call instruction
@@ -275,19 +291,19 @@ pub fn test_panic_when_expiration_has_passed() {
     &option_market_key,
     &exerciser_quote_asset.pubkey(),
     &exerciser_underlying_asset.pubkey(),
-    &exerciser_authority.pubkey(),
+    &exerciser_authority_keys.pubkey(),
     &option_market.underlying_asset_pool,
     &option_market.quote_asset_pool,
-    &option_writer_option_mint_keys.pubkey(),
-    &option_mint_authority_keys.pubkey(),
+    &exerciser_option_token_keys.pubkey(),
+    &exerciser_authority_keys.pubkey(),
   )
   .unwrap();
   // Send the transaction
-  let signers = vec![&exerciser_authority, &option_mint_authority_keys];
+  let signers = vec![&exerciser_authority_keys];
   solana_helpers::send_and_confirm_transaction(
     &client,
     exercise_covered_call_ix,
-    &exerciser_authority.pubkey(),
+    &exerciser_authority_keys.pubkey(),
     signers,
   )
   .unwrap();

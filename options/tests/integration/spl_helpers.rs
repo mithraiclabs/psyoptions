@@ -103,7 +103,7 @@ pub fn create_spl_account_uninitialized(
 
   let signers = vec![payer_keys, new_account_keys];
   send_and_confirm_transaction(client, instruction, &payer_keys.pubkey(), signers)?;
-  println!("Created SPL mint account {}", new_account_keys.pubkey());
+  println!("Created new SPL account {}", new_account_keys.pubkey());
   Ok(())
 }
 
@@ -125,7 +125,7 @@ pub fn create_spl_account(
   .unwrap();
 
   let signers = vec![payer_keys];
-  send_and_confirm_transaction(client, init_spl_account_ix, &payer_keys.pubkey(), signers)?;
+  send_and_confirm_transaction(client, init_spl_account_ix, &payer_keys.pubkey(), signers).unwrap();
   println!("Initialized SPL account {}", new_account_keys.pubkey());
   Ok(())
 }
