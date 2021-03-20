@@ -14,18 +14,29 @@ import { getOptionMarketData } from './utils/getOptionMarketData';
 
 export const EXERCISE_COVERED_CALL_LAYOUT = struct([u8('bumpSeed')]);
 
-export const exerciseCoveredCallInstruction = async (
-  programId: PublicKey,
-  optionMintKey: PublicKey,
-  optionMarketKey: PublicKey,
-  exerciserQuoteAssetKey: PublicKey,
-  exerciserUnderlyingAssetKey: PublicKey,
-  exerciserQuoteAssetAuthorityKey: PublicKey,
-  underlyingAssetPoolKey: PublicKey,
-  quoteAssetPoolKey: PublicKey,
-  optionTokenKey: PublicKey,
-  optionTokenAuthorityKey: PublicKey,
-) => {
+export const exerciseCoveredCallInstruction = async ({
+  programId,
+  optionMintKey,
+  optionMarketKey,
+  exerciserQuoteAssetKey,
+  exerciserUnderlyingAssetKey,
+  exerciserQuoteAssetAuthorityKey,
+  underlyingAssetPoolKey,
+  quoteAssetPoolKey,
+  optionTokenKey,
+  optionTokenAuthorityKey,
+}: {
+  programId: PublicKey;
+  optionMintKey: PublicKey;
+  optionMarketKey: PublicKey;
+  exerciserQuoteAssetKey: PublicKey;
+  exerciserUnderlyingAssetKey: PublicKey;
+  exerciserQuoteAssetAuthorityKey: PublicKey;
+  underlyingAssetPoolKey: PublicKey;
+  quoteAssetPoolKey: PublicKey;
+  optionTokenKey: PublicKey;
+  optionTokenAuthorityKey: PublicKey;
+}) => {
   const exerciseCoveredCallBuffer = Buffer.alloc(
     EXERCISE_COVERED_CALL_LAYOUT.span,
   );
@@ -83,36 +94,50 @@ export const exerciseCoveredCallInstruction = async (
   });
 };
 
-export const exerciseCoveredCall = async (
-  connection: Connection,
-  payer: Account,
-  programId: PublicKey | string,
-  optionMintKey: PublicKey,
-  optionMarketKey: PublicKey,
-  exerciserQuoteAssetKey: PublicKey,
-  exerciserUnderlyingAssetKey: PublicKey,
-  exerciserQuoteAssetAuthorityAccount: Account,
-  underlyingAssetPoolKey: PublicKey,
-  quoteAssetPoolKey: PublicKey,
-  optionTokenKey: PublicKey,
-  optionTokenAuthorityAccount: Account,
-) => {
+export const exerciseCoveredCall = async ({
+  connection,
+  payer,
+  programId,
+  optionMintKey,
+  optionMarketKey,
+  exerciserQuoteAssetKey,
+  exerciserUnderlyingAssetKey,
+  exerciserQuoteAssetAuthorityAccount,
+  underlyingAssetPoolKey,
+  quoteAssetPoolKey,
+  optionTokenKey,
+  optionTokenAuthorityAccount,
+}: {
+  connection: Connection;
+  payer: Account;
+  programId: PublicKey | string;
+  optionMintKey: PublicKey;
+  optionMarketKey: PublicKey;
+  exerciserQuoteAssetKey: PublicKey;
+  exerciserUnderlyingAssetKey: PublicKey;
+  exerciserQuoteAssetAuthorityAccount: Account;
+  underlyingAssetPoolKey: PublicKey;
+  quoteAssetPoolKey: PublicKey;
+  optionTokenKey: PublicKey;
+  optionTokenAuthorityAccount: Account;
+}) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
 
   const transaction = new Transaction();
-  const exerciseInstruction = await exerciseCoveredCallInstruction(
-    programPubkey,
+  const exerciseInstruction = await exerciseCoveredCallInstruction({
+    programId: programPubkey,
     optionMintKey,
     optionMarketKey,
     exerciserQuoteAssetKey,
     exerciserUnderlyingAssetKey,
-    exerciserQuoteAssetAuthorityAccount.publicKey,
+    exerciserQuoteAssetAuthorityKey:
+      exerciserQuoteAssetAuthorityAccount.publicKey,
     underlyingAssetPoolKey,
     quoteAssetPoolKey,
     optionTokenKey,
-    optionTokenAuthorityAccount.publicKey,
-  );
+    optionTokenAuthorityKey: optionTokenAuthorityAccount.publicKey,
+  });
   transaction.add(exerciseInstruction);
 
   const signers = [
@@ -142,34 +167,44 @@ export const exerciseCoveredCall = async (
  * @param optionTokenAuthorityAccount Account that owns the Pubkey to burn
  * Option Mint from
  */
-export const exerciseCoveredCallWithMarketKey = async (
-  connection: Connection,
-  payer: Account,
-  programId: PublicKey | string,
-  optionMarketKey: PublicKey,
-  exerciserQuoteAssetKey: PublicKey,
-  exerciserUnderlyingAssetKey: PublicKey,
-  exerciserQuoteAssetAuthorityAccount: Account,
-  optionTokenKey: PublicKey,
-  optionTokenAuthorityAccount: Account,
-) => {
-  const optionMarketData = await getOptionMarketData(
+export const exerciseCoveredCallWithMarketKey = async ({
+  connection,
+  payer,
+  programId,
+  optionMarketKey,
+  exerciserQuoteAssetKey,
+  exerciserUnderlyingAssetKey,
+  exerciserQuoteAssetAuthorityAccount,
+  optionTokenKey,
+  optionTokenAuthorityAccount,
+}: {
+  connection: Connection;
+  payer: Account;
+  programId: PublicKey | string;
+  optionMarketKey: PublicKey;
+  exerciserQuoteAssetKey: PublicKey;
+  exerciserUnderlyingAssetKey: PublicKey;
+  exerciserQuoteAssetAuthorityAccount: Account;
+  optionTokenKey: PublicKey;
+  optionTokenAuthorityAccount: Account;
+}) => {
+  const optionMarketData = await getOptionMarketData({
     connection,
     optionMarketKey,
-  );
+  });
 
-  return exerciseCoveredCall(
+  return exerciseCoveredCall({
     connection,
     payer,
     programId,
-    optionMarketData.optionMintKey,
+    optionMintKey: optionMarketData.optionMintKey,
     optionMarketKey,
     exerciserQuoteAssetKey,
     exerciserUnderlyingAssetKey,
     exerciserQuoteAssetAuthorityAccount,
-    optionMarketData.underlyingAssetPoolKey,
-    optionMarketData.quoteAssetPoolKey,
+    underlyingAssetPoolKey: optionMarketData.underlyingAssetPoolKey,
+    quoteAssetPoolKey: optionMarketData.quoteAssetPoolKey,
     optionTokenKey,
     optionTokenAuthorityAccount,
-  );
+  });
 };

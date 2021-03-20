@@ -157,10 +157,10 @@ export const closePostExpirationOption = async ({
 }) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
-  const optionMarketData = await getOptionMarketData(
+  const optionMarketData = await getOptionMarketData({
     connection,
     optionMarketKey,
-  );
+  });
 
   const transaction = new Transaction();
   const closePostExpiration = await closePostExpirationCoveredCallInstruction({

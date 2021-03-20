@@ -155,10 +155,10 @@ export const readMarketAndMintCoveredCall = async ({
   // The OptionWriter's account that has authority over their underlying asset account
   underlyingAssetAuthorityAccount: Account;
 }) => {
-  const optionMarketData = await getOptionMarketData(
+  const optionMarketData = await getOptionMarketData({
     connection,
     optionMarketKey,
-  );
+  });
 
   return mintCoveredCall({
     connection,
