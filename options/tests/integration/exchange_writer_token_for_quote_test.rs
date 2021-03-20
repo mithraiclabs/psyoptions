@@ -437,3 +437,5 @@ pub fn test_panic_when_not_enough_amount_in_quote_asset_pool() {
   )
   .unwrap();
 }
+
+// test should fail burning option token??
