@@ -53,8 +53,9 @@ pub fn test_sucessful_exercise_covered_call() {
   // Add 2 option writers to it
   let (
     option_writer_option_mint_keys,
-    option_writer_writer_token_keys,
-    option_writer_underlying_asset_keys,
+    _option_writer_writer_token_keys,
+    _option_writer_underlying_asset_keys,
+    _option_writer_quote_asset_keys,
     writer_option_token_authority_keys,
   ) = create_and_add_option_writer(
     &client,
@@ -216,7 +217,7 @@ pub fn test_panic_when_expiration_has_passed() {
     writer_token_mint_keys,
     asset_authority_keys,
     underlying_asset_pool_key,
-    quote_asset_pool_key,
+    _quote_asset_pool_key,
     option_market_key,
   ) = init_option_market(
     &client,
@@ -230,8 +231,9 @@ pub fn test_panic_when_expiration_has_passed() {
   // Add 2 option writers to it
   let (
     option_writer_option_mint_keys,
-    option_writer_writer_token_keys,
+    _option_writer_writer_token_keys,
     _option_writer_underlying_asset_keys,
+    _option_writer_quote_asset_keys,
     writer_option_token_authority_keys,
   ) = create_and_add_option_writer(
     &client,
@@ -263,14 +265,15 @@ pub fn test_panic_when_expiration_has_passed() {
   let option_market_data = client.get_account_data(&option_market_key).unwrap();
   let option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
   // create an option exerciser with SPL accounts we can check
-  let (exerciser_authority_keys, exerciser_quote_asset, exerciser_underlying_asset) = create_exerciser(
-    &client,
-    &asset_authority_keys,
-    &underlying_asset_mint_keys,
-    &quote_asset_mint_keys,
-    &option_market,
-  )
-  .unwrap();
+  let (exerciser_authority_keys, exerciser_quote_asset, exerciser_underlying_asset) =
+    create_exerciser(
+      &client,
+      &asset_authority_keys,
+      &underlying_asset_mint_keys,
+      &quote_asset_mint_keys,
+      &option_market,
+    )
+    .unwrap();
 
   let exerciser_option_token_keys = move_option_token_to_exerciser(
     &client,
