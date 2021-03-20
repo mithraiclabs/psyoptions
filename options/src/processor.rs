@@ -469,7 +469,12 @@ impl Processor {
 
         let option_market_data = option_market_acct.try_borrow_data()?;
         let option_market = OptionMarket::unpack(&option_market_data)?;
+        let quote_asset_pool_data = quote_asset_pool_acct.try_borrow_data()?;
+        let quote_asset_pool = TokenAccount::unpack(&quote_asset_pool_data)?;
 
+        if quote_asset_pool.amount < option_market.quote_amount_per_contract {
+            return Err(OptionsError::InsufficientVaultFunds.into());
+        }
         if *quote_asset_pool_acct.key != option_market.quote_asset_pool {
             return Err(OptionsError::IncorrectPool.into());
         }

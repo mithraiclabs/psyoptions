@@ -1,4 +1,3 @@
-use solana_program::pubkey::Pubkey;
 use crate::{
   option_helpers::{
     create_and_add_option_writer, create_exerciser, init_option_market,
@@ -6,21 +5,16 @@ use crate::{
   },
   solana_helpers, PROGRAM_KEY,
 };
-use solana_program::instruction::Instruction;
-use solana_program::instruction::AccountMeta;
 use serial_test::serial;
 use solana_client::rpc_client::RpcClient;
 use solana_options::{instruction::OptionsInstruction, market::OptionMarket};
 use solana_program::{
-  clock::Clock,
+  instruction::{AccountMeta, Instruction},
   program_pack::Pack,
-  sysvar::{clock, Sysvar},
+  pubkey::Pubkey,
 };
-use solana_sdk::{
-  account::create_account_infos, commitment_config::CommitmentConfig, signature::Signer,
-};
+use solana_sdk::{commitment_config::CommitmentConfig, signature::Signer};
 use spl_token::state::{Account, Mint};
-use std::{thread, time::Duration};
 
 #[test]
 #[serial]
@@ -320,21 +314,25 @@ pub fn test_panic_when_non_quote_asset_pool_is_used() {
   )
   .unwrap();
 
-  let (option_market_authority, bump_seed) =
-    Pubkey::find_program_address(&[&option_mint_keys.pubkey().to_bytes()[..32]], &options_program_id);
+  let (option_market_authority, bump_seed) = Pubkey::find_program_address(
+    &[&option_mint_keys.pubkey().to_bytes()[..32]],
+    &options_program_id,
+  );
   let data = OptionsInstruction::ExchangeWriterTokenForQuote { bump_seed }.pack();
-  
   let mut accounts = Vec::with_capacity(9);
   accounts.push(AccountMeta::new_readonly(option_market_key, false));
   accounts.push(AccountMeta::new_readonly(option_mint_keys.pubkey(), false));
   accounts.push(AccountMeta::new_readonly(option_market_authority, false));
   accounts.push(AccountMeta::new(writer_token_mint_keys.pubkey(), false));
-  accounts.push(AccountMeta::new(option_writer_writer_token_keys.pubkey(), false));
-  accounts.push(AccountMeta::new_readonly(
-    option_writer_keys.pubkey(),
-    true,
+  accounts.push(AccountMeta::new(
+    option_writer_writer_token_keys.pubkey(),
+    false,
   ));
-  accounts.push(AccountMeta::new(option_writer_quote_asset_keys.pubkey(), false));
+  accounts.push(AccountMeta::new_readonly(option_writer_keys.pubkey(), true));
+  accounts.push(AccountMeta::new(
+    option_writer_quote_asset_keys.pubkey(),
+    false,
+  ));
   accounts.push(AccountMeta::new(underlying_asset_pool_key, false));
   accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
 
@@ -355,7 +353,87 @@ pub fn test_panic_when_non_quote_asset_pool_is_used() {
 
 #[test]
 #[serial]
-#[should_panic(expected = "Error processing Instruction 0: custom program error: 0x7")]
+#[should_panic(expected = "Error processing Instruction 0: custom program error: 0x8")]
 pub fn test_panic_when_not_enough_amount_in_quote_asset_pool() {
-  assert!(false);
+  let client = RpcClient::new_with_commitment(
+    "http://localhost:8899".to_string(),
+    CommitmentConfig::processed(),
+  );
+  let options_program_id = &PROGRAM_KEY;
+  let amount_per_contract = 100;
+  let quote_amount_per_contract = 500;
+  let expiry = 999_999_999_999_999_999;
+  // Create the option market
+  let (
+    underlying_asset_mint_keys,
+    quote_asset_mint_keys,
+    option_mint_keys,
+    writer_token_mint_keys,
+    asset_authority_keys,
+    underlying_asset_pool_key,
+    quote_asset_pool_key,
+    option_market_key,
+  ) = init_option_market(
+    &client,
+    &options_program_id,
+    amount_per_contract,
+    quote_amount_per_contract,
+    expiry,
+  )
+  .unwrap();
+
+  // Add 2 option writers to it
+  let (
+    _option_writer_option_mint_keys,
+    option_writer_writer_token_keys,
+    _option_writer_underlying_asset_keys,
+    option_writer_quote_asset_keys,
+    option_writer_keys,
+  ) = create_and_add_option_writer(
+    &client,
+    &options_program_id,
+    &underlying_asset_mint_keys,
+    &asset_authority_keys,
+    &quote_asset_mint_keys,
+    &option_mint_keys,
+    &writer_token_mint_keys,
+    &underlying_asset_pool_key,
+    &option_market_key,
+    amount_per_contract,
+  )
+  .unwrap();
+  create_and_add_option_writer(
+    &client,
+    &options_program_id,
+    &underlying_asset_mint_keys,
+    &asset_authority_keys,
+    &quote_asset_mint_keys,
+    &option_mint_keys,
+    &writer_token_mint_keys,
+    &underlying_asset_pool_key,
+    &option_market_key,
+    amount_per_contract,
+  )
+  .unwrap();
+
+  let exchange_writer_token_quote_ix =
+    solana_options::instruction::exchange_writer_token_for_quote(
+      &options_program_id,
+      &option_market_key,
+      &option_mint_keys.pubkey(),
+      &writer_token_mint_keys.pubkey(),
+      &option_writer_writer_token_keys.pubkey(),
+      &option_writer_keys.pubkey(),
+      &option_writer_quote_asset_keys.pubkey(),
+      &quote_asset_pool_key,
+    )
+    .unwrap();
+  let signers = vec![&option_writer_keys];
+  solana_helpers::send_and_confirm_transaction(
+    &client,
+    exchange_writer_token_quote_ix,
+    &option_writer_keys.pubkey(),
+    signers,
+  )
+  .unwrap();
 }
