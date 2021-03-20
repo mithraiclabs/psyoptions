@@ -17,7 +17,6 @@ use solana_sdk::{
   account::create_account_infos, commitment_config::CommitmentConfig, signature::Signer,
 };
 use spl_token::state::{Account, Mint};
-use std::{thread, time::Duration};
 
 #[test]
 #[serial]
@@ -31,12 +30,7 @@ pub fn test_sucessful_close_position() {
   let options_program_id = &PROGRAM_KEY;
   let underlying_amount_per_contract = 100;
   let quote_amount_per_contract = 500; // strike price of 5
-                                       // Get the current network clock time to use as the basis for the expiration
-  let sysvar_clock_acct = client.get_account(&clock::id()).unwrap();
-  let accounts = &mut [(clock::id(), sysvar_clock_acct)];
-  let sysvar_clock_acct_info = &create_account_infos(accounts)[0];
-  let clock = Clock::from_account_info(&sysvar_clock_acct_info).unwrap();
-  let expiry = clock.unix_timestamp + 30;
+  let expiry = 999_999_999_999_999_999;
   // Create the option market
   let (
     underlying_asset_mint_keys,
@@ -141,9 +135,6 @@ pub fn test_sucessful_close_position() {
   let initial_underlying_asset_pool_acct =
     Account::unpack(&underlying_asset_pool_acct_data[..]).unwrap();
 
-  // Sleep 20 seconds so the market is expired
-  thread::sleep(Duration::from_secs(20));
-
   // Send the transaction
   let signers = vec![&option_writer_keys];
   solana_helpers::send_and_confirm_transaction(
@@ -239,11 +230,7 @@ pub fn test_panic_when_non_underlying_asset_pool_is_used() {
   let program_id = &PROGRAM_KEY;
   let amount_per_contract = 100;
   let quote_amount_per_contract = 500;
-  let sysvar_clock_acct = client.get_account(&clock::id()).unwrap();
-  let accounts = &mut [(clock::id(), sysvar_clock_acct)];
-  let sysvar_clock_acct_info = &create_account_infos(accounts)[0];
-  let clock = Clock::from_account_info(&sysvar_clock_acct_info).unwrap();
-  let expiry = clock.unix_timestamp + 20;
+  let expiry = 999_999_999_999_999_999;
   // Create the option market
   let (
     underlying_asset_mint_keys,
