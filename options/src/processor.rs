@@ -216,13 +216,13 @@ impl Processor {
         let option_market_acct = next_account_info(account_info_iter)?;
         let exerciser_quote_asset_acct = next_account_info(account_info_iter)?;
         let exerciser_authority_acct = next_account_info(account_info_iter)?;
-        let option_writer_quote_asset_acct = next_account_info(account_info_iter)?;
         let exerciser_underlying_asset_acct = next_account_info(account_info_iter)?;
-        let market_underlying_asset_pool_acct = next_account_info(account_info_iter)?;
+        let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
+        let quote_asset_pool_acct = next_account_info(account_info_iter)?;
         let options_spl_authority_acct = next_account_info(account_info_iter)?;
         let option_mint_acct = next_account_info(account_info_iter)?;
-        let contract_token_acct = next_account_info(account_info_iter)?;
-        let contract_token_authority_acct = next_account_info(account_info_iter)?;
+        let option_token_acct = next_account_info(account_info_iter)?;
+        let option_token_authority_acct = next_account_info(account_info_iter)?;
 
         let option_market_data = option_market_acct.try_borrow_data()?;
         let option_market = OptionMarket::unpack(&option_market_data)?;
@@ -236,28 +236,28 @@ impl Processor {
         // Burn an option token that was in the account passed in
         let burn_option_ix = token_instruction::burn(
             &spl_program_acct.key,
-            &contract_token_acct.key,
+            &option_token_acct.key,
             &option_mint_acct.key,
-            &contract_token_authority_acct.key,
+            &option_token_authority_acct.key,
             &[],
             1,
         )?;
         invoke_signed(
             &burn_option_ix,
             &[
-                contract_token_acct.clone(),
+                option_token_acct.clone(),
                 option_mint_acct.clone(),
-                contract_token_authority_acct.clone(),
+                option_token_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
             &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
         )?;
 
-        // transfer the quote asset from the Exerciser to the OptionWriter
+        // transfer the quote asset from the Exerciser to the quote asset pool
         let transer_quote_tokens_ix = token_instruction::transfer(
             &spl_program_acct.key,
             &exerciser_quote_asset_acct.key,
-            &option_writer_quote_asset_acct.key,
+            &quote_asset_pool_acct.key,
             &exerciser_authority_acct.key,
             &[],
             option_market.quote_amount_per_contract,
@@ -267,7 +267,7 @@ impl Processor {
             &[
                 spl_program_acct.clone(),
                 exerciser_quote_asset_acct.clone(),
-                option_writer_quote_asset_acct.clone(),
+                quote_asset_pool_acct.clone(),
                 exerciser_authority_acct.clone(),
             ],
         )?;
@@ -275,7 +275,7 @@ impl Processor {
         // transfer underlying asset from the pool to the exerciser's account
         let transfer_underlying_tokens_ix = token_instruction::transfer(
             &spl_program_acct.key,
-            &market_underlying_asset_pool_acct.key,
+            &underlying_asset_pool_acct.key,
             &exerciser_underlying_asset_acct.key,
             &options_spl_authority_acct.key,
             &[],
@@ -284,7 +284,7 @@ impl Processor {
         invoke_signed(
             &transfer_underlying_tokens_ix,
             &[
-                market_underlying_asset_pool_acct.clone(),
+                underlying_asset_pool_acct.clone(),
                 exerciser_underlying_asset_acct.clone(),
                 options_spl_authority_acct.clone(),
                 spl_program_acct.clone(),

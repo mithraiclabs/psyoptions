@@ -4,26 +4,26 @@ import * as BufferLayout from 'buffer-layout';
 import * as Layout from './layout';
 
 export type OptionMarket = {
-  optionMintAddress: PublicKey;
+  optionMintKey: PublicKey;
   writerTokenMintKey: PublicKey;
-  underlyingAssetMintAddress: PublicKey;
-  quoteAssetMintAddress: PublicKey;
+  underlyingAssetMintKey: PublicKey;
+  quoteAssetMintKey: PublicKey;
   amountPerContract: BN;
   quoteAmountPerContract: BN;
   expirationUnixTimestamp: number;
-  underlyingAssetPoolAddress: PublicKey;
+  underlyingAssetPoolKey: PublicKey;
   quoteAssetPoolKey: PublicKey;
 };
 
 export const OPTION_MARKET_LAYOUT = BufferLayout.struct([
-  Layout.publicKey('optionMintAddress'),
+  Layout.publicKey('optionMintKey'),
   Layout.publicKey('writerTokenMintKey'),
-  Layout.publicKey('underlyingAssetMintAddress'),
-  Layout.publicKey('quoteAssetMintAddress'),
+  Layout.publicKey('underlyingAssetMintKey'),
+  Layout.publicKey('quoteAssetMintKey'),
   Layout.uint64('amountPerContract'),
   Layout.uint64('quoteAmountPerContract'),
   BufferLayout.ns64('expirationUnixTimestamp'),
-  Layout.publicKey('underlyingAssetPoolAddress'),
+  Layout.publicKey('underlyingAssetPoolKey'),
   Layout.publicKey('quoteAssetPoolKey'),
 ]);
 
@@ -81,11 +81,9 @@ export class Market {
       (market) =>
         // eslint-disable-next-line implicit-arrow-linebreak
         assetAddresses.includes(
-          market.marketData.underlyingAssetMintAddress.toString(),
+          market.marketData.underlyingAssetMintKey.toString(),
         ) &&
-        assetAddresses.includes(
-          market.marketData.quoteAssetMintAddress.toString(),
-        ),
+        assetAddresses.includes(market.marketData.quoteAssetMintKey.toString()),
     );
   };
 }

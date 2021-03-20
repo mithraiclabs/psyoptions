@@ -8,7 +8,8 @@ use crate::{
 use solana_client::{client_error::ClientError, rpc_client::RpcClient};
 use solana_options::market::OptionMarket;
 use solana_program::{
-    clock::UnixTimestamp, program_pack::Pack, pubkey::Pubkey, system_instruction,
+    clock::UnixTimestamp, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
+    system_instruction,
 };
 use solana_sdk::{
     commitment_config::CommitmentConfig,
@@ -16,6 +17,8 @@ use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
+
+use spl_token::instruction as token_instruction;
 
 fn create_options_market(
     client: &RpcClient,
@@ -332,4 +335,39 @@ pub fn create_exerciser(
         exerciser_quote_asset_keys,
         exerciser_underlying_asset_keys,
     ))
+}
+
+/// Create an Option Token account for the Exerciser. Transfer an option token from 
+///  a Writer to the Exercisor.
+///
+pub fn move_option_token_to_exerciser(
+    client: &RpcClient,
+    option_mint: &Pubkey,
+    writer_option_mint: &Pubkey,
+    writer_option_token_authority: &Keypair,
+    exerciser_authority_keys: &Keypair,
+    payer_keys: &Keypair
+) -> Result<Keypair, ClientError> {
+    // TODO create an option token account for the Exerciser
+    let exerciser_option_token_keys = Keypair::new();
+    let _exerciser_underlying_asset_acct = create_spl_account(
+        &client,
+        &exerciser_option_token_keys,
+        &exerciser_authority_keys.pubkey(),
+        &option_mint,
+        &exerciser_authority_keys,
+    );
+
+    let transfer_option_token_ix = token_instruction::transfer(
+        &spl_token::id(),
+        &writer_option_mint,
+        &exerciser_option_token_keys.pubkey(),
+        &writer_option_token_authority.pubkey(),
+        &[],
+        1,
+    ).unwrap();
+    let signers = vec![payer_keys, writer_option_token_authority];
+    send_and_confirm_transaction(&client, transfer_option_token_ix, &payer_keys.pubkey(), signers)?;
+
+    Ok(exerciser_option_token_keys)
 }
