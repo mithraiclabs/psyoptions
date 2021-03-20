@@ -91,11 +91,12 @@ pub enum OptionsInstruction {
     /// 1. `[]` Option Mint
     /// 2. `[]` Option Mint Authority
     /// 3. `[writeable]` Writer Token Mint
-    /// 4. `[writeable]` Writer Token Mint Source (to be burned)
-    /// 5. `[writeable]` Option Writer Underlying Asset Destination
-    /// 6. `[writeable]` Underlying Asset Pool
-    /// 7. `[]` Sysvar clock
-    /// 8. `[]` SPL Token Program
+    /// 4. `[writeable]` Writer Token Source (to be burned)
+    /// 5. `[signer]` Writer Token Source Authority
+    /// 6. `[writeable]` Option Writer Underlying Asset Destination
+    /// 7. `[writeable]` Underlying Asset Pool
+    /// 8. `[]` Sysvar clock
+    /// 9. `[]` SPL Token Program
     ClosePostExpiration {
         bump_seed: u8,
     }
@@ -341,7 +342,8 @@ pub fn close_post_expiration(
     underlying_asset_pool: &Pubkey,
     option_mint_key: &Pubkey,
     writer_token_mint: &Pubkey,
-    writer_token_mint_source: &Pubkey,
+    writer_token_source: &Pubkey,
+    writer_token_source_authority: &Pubkey,
     underlying_asset_dest: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
 
@@ -353,7 +355,7 @@ pub fn close_post_expiration(
     }
     .pack();
 
-    let mut accounts = Vec::with_capacity(9);
+    let mut accounts = Vec::with_capacity(10);
     accounts.push(AccountMeta::new_readonly(*options_market, false));
     accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
     accounts.push(AccountMeta::new_readonly(
@@ -361,7 +363,8 @@ pub fn close_post_expiration(
         false,
     ));
     accounts.push(AccountMeta::new(*writer_token_mint, false));
-    accounts.push(AccountMeta::new(*writer_token_mint_source, false));
+    accounts.push(AccountMeta::new(*writer_token_source, false));
+    accounts.push(AccountMeta::new_readonly(*writer_token_source_authority, true));
     accounts.push(AccountMeta::new(*underlying_asset_dest, false));
     accounts.push(AccountMeta::new(*underlying_asset_pool, false));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
