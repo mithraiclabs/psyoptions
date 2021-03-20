@@ -56,12 +56,12 @@ pub enum OptionsInstruction {
     ///
     ///   0. `[]` Sysvar clock
     ///   1. `[]` SPL Token Program
-    ///   2. `[writeable]` Option Market
+    ///   2. `[]` Option Market
     ///   3. `[writeable]` Exerciser Quote Asset Source
     ///   4. `[signer]` Exerciser Authority
-    ///   5. `[writeable]` Option Writer Quote Asset Destination
-    ///   6. `[writeable]` Exerciser Underlying Asset Destination
-    ///   7. `[writeable]` Underlying Asset Pool
+    ///   5. `[writeable]` Exerciser Underlying Asset Source
+    ///   6. `[writeable]` Underlying Asset Pool
+    ///   7. `[writeable]` Quote Asset Pool
     ///   8. `[]` Option Mint Authority
     ///   9. `[writeable]` Option Mint
     ///   10. `[writeable]` Option Token Account
@@ -315,38 +315,40 @@ pub fn close_post_expiration(
 /// Creates a `ExerciseCoveredCall` instruction
 pub fn exercise_covered_call(
     program_id: &Pubkey,
-    option_mint_key: &Pubkey,
-    options_market_key: &Pubkey,
-    exerciser_quote_asset_key: &Pubkey,
-    exerciser_underlying_asset_key: &Pubkey,
-    exerciser_authority_key: &Pubkey,
-    market_underlying_asset_pool_key: &Pubkey,
-    contract_token_key: &Pubkey,
-    contract_token_authority: &Pubkey,
+    option_mint: &Pubkey,
+    options_market: &Pubkey,
+    exerciser_quote_asset: &Pubkey,
+    exerciser_underlying_asset: &Pubkey,
+    exerciser_authority: &Pubkey,
+    underlying_asset_pool: &Pubkey,
+    quote_asset_pool: &Pubkey,
+    option_token_key: &Pubkey,
+    option_token_authority: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
 
     let (options_spl_authority_pubkey, bump_seed) =
-        Pubkey::find_program_address(&[&option_mint_key.to_bytes()[..32]], &program_id);
+        Pubkey::find_program_address(&[&option_mint.to_bytes()[..32]], &program_id);
     let data = OptionsInstruction::ExerciseCoveredCall {
         bump_seed,
     }
     .pack();
 
-    let mut accounts = Vec::with_capacity(10);
+    let mut accounts = Vec::with_capacity(12);
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
-    accounts.push(AccountMeta::new_readonly(*options_market_key, false));
-    accounts.push(AccountMeta::new(*exerciser_quote_asset_key, false));
-    accounts.push(AccountMeta::new_readonly(*exerciser_authority_key, true));
-    accounts.push(AccountMeta::new(*exerciser_underlying_asset_key, false));
-    accounts.push(AccountMeta::new(*market_underlying_asset_pool_key, false));
+    accounts.push(AccountMeta::new_readonly(*options_market, false));
+    accounts.push(AccountMeta::new(*exerciser_quote_asset, false));
+    accounts.push(AccountMeta::new_readonly(*exerciser_authority, true));
+    accounts.push(AccountMeta::new(*exerciser_underlying_asset, false));
+    accounts.push(AccountMeta::new(*underlying_asset_pool, false));
+    accounts.push(AccountMeta::new(*quote_asset_pool, false));
     accounts.push(AccountMeta::new_readonly(
         options_spl_authority_pubkey,
         false,
     ));
-    accounts.push(AccountMeta::new(*option_mint_key, false));
-    accounts.push(AccountMeta::new(*contract_token_key, false));
-    accounts.push(AccountMeta::new_readonly(*contract_token_authority, true));
+    accounts.push(AccountMeta::new(*option_mint, false));
+    accounts.push(AccountMeta::new(*option_token_key, false));
+    accounts.push(AccountMeta::new_readonly(*option_token_authority, true));
 
     Ok(Instruction {
         program_id: *program_id,
