@@ -84,6 +84,12 @@ pub enum OptionsInstruction {
     /// 9. `[]` SPL Token Program
     ClosePostExpiration {
         bump_seed: u8,
+    },
+    /// Close a single option contract prior to expiration.
+    /// Burns the _option token_ and the _writer token_ and returns the 
+    /// underlying asset back to the writer (or address specified). 
+    ClosePosition {
+        bump_seed: u8,
     }
 }
 
@@ -120,6 +126,12 @@ impl OptionsInstruction {
                     bump_seed
                 }
             }
+            4 => {
+                let (bump_seed, _rest) = Self::unpack_u8(rest)?;
+                Self::ClosePosition {
+                    bump_seed
+                }
+            }
             _ => return Err(ProgramError::InvalidInstructionData.into()),
         })
     }
@@ -148,6 +160,10 @@ impl OptionsInstruction {
             }
             &Self::ClosePostExpiration { ref bump_seed } => {
                 buf.push(3);
+                buf.extend_from_slice(&bump_seed.to_le_bytes());
+            }
+            &Self::ClosePosition { ref bump_seed } => {
+                buf.push(4);
                 buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
         };
@@ -263,6 +279,50 @@ pub fn mint_covered_call(
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
 
     let data = OptionsInstruction::MintCoveredCall { bump_seed }.pack();
+    Ok(Instruction {
+        program_id: *program_id,
+        data,
+        accounts,
+    })
+}
+
+/// Creates a `ClosePosition` instruction
+pub fn close_position(
+    program_id: &Pubkey,
+    options_market: &Pubkey,
+    underlying_asset_pool: &Pubkey,
+    option_mint_key: &Pubkey,
+    option_token_source: &Pubkey,
+    option_token_source_authority: &Pubkey,
+    writer_token_mint: &Pubkey,
+    writer_token_source: &Pubkey,
+    writer_token_source_authority: &Pubkey,
+    underlying_asset_dest: &Pubkey,
+) -> Result<Instruction, ProgramError> {
+    let (option_mint_authority, bump_seed) =
+        Pubkey::find_program_address(&[&option_mint_key.to_bytes()[..32]], &program_id);
+
+    let data = OptionsInstruction::ClosePosition {
+        bump_seed
+    }
+    .pack();
+
+    let mut accounts = Vec::with_capacity(11);
+    accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
+    accounts.push(AccountMeta::new_readonly(*options_market, false));
+    accounts.push(AccountMeta::new(*option_mint_key, false));
+    accounts.push(AccountMeta::new_readonly(
+        option_mint_authority,
+        false,
+    ));
+    accounts.push(AccountMeta::new(*option_token_source, false));
+    accounts.push(AccountMeta::new_readonly(*option_token_source_authority, true));
+    accounts.push(AccountMeta::new(*writer_token_mint, false));
+    accounts.push(AccountMeta::new(*writer_token_source, false));
+    accounts.push(AccountMeta::new_readonly(*writer_token_source_authority, true));
+    accounts.push(AccountMeta::new(*underlying_asset_dest, false));
+    accounts.push(AccountMeta::new(*underlying_asset_pool, false));
+
     Ok(Instruction {
         program_id: *program_id,
         data,
@@ -420,6 +480,21 @@ mod tests {
         let packed = check.pack();
         // add the tag to the expected buffer
         let mut expect = Vec::from([3u8]);
+        expect.push(bump_seed);
+        assert_eq!(packed, expect);
+        let unpacked = OptionsInstruction::unpack(&expect).unwrap();
+        assert_eq!(unpacked, check);
+    }
+
+    #[test]
+    fn test_pack_unpack_close_position() {
+        let bump_seed = 1;
+        let check = OptionsInstruction::ClosePosition {
+            bump_seed
+        };
+        let packed = check.pack();
+        // add the tag to the expected buffer
+        let mut expect = Vec::from([4u8]);
         expect.push(bump_seed);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();

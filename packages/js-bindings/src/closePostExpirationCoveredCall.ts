@@ -52,7 +52,7 @@ export const closePostExpirationCoveredCallInstruction = async ({
   );
 
   /*
-   * Generate the instruction tag. 4 is the tag that denotes the ClosePostExpiration instructions
+   * Generate the instruction tag. 3 is the tag that denotes the ClosePostExpiration instructions
    * The tags can be found the OptionInstruction.unpack function (instruction.rs)
    */
   const tagBuffer = Buffer.alloc(INTRUCTION_TAG_LAYOUT.span);

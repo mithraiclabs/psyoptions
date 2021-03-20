@@ -4,6 +4,7 @@ mod solana_helpers;
 mod spl_helpers;
 
 // Add test files here for automatic discovery
+mod close_position_test;
 mod close_post_expiration_test;
 mod exercise_covered_call_test;
 mod initialize_mint_test;
