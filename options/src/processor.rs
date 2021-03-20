@@ -217,8 +217,8 @@ impl Processor {
         let exerciser_quote_asset_acct = next_account_info(account_info_iter)?;
         let exerciser_authority_acct = next_account_info(account_info_iter)?;
         let exerciser_underlying_asset_acct = next_account_info(account_info_iter)?;
-        let market_underlying_asset_pool_acct = next_account_info(account_info_iter)?;
-        let market_quote_asset_pool_acct = next_account_info(account_info_iter)?;
+        let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
+        let quote_asset_pool_acct = next_account_info(account_info_iter)?;
         let options_spl_authority_acct = next_account_info(account_info_iter)?;
         let option_mint_acct = next_account_info(account_info_iter)?;
         let option_token_acct = next_account_info(account_info_iter)?;
@@ -257,7 +257,7 @@ impl Processor {
         let transer_quote_tokens_ix = token_instruction::transfer(
             &spl_program_acct.key,
             &exerciser_quote_asset_acct.key,
-            &market_quote_asset_pool_acct.key,
+            &quote_asset_pool_acct.key,
             &exerciser_authority_acct.key,
             &[],
             option_market.quote_amount_per_contract,
@@ -267,7 +267,7 @@ impl Processor {
             &[
                 spl_program_acct.clone(),
                 exerciser_quote_asset_acct.clone(),
-                market_quote_asset_pool_acct.clone(),
+                quote_asset_pool_acct.clone(),
                 exerciser_authority_acct.clone(),
             ],
         )?;
@@ -275,7 +275,7 @@ impl Processor {
         // transfer underlying asset from the pool to the exerciser's account
         let transfer_underlying_tokens_ix = token_instruction::transfer(
             &spl_program_acct.key,
-            &market_underlying_asset_pool_acct.key,
+            &underlying_asset_pool_acct.key,
             &exerciser_underlying_asset_acct.key,
             &options_spl_authority_acct.key,
             &[],
@@ -284,7 +284,7 @@ impl Processor {
         invoke_signed(
             &transfer_underlying_tokens_ix,
             &[
-                market_underlying_asset_pool_acct.clone(),
+                underlying_asset_pool_acct.clone(),
                 exerciser_underlying_asset_acct.clone(),
                 options_spl_authority_acct.clone(),
                 spl_program_acct.clone(),
