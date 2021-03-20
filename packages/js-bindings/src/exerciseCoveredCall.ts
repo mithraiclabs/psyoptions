@@ -10,23 +10,21 @@ import {
 import { struct, u8 } from 'buffer-layout';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { TOKEN_PROGRAM_ID } from './utils';
+import { getOptionMarketData } from './utils/getOptionMarketData';
 
 export const EXERCISE_COVERED_CALL_LAYOUT = struct([u8('bumpSeed')]);
 
 export const exerciseCoveredCallInstruction = async (
   programId: PublicKey,
-  optionWriterUnderlyingAssetKey: PublicKey,
-  optionWriterQuoteAssetKey: PublicKey,
-  optionWriterContractTokenKey: PublicKey,
   optionMintKey: PublicKey,
   optionMarketKey: PublicKey,
-  optionWriterRegistryKey: PublicKey,
   exerciserQuoteAssetKey: PublicKey,
   exerciserUnderlyingAssetKey: PublicKey,
   exerciserQuoteAssetAuthorityKey: PublicKey,
   underlyingAssetPoolKey: PublicKey,
-  exerciserContractTokenKey: PublicKey,
-  exerciserContractTokenAuthorityKey: PublicKey,
+  quoteAssetPoolKey: PublicKey,
+  optionTokenKey: PublicKey,
+  optionTokenAuthorityKey: PublicKey,
 ) => {
   const exerciseCoveredCallBuffer = Buffer.alloc(
     EXERCISE_COVERED_CALL_LAYOUT.span,
@@ -40,9 +38,6 @@ export const exerciseCoveredCallInstruction = async (
   EXERCISE_COVERED_CALL_LAYOUT.encode(
     {
       bumpSeed,
-      underlyingAssetAcctAddress: optionWriterUnderlyingAssetKey,
-      quoteAssetAcctAddress: optionWriterQuoteAssetKey,
-      contractTokenAcctAddress: optionWriterContractTokenKey,
     },
     exerciseCoveredCallBuffer,
     0,
@@ -68,21 +63,16 @@ export const exerciseCoveredCallInstruction = async (
       isSigner: true,
       isWritable: false,
     },
-    { pubkey: optionWriterQuoteAssetKey, isSigner: false, isWritable: true },
     { pubkey: exerciserUnderlyingAssetKey, isSigner: false, isWritable: true },
     { pubkey: underlyingAssetPoolKey, isSigner: false, isWritable: true },
+    { pubkey: quoteAssetPoolKey, isSigner: false, isWritable: true },
     { pubkey: optionsSplAuthorityPubkey, isSigner: false, isWritable: false },
     { pubkey: optionMintKey, isSigner: false, isWritable: true },
-    { pubkey: exerciserContractTokenKey, isSigner: false, isWritable: true },
+    { pubkey: optionTokenKey, isSigner: false, isWritable: true },
     {
-      pubkey: exerciserContractTokenAuthorityKey,
+      pubkey: optionTokenAuthorityKey,
       isSigner: true,
       isWritable: false,
-    },
-    {
-      pubkey: optionWriterRegistryKey,
-      isSigner: false,
-      isWritable: true,
     },
   ];
 
@@ -97,18 +87,15 @@ export const exerciseCoveredCall = async (
   connection: Connection,
   payer: Account,
   programId: PublicKey | string,
-  optionWriterUnderlyingAssetKey: PublicKey,
-  optionWriterQuoteAssetKey: PublicKey,
-  optionWriterContractTokenKey: PublicKey,
   optionMintKey: PublicKey,
   optionMarketKey: PublicKey,
-  optionWriterRegistryKey: PublicKey,
   exerciserQuoteAssetKey: PublicKey,
   exerciserUnderlyingAssetKey: PublicKey,
   exerciserQuoteAssetAuthorityAccount: Account,
   underlyingAssetPoolKey: PublicKey,
-  exerciserContractTokenKey: PublicKey,
-  exerciserContractTokenAuthorityAccount: Account,
+  quoteAssetPoolKey: PublicKey,
+  optionTokenKey: PublicKey,
+  optionTokenAuthorityAccount: Account,
 ) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
@@ -116,25 +103,22 @@ export const exerciseCoveredCall = async (
   const transaction = new Transaction();
   const exerciseInstruction = await exerciseCoveredCallInstruction(
     programPubkey,
-    optionWriterUnderlyingAssetKey,
-    optionWriterQuoteAssetKey,
-    optionWriterContractTokenKey,
     optionMintKey,
     optionMarketKey,
-    optionWriterRegistryKey,
     exerciserQuoteAssetKey,
     exerciserUnderlyingAssetKey,
     exerciserQuoteAssetAuthorityAccount.publicKey,
     underlyingAssetPoolKey,
-    exerciserContractTokenKey,
-    exerciserContractTokenAuthorityAccount.publicKey,
+    quoteAssetPoolKey,
+    optionTokenKey,
+    optionTokenAuthorityAccount.publicKey,
   );
   transaction.add(exerciseInstruction);
 
   const signers = [
     payer,
     exerciserQuoteAssetAuthorityAccount,
-    exerciserContractTokenAuthorityAccount,
+    optionTokenAuthorityAccount,
   ];
   transaction.feePayer = payer.publicKey;
   const { blockhash } = await connection.getRecentBlockhash();
@@ -144,7 +128,7 @@ export const exerciseCoveredCall = async (
 };
 
 /**
- *  Exercise an Option from a random Option Writer in the registry
+ *  Exercise an option
  *
  * @param connection solana web3 connection
  * @param payer Account paying for the transaction
@@ -154,11 +138,11 @@ export const exerciseCoveredCall = async (
  * @param exerciserUnderlyingAssetKey  Pubkey of where the Underlying Asset will be sent to
  * @param exerciserQuoteAssetAuthorityAccount Account that owns and can sign TXs on behalf
  * of the Quote Asset Pubkey above
- * @param exerciserContractTokenKey Pubkey for the account to burn the Option Mint from
- * @param exerciserContractTokenAuthorityAccount Account that owns the Pubkey to burn
+ * @param optionTokenKey Pubkey for the account to burn the Option Mint from
+ * @param optionTokenAuthorityAccount Account that owns the Pubkey to burn
  * Option Mint from
  */
-export const exerciseCoveredCallWithRandomOptionWriter = async (
+export const exerciseCoveredCallWithMarketKey = async (
   connection: Connection,
   payer: Account,
   programId: PublicKey | string,
@@ -166,29 +150,26 @@ export const exerciseCoveredCallWithRandomOptionWriter = async (
   exerciserQuoteAssetKey: PublicKey,
   exerciserUnderlyingAssetKey: PublicKey,
   exerciserQuoteAssetAuthorityAccount: Account,
-  exerciserContractTokenKey: PublicKey,
-  exerciserContractTokenAuthorityAccount: Account,
+  optionTokenKey: PublicKey,
+  optionTokenAuthorityAccount: Account,
 ) => {
-  const [
-    optionWriterToExercise,
-    optionMarketData,
-  ] = await getRandomOptionWriter(connection, optionMarketKey);
+  const optionMarketData = await getOptionMarketData(
+    connection,
+    optionMarketKey,
+  );
 
   return exerciseCoveredCall(
     connection,
     payer,
     programId,
-    optionWriterToExercise.underlyingAssetAcctAddress,
-    optionWriterToExercise.quoteAssetAcctAddress,
-    optionWriterToExercise.contractTokenAcctAddress,
-    optionMarketData.optionMintAddress,
+    optionMarketData.optionMintKey,
     optionMarketKey,
-    optionMarketData.writerRegistryAddress,
     exerciserQuoteAssetKey,
     exerciserUnderlyingAssetKey,
     exerciserQuoteAssetAuthorityAccount,
-    optionMarketData.underlyingAssetPoolAddress,
-    exerciserContractTokenKey,
-    exerciserContractTokenAuthorityAccount,
+    optionMarketData.underlyingAssetPoolKey,
+    optionMarketData.quoteAssetPoolKey,
+    optionTokenKey,
+    optionTokenAuthorityAccount,
   );
 };

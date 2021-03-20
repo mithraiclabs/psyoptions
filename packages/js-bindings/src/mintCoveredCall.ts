@@ -168,8 +168,8 @@ export const readMarketAndMintCoveredCall = async ({
     underlyingAssetSrcKey,
     optionMarketKey,
     authorityAccount: underlyingAssetAuthorityAccount,
-    optionMintKey: optionMarketData.optionMintAddress,
-    underlyingAssetPoolKey: optionMarketData.underlyingAssetPoolAddress,
+    optionMintKey: optionMarketData.optionMintKey,
+    underlyingAssetPoolKey: optionMarketData.underlyingAssetPoolKey,
     writerTokenMintKey: optionMarketData.writerTokenMintKey,
     writerTokenDestKey,
   });

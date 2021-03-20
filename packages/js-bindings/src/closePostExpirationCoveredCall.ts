@@ -166,9 +166,9 @@ export const closePostExpirationOption = async ({
   const closePostExpiration = await closePostExpirationCoveredCallInstruction({
     programId: programPubkey,
     optionMarketKey,
-    optionMintKey: optionMarketData.optionMintAddress,
+    optionMintKey: optionMarketData.optionMintKey,
     underlyingAssetDestKey,
-    underlyingAssetPoolKey: optionMarketData.underlyingAssetPoolAddress,
+    underlyingAssetPoolKey: optionMarketData.underlyingAssetPoolKey,
     writerTokenMintKey: optionMarketData.writerTokenMintKey,
     writerTokenSourceAuthorityKey,
     writerTokenSourceKey,
