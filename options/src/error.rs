@@ -28,6 +28,9 @@ pub enum OptionsError {
     /// The wrong pool key was used
     #[error("Incorrect pool was accessed")]
     IncorrectPool,
+    /// The Option Token or Writer Token does not match the Option Market
+    #[error("Option or writer token does not match market")]
+    IncorrectMarketTokens
 }
 impl From<OptionsError> for ProgramError {
     fn from(e: OptionsError) -> Self {

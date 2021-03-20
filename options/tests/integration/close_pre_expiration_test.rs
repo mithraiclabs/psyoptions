@@ -267,8 +267,8 @@ pub fn test_panic_when_non_underlying_asset_pool_is_used() {
   let (
     option_writer_option_keys,
     option_writer_writer_token_keys,
-    _option_writer_underlying_asset_keys,
-    option_writer_quote_asset_keys,
+    option_writer_underlying_asset_keys,
+    _option_writer_quote_asset_keys,
     option_writer_keys,
   ) = create_and_add_option_writer(
     &client,
@@ -289,21 +289,20 @@ pub fn test_panic_when_non_underlying_asset_pool_is_used() {
 
   let data = OptionsInstruction::ClosePreExpiration { bump_seed }.pack();
 
-  let mut accounts = Vec::with_capacity(12);
+  let mut accounts = Vec::with_capacity(11);
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
-    accounts.push(AccountMeta::new_readonly(clock::id(), false));
     accounts.push(AccountMeta::new_readonly(option_market_key, false));
-    accounts.push(AccountMeta::new_readonly(option_mint_keys.pubkey(), false));
+    accounts.push(AccountMeta::new(option_mint_keys.pubkey(), false));
     accounts.push(AccountMeta::new_readonly(
         option_mint_authority,
         false,
     ));
     accounts.push(AccountMeta::new(option_writer_option_keys.pubkey(), false));
     accounts.push(AccountMeta::new_readonly(option_writer_keys.pubkey(), true));
-    accounts.push(AccountMeta::new_readonly(writer_token_mint_keys.pubkey(), false));
+    accounts.push(AccountMeta::new(writer_token_mint_keys.pubkey(), false));
     accounts.push(AccountMeta::new(option_writer_writer_token_keys.pubkey(), false));
     accounts.push(AccountMeta::new_readonly(option_writer_keys.pubkey(), true));
-    accounts.push(AccountMeta::new(underlying_asset_pool_key, false));
+    accounts.push(AccountMeta::new(option_writer_underlying_asset_keys.pubkey(), false));
     accounts.push(AccountMeta::new(quote_asset_pool_key, false));
 
   // generate the close_pre_expiration instruction

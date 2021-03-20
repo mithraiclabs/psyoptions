@@ -309,7 +309,18 @@ impl Processor {
         let underlying_asset_dest_acct = next_account_info(account_info_iter)?;
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
 
-        
+        // validate the Writer Token and Option Token mints are for the market specified
+        let option_market_data = option_market_acct.try_borrow_data()?;
+        let option_market = OptionMarket::unpack(&option_market_data)?;
+
+        if option_market.option_mint != *option_mint_acct.key
+            || option_market.writer_token_mint != *writer_token_mint_acct.key
+        {
+            return Err(OptionsError::IncorrectMarketTokens.into());
+        }
+        if *underlying_asset_pool_acct.key != option_market.underlying_asset_pool {
+            return Err(OptionsError::IncorrectPool.into());
+        }
         // Burn Writer Token
         let burn_writer_token_ix = token_instruction::burn(
             &spl_program_acct.key,
@@ -345,6 +356,26 @@ impl Processor {
                 option_token_src_acct.clone(),
                 option_mint_acct.clone(),
                 option_token_src_auth_acct.clone(),
+                spl_program_acct.clone(),
+            ],
+            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+        )?;
+
+        // transfer underlying asset from the pool to the option writers's account
+        let transfer_underlying_tokens_ix = token_instruction::transfer(
+            &spl_program_acct.key,
+            &underlying_asset_pool_acct.key,
+            &underlying_asset_dest_acct.key,
+            &option_mint_authority_acct.key,
+            &[],
+            option_market.underlying_amount_per_contract,
+        )?;
+        invoke_signed(
+            &transfer_underlying_tokens_ix,
+            &[
+                underlying_asset_pool_acct.clone(),
+                underlying_asset_dest_acct.clone(),
+                option_mint_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
             &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
