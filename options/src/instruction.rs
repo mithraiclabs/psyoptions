@@ -286,6 +286,51 @@ pub fn mint_covered_call(
     })
 }
 
+/// Creates a `ClosePreExpiration` instruction
+pub fn close_pre_expiration(
+    program_id: &Pubkey,
+    options_market: &Pubkey,
+    underlying_asset_pool: &Pubkey,
+    option_mint_key: &Pubkey,
+    option_token_source: &Pubkey,
+    option_token_source_authority: &Pubkey,
+    writer_token_mint: &Pubkey,
+    writer_token_source: &Pubkey,
+    writer_token_source_authority: &Pubkey,
+    underlying_asset_dest: &Pubkey,
+) -> Result<Instruction, ProgramError> {
+    let (option_mint_authority, bump_seed) =
+        Pubkey::find_program_address(&[&option_mint_key.to_bytes()[..32]], &program_id);
+
+    let data = OptionsInstruction::ClosePreExpiration {
+        bump_seed
+    }
+    .pack();
+
+    let mut accounts = Vec::with_capacity(12);
+    accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
+    accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
+    accounts.push(AccountMeta::new_readonly(*options_market, false));
+    accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
+    accounts.push(AccountMeta::new_readonly(
+        option_mint_authority,
+        false,
+    ));
+    accounts.push(AccountMeta::new(*option_token_source, false));
+    accounts.push(AccountMeta::new_readonly(*option_token_source_authority, true));
+    accounts.push(AccountMeta::new_readonly(*writer_token_mint, false));
+    accounts.push(AccountMeta::new(*writer_token_source, false));
+    accounts.push(AccountMeta::new_readonly(*writer_token_source_authority, true));
+    accounts.push(AccountMeta::new(*underlying_asset_dest, false));
+    accounts.push(AccountMeta::new(*underlying_asset_pool, false));
+
+    Ok(Instruction {
+        program_id: *program_id,
+        data,
+        accounts,
+    })
+}
+
 /// Creates a `ClosePostExpiration` instruction
 pub fn close_post_expiration(
     program_id: &Pubkey,
