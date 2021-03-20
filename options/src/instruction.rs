@@ -52,21 +52,6 @@ pub enum OptionsInstruction {
     ///   10. `[]` SysVar clock account
     ///   
     MintCoveredCall { bump_seed: u8 },
-    /// Exercises the specified OptionWriter
-    ///
-    /// 0. `[]` Sysvar clock
-    /// 1. `[]` SPL Token Program
-    /// 2. `[writeable]` Option Market
-    /// 3. `[writeable]` Exerciser Quote Asset Source
-    /// 4. `[signer]` Exerciser Quote Asset Authority
-    /// 5. `[writeable]` Option Writer Quote Asset Destination
-    /// 6. `[writeable]` Exerciser Underlying Asset Destination
-    /// 7. `[writeable]` Underlying Asset Pool
-    /// 8. `[]` Option Mint Authority
-    /// 9. `[]` Option Mint
-    ExercisePostExpiration {
-        bump_seed: u8
-    },
     /// Exercise an Options token representing a Covered Call
     ///
     ///   0. `[]` Sysvar clock
@@ -125,17 +110,11 @@ impl OptionsInstruction {
             }
             2 => {
                 let (bump_seed, _rest) = Self::unpack_u8(rest)?;
-                Self::ExercisePostExpiration {
-                    bump_seed,
-                }
-            }
-            3 => {
-                let (bump_seed, _rest) = Self::unpack_u8(rest)?;
                 Self::ExerciseCoveredCall {
                     bump_seed
                 }
             }
-            4 => {
+            3 => {
                 let (bump_seed, _rest) = Self::unpack_u8(rest)?;
                 Self::ClosePostExpiration {
                     bump_seed
@@ -163,18 +142,12 @@ impl OptionsInstruction {
                 buf.push(1);
                 buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
-            &Self::ExercisePostExpiration {
-                ref bump_seed,
-            } => {
+            &Self::ExerciseCoveredCall { ref bump_seed } => {
                 buf.push(2);
                 buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
-            &Self::ExerciseCoveredCall { ref bump_seed } => {
-                buf.push(3);
-                buf.extend_from_slice(&bump_seed.to_le_bytes());
-            }
             &Self::ClosePostExpiration { ref bump_seed } => {
-                buf.push(4);
+                buf.push(3);
                 buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
         };
@@ -290,44 +263,6 @@ pub fn mint_covered_call(
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
 
     let data = OptionsInstruction::MintCoveredCall { bump_seed }.pack();
-    Ok(Instruction {
-        program_id: *program_id,
-        data,
-        accounts,
-    })
-}
-/// Creates a `ExercisePostExpiration` instruction
-pub fn exercise_post_expiration(
-    program_id: &Pubkey,
-    option_mint_key: &Pubkey,
-    options_market_key: &Pubkey,
-    exerciser_quote_asset_key: &Pubkey,
-    exerciser_underlying_asset_key: &Pubkey,
-    exerciser_authority_key: &Pubkey,
-    market_underlying_asset_pool_key: &Pubkey,
-) -> Result<Instruction, ProgramError> {
-
-    let (options_spl_authority_pubkey, bump_seed) =
-        Pubkey::find_program_address(&[&option_mint_key.to_bytes()[..32]], &program_id);
-    let data = OptionsInstruction::ExercisePostExpiration {
-        bump_seed,
-    }
-    .pack();
-
-    let mut accounts = Vec::with_capacity(10);
-    accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
-    accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
-    accounts.push(AccountMeta::new_readonly(*options_market_key, false));
-    accounts.push(AccountMeta::new(*exerciser_quote_asset_key, false));
-    accounts.push(AccountMeta::new_readonly(*exerciser_authority_key, true));
-    accounts.push(AccountMeta::new(*exerciser_underlying_asset_key, false));
-    accounts.push(AccountMeta::new(*market_underlying_asset_pool_key, false));
-    accounts.push(AccountMeta::new_readonly(
-        options_spl_authority_pubkey,
-        false,
-    ));
-    accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
-
     Ok(Instruction {
         program_id: *program_id,
         data,

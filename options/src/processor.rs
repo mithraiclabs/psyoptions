@@ -295,73 +295,6 @@ impl Processor {
         Ok(())
     }
 
-    pub fn process_exercise_post_expiration(
-        accounts: &[AccountInfo],
-        bump_seed: u8,
-    ) -> ProgramResult {
-        let account_info_iter = &mut accounts.iter();
-        let clock_sysvar_info = next_account_info(account_info_iter)?;
-        let spl_program_acct = next_account_info(account_info_iter)?;
-        let option_market_acct = next_account_info(account_info_iter)?;
-        let exerciser_quote_asset_acct = next_account_info(account_info_iter)?;
-        let exerciser_authority_acct = next_account_info(account_info_iter)?;
-        let option_writer_quote_asset_acct = next_account_info(account_info_iter)?;
-        let exerciser_underlying_asset_acct = next_account_info(account_info_iter)?;
-        let market_underlying_asset_pool_acct = next_account_info(account_info_iter)?;
-        let options_spl_authority_acct = next_account_info(account_info_iter)?;
-        let option_mint_acct = next_account_info(account_info_iter)?;
-
-        let option_market_data = option_market_acct.try_borrow_data()?;
-        let option_market = OptionMarket::unpack(&option_market_data)?;
-
-        let clock = Clock::from_account_info(&clock_sysvar_info)?;
-        // Verify that the OptionMarket has already expired
-        if clock.unix_timestamp <= option_market.expiration_unix_timestamp {
-            return Err(OptionsError::OptionMarketNotExpired.into());
-        }
-
-        // transfer the quote asset from the Exerciser to the OptionWriter
-        let transer_quote_tokens_ix = token_instruction::transfer(
-            &spl_program_acct.key,
-            &exerciser_quote_asset_acct.key,
-            &option_writer_quote_asset_acct.key,
-            &exerciser_authority_acct.key,
-            &[],
-            option_market.quote_amount_per_contract,
-        )?;
-        invoke(
-            &transer_quote_tokens_ix,
-            &[
-                spl_program_acct.clone(),
-                exerciser_quote_asset_acct.clone(),
-                option_writer_quote_asset_acct.clone(),
-                exerciser_authority_acct.clone(),
-            ],
-        )?;
-
-        // transfer underlying asset from the pool to the exerciser's account
-        let transfer_underlying_tokens_ix = token_instruction::transfer(
-            &spl_program_acct.key,
-            &market_underlying_asset_pool_acct.key,
-            &exerciser_underlying_asset_acct.key,
-            &options_spl_authority_acct.key,
-            &[],
-            option_market.underlying_amount_per_contract,
-        )?;
-        invoke_signed(
-            &transfer_underlying_tokens_ix,
-            &[
-                market_underlying_asset_pool_acct.clone(),
-                exerciser_underlying_asset_acct.clone(),
-                options_spl_authority_acct.clone(),
-                spl_program_acct.clone(),
-            ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
-        )?;
-
-        Ok(())
-    }
-
     pub fn process_close_post_expiration(accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let option_market_acct = next_account_info(account_info_iter)?;
@@ -444,9 +377,6 @@ impl Processor {
             ),
             OptionsInstruction::MintCoveredCall { bump_seed } => {
                 Self::process_mint_covered_call(accounts, bump_seed)
-            }
-            OptionsInstruction::ExercisePostExpiration { bump_seed } => {
-                Self::process_exercise_post_expiration(accounts, bump_seed)
             }
             OptionsInstruction::ExerciseCoveredCall { bump_seed } => {
                 Self::process_exercise_covered_call(accounts, bump_seed)
