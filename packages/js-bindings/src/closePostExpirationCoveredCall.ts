@@ -9,25 +9,30 @@ import {
 } from '@solana/web3.js';
 import { struct, u8 } from 'buffer-layout';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
-import { optionWriterStructArray } from './market';
 import { TOKEN_PROGRAM_ID } from './utils';
 import { getOptionMarketData } from './utils/getOptionMarketData';
 
-export const CLOSE_POST_EXPIRATION_COVERED_CALL = struct([
-  ...optionWriterStructArray,
-  u8('bumpSeed'),
-]);
+export const CLOSE_POST_EXPIRATION_COVERED_CALL = struct([u8('bumpSeed')]);
 
-export const closePostExpirationCoveredCallInstruction = async (
-  programId: PublicKey,
-  optionWriterUnderlyingAssetKey: PublicKey,
-  optionWriterQuoteAssetKey: PublicKey,
-  optionWriterContractTokenKey: PublicKey,
-  optionMintKey: PublicKey,
-  optionMarketKey: PublicKey,
-  underlyingAssetPoolKey: PublicKey,
-  optionWriterRegistryKey: PublicKey,
-) => {
+export const closePostExpirationCoveredCallInstruction = async ({
+  programId,
+  optionMarketKey,
+  optionMintKey,
+  underlyingAssetDestKey,
+  underlyingAssetPoolKey,
+  writerTokenMintKey,
+  writerTokenSourceAuthorityKey,
+  writerTokenSourceKey,
+}: {
+  programId: PublicKey;
+  optionMintKey: PublicKey;
+  optionMarketKey: PublicKey;
+  underlyingAssetPoolKey: PublicKey;
+  writerTokenMintKey: PublicKey;
+  writerTokenSourceKey: PublicKey;
+  writerTokenSourceAuthorityKey: PublicKey;
+  underlyingAssetDestKey: PublicKey;
+}) => {
   const closePostExpirationBuffer = Buffer.alloc(
     CLOSE_POST_EXPIRATION_COVERED_CALL.span,
   );
@@ -41,9 +46,6 @@ export const closePostExpirationCoveredCallInstruction = async (
   CLOSE_POST_EXPIRATION_COVERED_CALL.encode(
     {
       bumpSeed,
-      underlyingAssetAcctAddress: optionWriterUnderlyingAssetKey,
-      quoteAssetAcctAddress: optionWriterQuoteAssetKey,
-      contractTokenAcctAddress: optionWriterContractTokenKey,
     },
     closePostExpirationBuffer,
     0,
@@ -60,18 +62,20 @@ export const closePostExpirationCoveredCallInstruction = async (
   const data = Buffer.concat([tagBuffer, closePostExpirationBuffer]);
 
   const keys: AccountMeta[] = [
-    { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
-    { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: optionMarketKey, isSigner: false, isWritable: false },
-    {
-      pubkey: optionWriterUnderlyingAssetKey,
-      isSigner: false,
-      isWritable: true,
-    },
-    { pubkey: underlyingAssetPoolKey, isSigner: false, isWritable: true },
-    { pubkey: optionMintAuthorityPubkey, isSigner: false, isWritable: false },
     { pubkey: optionMintKey, isSigner: false, isWritable: false },
-    { pubkey: optionWriterRegistryKey, isSigner: false, isWritable: true },
+    { pubkey: optionMintAuthorityPubkey, isSigner: false, isWritable: false },
+    { pubkey: writerTokenMintKey, isSigner: false, isWritable: true },
+    { pubkey: writerTokenSourceKey, isSigner: false, isWritable: true },
+    {
+      pubkey: writerTokenSourceAuthorityKey,
+      isSigner: true,
+      isWritable: false,
+    },
+    { pubkey: underlyingAssetDestKey, isSigner: false, isWritable: true },
+    { pubkey: underlyingAssetPoolKey, isSigner: false, isWritable: true },
+    { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
   ];
 
   return new TransactionInstruction({
@@ -81,32 +85,43 @@ export const closePostExpirationCoveredCallInstruction = async (
   });
 };
 
-export const closePostExpirationCoveredCall = async (
-  connection: Connection,
-  payer: Account,
-  programId: PublicKey | string,
-  optionWriterUnderlyingAssetKey: PublicKey,
-  optionWriterQuoteAssetKey: PublicKey,
-  optionWriterContractTokenKey: PublicKey,
-  optionMintKey: PublicKey,
-  optionMarketKey: PublicKey,
-  underlyingAssetPoolKey: PublicKey,
-  optionWriterRegistryKey: PublicKey,
-) => {
+export const closePostExpirationCoveredCall = async ({
+  connection,
+  payer,
+  programId,
+  optionMarketKey,
+  optionMintKey,
+  underlyingAssetPoolKey,
+  underlyingAssetDestKey,
+  writerTokenMintKey,
+  writerTokenSourceAuthorityKey,
+  writerTokenSourceKey,
+}: {
+  connection: Connection;
+  payer: Account;
+  programId: PublicKey | string;
+  optionMintKey: PublicKey;
+  optionMarketKey: PublicKey;
+  underlyingAssetPoolKey: PublicKey;
+  writerTokenMintKey: PublicKey;
+  writerTokenSourceKey: PublicKey;
+  writerTokenSourceAuthorityKey: PublicKey;
+  underlyingAssetDestKey: PublicKey;
+}) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
 
   const transaction = new Transaction();
-  const closePostExpiration = await closePostExpirationCoveredCallInstruction(
-    programPubkey,
-    optionWriterUnderlyingAssetKey,
-    optionWriterQuoteAssetKey,
-    optionWriterContractTokenKey,
+  const closePostExpiration = await closePostExpirationCoveredCallInstruction({
+    programId: programPubkey,
     optionMintKey,
     optionMarketKey,
     underlyingAssetPoolKey,
-    optionWriterRegistryKey,
-  );
+    underlyingAssetDestKey,
+    writerTokenMintKey,
+    writerTokenSourceAuthorityKey,
+    writerTokenSourceKey,
+  });
   transaction.add(closePostExpiration);
   const signers = [payer];
   transaction.feePayer = payer.publicKey;
@@ -121,23 +136,25 @@ export const closePostExpirationCoveredCall = async (
  * @param connection
  * @param payer
  * @param programId
- * @param optionWriterUnderlyingAssetKey
- * @param optionWriterQuoteAssetKey
- * @param optionWriterContractTokenKey
- * @param optionMintKey
  * @param optionMarketKey
  */
-export const closePostExpirationOption = async (
-  connection: Connection,
-  payer: Account,
-  programId: PublicKey | string,
-  optionWriterUnderlyingAssetKey: PublicKey,
-  optionWriterQuoteAssetKey: PublicKey,
-  optionWriterContractTokenKey: PublicKey,
-  optionMintKey: PublicKey,
-  optionMarketKey: PublicKey,
-  optionWriterRegistryKey: PublicKey,
-) => {
+export const closePostExpirationOption = async ({
+  connection,
+  payer,
+  programId,
+  optionMarketKey,
+  underlyingAssetDestKey,
+  writerTokenSourceAuthorityKey,
+  writerTokenSourceKey,
+}: {
+  connection: Connection;
+  payer: Account;
+  programId: PublicKey | string;
+  optionMarketKey: PublicKey;
+  underlyingAssetDestKey: PublicKey;
+  writerTokenSourceKey: PublicKey;
+  writerTokenSourceAuthorityKey: PublicKey;
+}) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
   const optionMarketData = await getOptionMarketData(
@@ -146,16 +163,16 @@ export const closePostExpirationOption = async (
   );
 
   const transaction = new Transaction();
-  const closePostExpiration = await closePostExpirationCoveredCallInstruction(
-    programPubkey,
-    optionWriterUnderlyingAssetKey,
-    optionWriterQuoteAssetKey,
-    optionWriterContractTokenKey,
-    optionMintKey,
+  const closePostExpiration = await closePostExpirationCoveredCallInstruction({
+    programId: programPubkey,
     optionMarketKey,
-    optionMarketData.underlyingAssetPoolAddress,
-    optionWriterRegistryKey,
-  );
+    optionMintKey: optionMarketData.optionMintAddress,
+    underlyingAssetDestKey,
+    underlyingAssetPoolKey: optionMarketData.underlyingAssetPoolAddress,
+    writerTokenMintKey: optionMarketData.writerTokenMintKey,
+    writerTokenSourceAuthorityKey,
+    writerTokenSourceKey,
+  });
   transaction.add(closePostExpiration);
   const signers = [payer];
   transaction.feePayer = payer.publicKey;
