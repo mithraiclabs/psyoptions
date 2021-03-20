@@ -316,6 +316,9 @@ impl Processor {
         if clock.unix_timestamp <= option_market.expiration_unix_timestamp {
             return Err(OptionsError::OptionMarketNotExpired.into());
         }
+        if *underlying_asset_pool_acct.key != option_market.underlying_asset_pool {
+            return Err(OptionsError::IncorrectPool.into());
+        }
 
         // Burn Writer Token
         let burn_writer_token_ix = token_instruction::burn(

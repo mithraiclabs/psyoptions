@@ -1,13 +1,16 @@
+use solana_program::instruction::Instruction;
+use solana_program::instruction::AccountMeta;
 use crate::{
   option_helpers::{create_and_add_option_writer, init_option_market},
   solana_helpers, PROGRAM_KEY,
 };
 use serial_test::serial;
 use solana_client::rpc_client::RpcClient;
-use solana_options::market::OptionMarket;
+use solana_options::{instruction::OptionsInstruction, market::OptionMarket};
 use solana_program::{
   clock::Clock,
   program_pack::Pack,
+  pubkey::Pubkey,
   sysvar::{clock, Sysvar},
 };
 use solana_sdk::{
@@ -58,6 +61,7 @@ pub fn test_sucessful_close_post_expiration() {
     _option_writer_option_keys,
     option_writer_writer_token_keys,
     option_writer_underlying_asset_keys,
+    _option_writer_quote_asset_keys,
     option_writer_keys,
   ) = create_and_add_option_writer(
     &client,
@@ -154,8 +158,9 @@ pub fn test_sucessful_close_post_expiration() {
   );
 
   // assert that the option writer burned one Writer Token
-  let option_writer_writer_token_acct_data =
-    client.get_account_data(&option_writer_writer_token_keys.pubkey()).unwrap();
+  let option_writer_writer_token_acct_data = client
+    .get_account_data(&option_writer_writer_token_keys.pubkey())
+    .unwrap();
   let option_writer_writer_token_acct =
     Account::unpack(&option_writer_writer_token_acct_data[..]).unwrap();
   assert_eq!(
@@ -216,6 +221,7 @@ pub fn test_panic_when_expiration_has_not_passed_close_post_exp() {
     _option_writer_option_keys,
     option_writer_writer_token_keys,
     option_writer_underlying_asset_keys,
+    _option_writer_quote_asset_keys,
     option_writer_keys,
   ) = create_and_add_option_writer(
     &client,
@@ -259,6 +265,114 @@ pub fn test_panic_when_expiration_has_not_passed_close_post_exp() {
     &option_writer_underlying_asset_keys.pubkey(),
   )
   .unwrap();
+  // Send the transaction
+  let signers = vec![&option_writer_keys];
+  solana_helpers::send_and_confirm_transaction(
+    &client,
+    close_post_exirpation_ix,
+    &option_writer_keys.pubkey(),
+    signers,
+  )
+  .unwrap();
+}
+
+#[test]
+#[serial]
+#[should_panic(expected = "Error processing Instruction 0: custom program error: 0x6")]
+pub fn test_panic_when_non_underlying_asset_pool_is_used() {
+  // Create the options market
+  let client = RpcClient::new_with_commitment(
+    "http://localhost:8899".to_string(),
+    CommitmentConfig::processed(),
+  );
+  let program_id = &PROGRAM_KEY;
+  let amount_per_contract = 100;
+  let quote_amount_per_contract = 500;
+  let sysvar_clock_acct = client.get_account(&clock::id()).unwrap();
+  let accounts = &mut [(clock::id(), sysvar_clock_acct)];
+  let sysvar_clock_acct_info = &create_account_infos(accounts)[0];
+  let clock = Clock::from_account_info(&sysvar_clock_acct_info).unwrap();
+  let expiry = clock.unix_timestamp + 20;
+  // Create the option market
+  let (
+    underlying_asset_mint_keys,
+    quote_asset_mint_keys,
+    option_mint_keys,
+    writer_token_mint_keys,
+    asset_authority_keys,
+    underlying_asset_pool_key,
+    quote_asset_pool_key,
+    option_market_key,
+  ) = init_option_market(
+    &client,
+    &program_id,
+    amount_per_contract,
+    quote_amount_per_contract,
+    expiry,
+  )
+  .unwrap();
+
+  // Add 2 option writers to it
+  let (
+    _option_writer_option_keys,
+    option_writer_writer_token_keys,
+    _option_writer_underlying_asset_keys,
+    option_writer_quote_asset_keys,
+    option_writer_keys,
+  ) = create_and_add_option_writer(
+    &client,
+    &program_id,
+    &underlying_asset_mint_keys,
+    &asset_authority_keys,
+    &quote_asset_mint_keys,
+    &option_mint_keys,
+    &writer_token_mint_keys,
+    &underlying_asset_pool_key,
+    &option_market_key,
+    amount_per_contract,
+  )
+  .unwrap();
+  create_and_add_option_writer(
+    &client,
+    &program_id,
+    &underlying_asset_mint_keys,
+    &asset_authority_keys,
+    &quote_asset_mint_keys,
+    &option_mint_keys,
+    &writer_token_mint_keys,
+    &underlying_asset_pool_key,
+    &option_market_key,
+    amount_per_contract,
+  )
+  .unwrap();
+
+  let (option_mint_authority, bump_seed) =
+    Pubkey::find_program_address(&[&option_mint_keys.pubkey().to_bytes()[..32]], &program_id);
+
+  let data = OptionsInstruction::ClosePostExpiration { bump_seed }.pack();
+
+  let mut accounts = Vec::with_capacity(10);
+  accounts.push(AccountMeta::new_readonly(option_market_key, false));
+  accounts.push(AccountMeta::new_readonly(option_mint_keys.pubkey(), false));
+  accounts.push(AccountMeta::new_readonly(option_mint_authority, false));
+  accounts.push(AccountMeta::new(writer_token_mint_keys.pubkey(), false));
+  accounts.push(AccountMeta::new(option_writer_writer_token_keys.pubkey(), false));
+  accounts.push(AccountMeta::new_readonly(
+    option_writer_keys.pubkey(),
+    true,
+  ));
+  accounts.push(AccountMeta::new(option_writer_quote_asset_keys.pubkey(), false));
+  accounts.push(AccountMeta::new(quote_asset_pool_key, false));
+  accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
+  accounts.push(AccountMeta::new_readonly(clock::id(), false));
+
+  // generate the exercise_post_expiration instruction
+  let close_post_exirpation_ix = Instruction {
+    program_id: **program_id,
+    data,
+    accounts,
+  };
+  thread::sleep(Duration::from_secs(20));
   // Send the transaction
   let signers = vec![&option_writer_keys];
   solana_helpers::send_and_confirm_transaction(

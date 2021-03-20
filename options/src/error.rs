@@ -9,7 +9,7 @@ pub enum OptionsError {
     /// Expiration date is in the past and the client tried to mint a contract token
     #[error("Expiration has passed, cannot mint")]
     CantMintExpired,
-    /// The mint that controls the account passed as the quote_asset account does not match 
+    /// The mint that controls the account passed as the quote_asset account does not match
     ///  the mint of the quote asset on the market
     #[error("Incorrect mint on the quote asset account, cannot mint")]
     IncorrectQuoteAssetKey,
@@ -24,7 +24,10 @@ pub enum OptionsError {
     OptionMarketNotExpired,
     /// The OptionMarket has expired operation isn't possible
     #[error("OptionMarket has expired")]
-    OptionMarketHasExpired
+    OptionMarketHasExpired,
+    /// The wrong pool key was used
+    #[error("Incorrect pool was accessed")]
+    IncorrectPool,
 }
 impl From<OptionsError> for ProgramError {
     fn from(e: OptionsError) -> Self {
