@@ -403,7 +403,7 @@ mod tests {
         };
         let packed = check.pack();
         // add the tag to the expected buffer
-        let mut expect = Vec::from([3u8]);
+        let mut expect = Vec::from([2u8]);
         expect.push(bump_seed);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
@@ -419,7 +419,7 @@ mod tests {
         };
         let packed = check.pack();
         // add the tag to the expected buffer
-        let mut expect = Vec::from([4u8]);
+        let mut expect = Vec::from([3u8]);
         expect.push(bump_seed);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
