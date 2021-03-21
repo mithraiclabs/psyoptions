@@ -469,14 +469,12 @@ impl Processor {
 
         let option_market_data = option_market_acct.try_borrow_data()?;
         let option_market = OptionMarket::unpack(&option_market_data)?;
-        let quote_asset_pool_data = quote_asset_pool_acct.try_borrow_data()?;
-        let quote_asset_pool = TokenAccount::unpack(&quote_asset_pool_data)?;
 
-        if quote_asset_pool.amount < option_market.quote_amount_per_contract {
-            return Err(OptionsError::InsufficientVaultFunds.into());
-        }
         if *quote_asset_pool_acct.key != option_market.quote_asset_pool {
             return Err(OptionsError::IncorrectPool.into());
+        }
+        if *writer_token_mint_acct.key != option_market.writer_token_mint {
+            return Err(OptionsError::IncorrectMarketTokens.into());
         }
 
         // Burn Writer Token
@@ -502,7 +500,7 @@ impl Processor {
         // transfer quote asset from the pool to the destination account
         let transfer_underlying_tokens_ix = token_instruction::transfer(
             &spl_token_program_acct.key,
-            &quote_asset_pool_acct.key,
+            &option_market.quote_asset_pool,
             &quote_asset_dest_acct.key,
             &option_market_authority_acct.key,
             &[],

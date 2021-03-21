@@ -31,9 +31,6 @@ pub enum OptionsError {
     /// The Option Token or Writer Token does not match the Option Market
     #[error("Option or writer token does not match market")]
     IncorrectMarketTokens,
-    /// Insufficient funds in the vault withdrawing from
-    #[error("Insufficient vault funds")]
-    InsufficientVaultFunds,
 }
 impl From<OptionsError> for ProgramError {
     fn from(e: OptionsError) -> Self {

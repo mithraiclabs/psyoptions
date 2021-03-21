@@ -353,8 +353,8 @@ pub fn test_panic_when_non_quote_asset_pool_is_used() {
 
 #[test]
 #[serial]
-#[should_panic(expected = "Error processing Instruction 0: custom program error: 0x8")]
-pub fn test_panic_when_not_enough_amount_in_quote_asset_pool() {
+#[should_panic(expected = "Error processing Instruction 0: custom program error: 0x7")]
+pub fn test_panic_when_option_token_is_used() {
   let client = RpcClient::new_with_commitment(
     "http://localhost:8899".to_string(),
     CommitmentConfig::processed(),
@@ -384,8 +384,8 @@ pub fn test_panic_when_not_enough_amount_in_quote_asset_pool() {
 
   // Add 2 option writers to it
   let (
-    _option_writer_option_mint_keys,
-    option_writer_writer_token_keys,
+    option_writer_option_mint_keys,
+    _option_writer_writer_token_keys,
     _option_writer_underlying_asset_keys,
     option_writer_quote_asset_keys,
     option_writer_keys,
@@ -402,7 +402,14 @@ pub fn test_panic_when_not_enough_amount_in_quote_asset_pool() {
     amount_per_contract,
   )
   .unwrap();
-  create_and_add_option_writer(
+  // We move the option token from here instead
+  let (
+    tmp_option_writer_option_mint_keys,
+    _option_writer_writer_token_keys,
+    _option_writer_underlying_asset_keys,
+    _tmp_option_writer_quote_asset_keys,
+    tmp_option_writer_keys,
+  ) = create_and_add_option_writer(
     &client,
     &options_program_id,
     &underlying_asset_mint_keys,
@@ -416,18 +423,79 @@ pub fn test_panic_when_not_enough_amount_in_quote_asset_pool() {
   )
   .unwrap();
 
-  let exchange_writer_token_quote_ix =
-    solana_options::instruction::exchange_writer_token_for_quote(
-      &options_program_id,
-      &option_market_key,
-      &option_mint_keys.pubkey(),
-      &writer_token_mint_keys.pubkey(),
-      &option_writer_writer_token_keys.pubkey(),
-      &option_writer_keys.pubkey(),
-      &option_writer_quote_asset_keys.pubkey(),
-      &quote_asset_pool_key,
+  let option_market_data = client.get_account_data(&option_market_key).unwrap();
+  let option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
+  // create an option exerciser with SPL accounts we can check
+  let (exerciser_authority_keys, exerciser_quote_asset_keys, exerciser_underlying_asset_keys) =
+    create_exerciser(
+      &client,
+      &asset_authority_keys,
+      &underlying_asset_mint_keys,
+      &quote_asset_mint_keys,
+      &option_market,
     )
     .unwrap();
+
+  let exerciser_option_token_keys = move_option_token_to_exerciser(
+    &client,
+    &option_mint_keys.pubkey(),
+    &tmp_option_writer_option_mint_keys.pubkey(),
+    &tmp_option_writer_keys,
+    &exerciser_authority_keys,
+    &tmp_option_writer_keys,
+  )
+  .unwrap();
+  // generate the exercise_covered_call instruction
+  let exercise_covered_call_ix = solana_options::instruction::exercise_covered_call(
+    &options_program_id,
+    &option_mint_keys.pubkey(),
+    &option_market_key,
+    &exerciser_quote_asset_keys.pubkey(),
+    &exerciser_underlying_asset_keys.pubkey(),
+    &exerciser_authority_keys.pubkey(),
+    &option_market.underlying_asset_pool,
+    &option_market.quote_asset_pool,
+    &exerciser_option_token_keys.pubkey(),
+    &exerciser_authority_keys.pubkey(),
+  )
+  .unwrap();
+  // Send transaction to exercise in order to have assets in the quote pool
+  let signers = vec![&exerciser_authority_keys];
+  solana_helpers::send_and_confirm_transaction(
+    &client,
+    exercise_covered_call_ix,
+    &exerciser_authority_keys.pubkey(),
+    signers,
+  )
+  .unwrap();
+
+  let (option_market_authority, bump_seed) = Pubkey::find_program_address(
+    &[&option_mint_keys.pubkey().to_bytes()[..32]],
+    &options_program_id,
+  );
+  let data = OptionsInstruction::ExchangeWriterTokenForQuote { bump_seed }.pack();
+  let mut accounts = Vec::with_capacity(9);
+  accounts.push(AccountMeta::new_readonly(option_market_key, false));
+  accounts.push(AccountMeta::new_readonly(option_mint_keys.pubkey(), false));
+  accounts.push(AccountMeta::new_readonly(option_market_authority, false));
+  accounts.push(AccountMeta::new(option_mint_keys.pubkey(), false));
+  accounts.push(AccountMeta::new(
+    option_writer_option_mint_keys.pubkey(),
+    false,
+  ));
+  accounts.push(AccountMeta::new_readonly(option_writer_keys.pubkey(), true));
+  accounts.push(AccountMeta::new(
+    option_writer_quote_asset_keys.pubkey(),
+    false,
+  ));
+  accounts.push(AccountMeta::new(quote_asset_pool_key, false));
+  accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
+
+  let exchange_writer_token_quote_ix = Instruction {
+    program_id: **options_program_id,
+    data,
+    accounts,
+  };
   let signers = vec![&option_writer_keys];
   solana_helpers::send_and_confirm_transaction(
     &client,
@@ -437,5 +505,13 @@ pub fn test_panic_when_not_enough_amount_in_quote_asset_pool() {
   )
   .unwrap();
 }
-
-// test should fail burning option token??
+// panic message: `"called `Result::unwrap()` on an `Err` value: ClientError { request: Some(SendTransaction), 
+// kind: RpcError(RpcResponseError { code: -32002, message: \"Transaction simulation failed: Error processing 
+// Instruction 0: instruction tries to borrow reference for an account which is already borrowed\", 
+// data: SendTransactionPreflightFailure(RpcSimulateTransactionResult { err: Some(InstructionError(0, 
+// AccountBorrowFailed)), logs: Some([\"Program AMyhVDiYPRehfcS6MFsYTB2cYQSDCAfrVSwTH8ahKnE2 invoke [1]\", 
+// \"Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]\", \"Program log: Instruction: Burn\", 
+// \"Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 4130 of 193839 compute units\", \"Program 
+// TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success\", \"Program AMyhVDiYPRehfcS6MFsYTB2cYQSDCAfrVSwTH8ahKnE2 
+// consumed 12401 of 200000 compute units\", \"Program AMyhVDiYPRehfcS6MFsYTB2cYQSDCAfrVSwTH8ahKnE2 failed: 
+// instruction tries to borrow reference for an account which is already borrowed\"]) }) }) }"`
