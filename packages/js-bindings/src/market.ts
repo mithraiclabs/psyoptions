@@ -3,59 +3,28 @@ import BN from 'bn.js';
 import * as BufferLayout from 'buffer-layout';
 import * as Layout from './layout';
 
-const MAX_CONTRACTS = 10;
-
-export type OptionWriter = {
-  underlyingAssetAcctAddress: PublicKey;
-  quoteAssetAcctAddress: PublicKey;
-  contractTokenAcctAddress: PublicKey;
-};
-export const optionWriterStructArray = [
-  Layout.publicKey('underlyingAssetAcctAddress'),
-  Layout.publicKey('quoteAssetAcctAddress'),
-  Layout.publicKey('contractTokenAcctAddress'),
-] as BufferLayout.Layout<any>[];
-
-export const OPTION_WRITER_LAYOUT = BufferLayout.struct(
-  optionWriterStructArray,
-);
-
-export type OptionWriterRegistry = {
-  accountType: Layout.AccountType.Registry;
-  optionMarketKey: PublicKey;
-  registryLength: number;
-  registry: OptionWriter[];
-};
-
 export type OptionMarket = {
-  accountType: Layout.AccountType.Market;
-  optionMintAddress: PublicKey;
-  underlyingAssetMintAddress: PublicKey;
-  quoteAssetMintAddress: PublicKey;
+  optionMintKey: PublicKey;
+  writerTokenMintKey: PublicKey;
+  underlyingAssetMintKey: PublicKey;
+  quoteAssetMintKey: PublicKey;
   amountPerContract: BN;
   quoteAmountPerContract: BN;
   expirationUnixTimestamp: number;
-  underlyingAssetPoolAddress: PublicKey;
-  writerRegistryAddress: PublicKey;
+  underlyingAssetPoolKey: PublicKey;
+  quoteAssetPoolKey: PublicKey;
 };
 
 export const OPTION_MARKET_LAYOUT = BufferLayout.struct([
-  Layout.accountType('accountType'),
-  Layout.publicKey('optionMintAddress'),
-  Layout.publicKey('underlyingAssetMintAddress'),
-  Layout.publicKey('quoteAssetMintAddress'),
+  Layout.publicKey('optionMintKey'),
+  Layout.publicKey('writerTokenMintKey'),
+  Layout.publicKey('underlyingAssetMintKey'),
+  Layout.publicKey('quoteAssetMintKey'),
   Layout.uint64('amountPerContract'),
   Layout.uint64('quoteAmountPerContract'),
   BufferLayout.ns64('expirationUnixTimestamp'),
-  Layout.publicKey('underlyingAssetPoolAddress'),
-  Layout.publicKey('writerRegistryAddress'),
-]);
-
-export const OPTION_WRITER_REGISTRY_LAYOUT = BufferLayout.struct([
-  Layout.accountType('accountType'),
-  Layout.publicKey('optionMarketKey'),
-  BufferLayout.u16('registryLength'),
-  BufferLayout.seq(OPTION_WRITER_LAYOUT, MAX_CONTRACTS, 'registry'),
+  Layout.publicKey('underlyingAssetPoolKey'),
+  Layout.publicKey('quoteAssetPoolKey'),
 ]);
 
 export class Market {
@@ -112,11 +81,9 @@ export class Market {
       (market) =>
         // eslint-disable-next-line implicit-arrow-linebreak
         assetAddresses.includes(
-          market.marketData.underlyingAssetMintAddress.toString(),
+          market.marketData.underlyingAssetMintKey.toString(),
         ) &&
-        assetAddresses.includes(
-          market.marketData.quoteAssetMintAddress.toString(),
-        ),
+        assetAddresses.includes(market.marketData.quoteAssetMintKey.toString()),
     );
   };
 }
