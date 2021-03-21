@@ -232,6 +232,11 @@ impl Processor {
         if clock.unix_timestamp > option_market.expiration_unix_timestamp {
             return Err(OptionsError::OptionMarketHasExpired.into());
         }
+        if *underlying_asset_pool_acct.key != option_market.underlying_asset_pool
+            || *quote_asset_pool_acct.key != option_market.quote_asset_pool
+        {
+            return Err(OptionsError::IncorrectPool.into());
+        }
 
         // Burn an option token that was in the account passed in
         let burn_option_ix = token_instruction::burn(
