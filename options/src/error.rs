@@ -30,7 +30,7 @@ pub enum OptionsError {
     IncorrectPool,
     /// The Option Token or Writer Token does not match the Option Market
     #[error("Option or writer token does not match market")]
-    IncorrectMarketTokens
+    IncorrectMarketTokens,
 }
 impl From<OptionsError> for ProgramError {
     fn from(e: OptionsError) -> Self {

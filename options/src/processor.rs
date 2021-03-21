@@ -452,6 +452,74 @@ impl Processor {
         Ok(())
     }
 
+    pub fn process_exchange_writer_token_for_quote(
+        accounts: &[AccountInfo],
+        bump_seed: u8,
+    ) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let option_market_acct = next_account_info(account_info_iter)?;
+        let option_mint_acct = next_account_info(account_info_iter)?;
+        let option_market_authority_acct = next_account_info(account_info_iter)?;
+        let writer_token_mint_acct = next_account_info(account_info_iter)?;
+        let writer_token_source_acct = next_account_info(account_info_iter)?;
+        let writer_token_source_authority_acct = next_account_info(account_info_iter)?;
+        let quote_asset_dest_acct = next_account_info(account_info_iter)?;
+        let quote_asset_pool_acct = next_account_info(account_info_iter)?;
+        let spl_token_program_acct = next_account_info(account_info_iter)?;
+
+        let option_market_data = option_market_acct.try_borrow_data()?;
+        let option_market = OptionMarket::unpack(&option_market_data)?;
+
+        if *quote_asset_pool_acct.key != option_market.quote_asset_pool {
+            return Err(OptionsError::IncorrectPool.into());
+        }
+        if *writer_token_mint_acct.key != option_market.writer_token_mint {
+            return Err(OptionsError::IncorrectMarketTokens.into());
+        }
+
+        // Burn Writer Token
+        let burn_writer_token_ix = token_instruction::burn(
+            &spl_token_program_acct.key,
+            &writer_token_source_acct.key,
+            &writer_token_mint_acct.key,
+            &writer_token_source_authority_acct.key,
+            &[],
+            1,
+        )?;
+        invoke_signed(
+            &burn_writer_token_ix,
+            &[
+                writer_token_source_acct.clone(),
+                writer_token_mint_acct.clone(),
+                writer_token_source_authority_acct.clone(),
+                spl_token_program_acct.clone(),
+            ],
+            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+        )?;
+
+        // transfer quote asset from the pool to the destination account
+        let transfer_underlying_tokens_ix = token_instruction::transfer(
+            &spl_token_program_acct.key,
+            &option_market.quote_asset_pool,
+            &quote_asset_dest_acct.key,
+            &option_market_authority_acct.key,
+            &[],
+            option_market.quote_amount_per_contract,
+        )?;
+        invoke_signed(
+            &transfer_underlying_tokens_ix,
+            &[
+                quote_asset_pool_acct.clone(),
+                quote_asset_dest_acct.clone(),
+                option_market_authority_acct.clone(),
+                spl_token_program_acct.clone(),
+            ],
+            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+        )?;
+
+        Ok(())
+    }
+
     pub fn process(program_id: &Pubkey, accounts: &[AccountInfo], input: &[u8]) -> ProgramResult {
         let instruction = OptionsInstruction::unpack(input)?;
 
@@ -478,6 +546,9 @@ impl Processor {
             }
             OptionsInstruction::ClosePosition { bump_seed } => {
                 Self::process_close_position(accounts, bump_seed)
+            }
+            OptionsInstruction::ExchangeWriterTokenForQuote { bump_seed } => {
+                Self::process_exchange_writer_token_for_quote(accounts, bump_seed)
             }
         }
     }
