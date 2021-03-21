@@ -53,7 +53,7 @@ export const exchangeWriterTokenForQuoteInstruction = async ({
    * OptionInstruction.unpack function (instruction.rs)
    */
   const tagBuffer = Buffer.alloc(INTRUCTION_TAG_LAYOUT.span);
-  INTRUCTION_TAG_LAYOUT.encode(4, tagBuffer, 0);
+  INTRUCTION_TAG_LAYOUT.encode(5, tagBuffer, 0);
 
   // concatentate the tag with the data
   const data = Buffer.concat([tagBuffer, exchangeWriterTokenForQuoteBuffer]);

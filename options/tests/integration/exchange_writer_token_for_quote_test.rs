@@ -505,13 +505,3 @@ pub fn test_panic_when_option_token_is_used() {
   )
   .unwrap();
 }
-// panic message: `"called `Result::unwrap()` on an `Err` value: ClientError { request: Some(SendTransaction), 
-// kind: RpcError(RpcResponseError { code: -32002, message: \"Transaction simulation failed: Error processing 
-// Instruction 0: instruction tries to borrow reference for an account which is already borrowed\", 
-// data: SendTransactionPreflightFailure(RpcSimulateTransactionResult { err: Some(InstructionError(0, 
-// AccountBorrowFailed)), logs: Some([\"Program AMyhVDiYPRehfcS6MFsYTB2cYQSDCAfrVSwTH8ahKnE2 invoke [1]\", 
-// \"Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]\", \"Program log: Instruction: Burn\", 
-// \"Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 4130 of 193839 compute units\", \"Program 
-// TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success\", \"Program AMyhVDiYPRehfcS6MFsYTB2cYQSDCAfrVSwTH8ahKnE2 
-// consumed 12401 of 200000 compute units\", \"Program AMyhVDiYPRehfcS6MFsYTB2cYQSDCAfrVSwTH8ahKnE2 failed: 
-// instruction tries to borrow reference for an account which is already borrowed\"]) }) }) }"`
