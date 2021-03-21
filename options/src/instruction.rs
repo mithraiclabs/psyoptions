@@ -83,6 +83,18 @@ pub enum OptionsInstruction {
     /// Close a single option contract prior to expiration.
     /// Burns the _option token_ and the _writer token_ and returns the
     /// underlying asset back to the writer (or address specified).
+    ///
+    /// 0. `[]` SPL Token porgram
+    /// 1. `[]` Option Market
+    /// 2. `[writable]` Option Mint
+    /// 3. `[]` Option Mint Authority
+    /// 4. `[writable]` Option Token Source
+    /// 5. `[signer]` Option Token Source Authority
+    /// 6. `[writable]` Writer Token Mint
+    /// 7. `[writable]` Writer Token Source
+    /// 8. `[]` Writer Token Source Authority
+    /// 9. `[writable]` Underlying Asset Destination
+    /// 10. `[writable]` Underlying Asset Pool
     ClosePosition { bump_seed: u8 },
     /// Allow a user to exchange their Writer Token for Quote Asset.
     /// Burns the Writer Token and transfers the Quote Asset amount
