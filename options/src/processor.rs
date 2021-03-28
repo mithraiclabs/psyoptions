@@ -140,6 +140,13 @@ impl Processor {
         let option_market_data = option_market_acct.try_borrow_data()?;
         let option_market = OptionMarket::unpack(&option_market_data)?;
 
+        // Validate that the option mint and writer token mint are the same as the market
+        if option_market.option_mint != *option_mint_acct.key
+            || option_market.writer_token_mint != *writer_token_mint_acct.key
+        {
+            return Err(OptionsError::IncorrectMarketTokens.into());
+        }
+
         // Deserialize the account into a clock struct
         let clock = Clock::from_account_info(&clock_sysvar_info)?;
         // Verify that the expiration date for the options market has not passed
