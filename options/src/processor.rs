@@ -134,7 +134,7 @@ impl Processor {
         let option_market_acct = next_account_info(account_info_iter)?;
         let authority_acct = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
-        let option_mint_authority_acct = next_account_info(account_info_iter)?;
+        let market_authority_acct = next_account_info(account_info_iter)?;
         let clock_sysvar_info = next_account_info(account_info_iter)?;
         // Get the amount of underlying asset for transfer
         let option_market_data = option_market_acct.try_borrow_data()?;
@@ -143,9 +143,9 @@ impl Processor {
         // Assert that the derived address from the given option market account is 
         // the same as the OptionMarket. This blocks adversaries from spoofing an 
         // option market to drain the vaults.
-        let (option_mint_authority_pubkey, _bump_seed) =
+        let (market_authority_pubkey, _bump_seed) =
             Pubkey::find_program_address(&[&option_market_acct.key.to_bytes()[..32]], &program_id);
-        if option_mint_authority_pubkey != *option_mint_authority_acct.key {
+        if market_authority_pubkey != *market_authority_acct.key {
             return Err(OptionsError::BadMarketAddress.into())
         }
 
@@ -187,14 +187,14 @@ impl Processor {
             &spl_program_acct.key,
             &option_mint_acct.key,
             &minted_option_dest_acct.key,
-            &option_mint_authority_acct.key,
+            &market_authority_acct.key,
             &[],
             1,
         )?;
         invoke_signed(
             &mint_option_ix,
             &[
-                option_mint_authority_acct.clone(),
+                market_authority_acct.clone(),
                 minted_option_dest_acct.clone(),
                 option_mint_acct.clone(),
                 spl_program_acct.clone(),
@@ -207,14 +207,14 @@ impl Processor {
             &spl_program_acct.key,
             &writer_token_mint_acct.key,
             &writer_token_dest_acct.key,
-            &option_mint_authority_acct.key,
+            &market_authority_acct.key,
             &[],
             1,
         )?;
         invoke_signed(
             &mint_writer_token_ix,
             &[
-                option_mint_authority_acct.clone(),
+                market_authority_acct.clone(),
                 writer_token_dest_acct.clone(),
                 writer_token_mint_acct.clone(),
                 spl_program_acct.clone(),
@@ -225,7 +225,7 @@ impl Processor {
         Ok(())
     }
 
-    pub fn process_exercise_covered_call(accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
+    pub fn process_exercise_covered_call(program_id: &Pubkey, accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let clock_sysvar_info = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
@@ -235,13 +235,22 @@ impl Processor {
         let exerciser_underlying_asset_acct = next_account_info(account_info_iter)?;
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let quote_asset_pool_acct = next_account_info(account_info_iter)?;
-        let options_spl_authority_acct = next_account_info(account_info_iter)?;
+        let market_authority_acct = next_account_info(account_info_iter)?;
         let option_mint_acct = next_account_info(account_info_iter)?;
         let option_token_acct = next_account_info(account_info_iter)?;
         let option_token_authority_acct = next_account_info(account_info_iter)?;
 
         let option_market_data = option_market_acct.try_borrow_data()?;
         let option_market = OptionMarket::unpack(&option_market_data)?;
+
+        // Assert that the derived address from the given option market account is 
+        // the same as the OptionMarket. This blocks adversaries from spoofing an 
+        // option market to drain the vaults.
+        let (market_authority_pubkey, _bump_seed) =
+            Pubkey::find_program_address(&[&option_market_acct.key.to_bytes()[..32]], &program_id);
+        if market_authority_pubkey != *market_authority_acct.key {
+            return Err(OptionsError::BadMarketAddress.into())
+        }
 
         let clock = Clock::from_account_info(&clock_sysvar_info)?;
         // Verify that the OptionMarket has not expired
@@ -293,7 +302,7 @@ impl Processor {
             &spl_program_acct.key,
             &underlying_asset_pool_acct.key,
             &exerciser_underlying_asset_acct.key,
-            &options_spl_authority_acct.key,
+            &market_authority_acct.key,
             &[],
             option_market.underlying_amount_per_contract,
         )?;
@@ -302,7 +311,7 @@ impl Processor {
             &[
                 underlying_asset_pool_acct.clone(),
                 exerciser_underlying_asset_acct.clone(),
-                options_spl_authority_acct.clone(),
+                market_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
             &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
@@ -311,12 +320,12 @@ impl Processor {
         Ok(())
     }
 
-    pub fn process_close_position(accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
+    pub fn process_close_position(program_id: &Pubkey, accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let spl_program_acct = next_account_info(account_info_iter)?;
         let option_market_acct = next_account_info(account_info_iter)?;
         let option_mint_acct = next_account_info(account_info_iter)?;
-        let option_mint_authority_acct = next_account_info(account_info_iter)?;
+        let market_authority_acct = next_account_info(account_info_iter)?;
         let option_token_src_acct = next_account_info(account_info_iter)?;
         let option_token_src_auth_acct = next_account_info(account_info_iter)?;
         let writer_token_mint_acct = next_account_info(account_info_iter)?;
@@ -325,10 +334,19 @@ impl Processor {
         let underlying_asset_dest_acct = next_account_info(account_info_iter)?;
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
 
+        // Assert that the derived address from the given option market account is 
+        // the same as the OptionMarket. This blocks adversaries from spoofing an 
+        // option market to drain the vaults.
+        let (market_authority_pubkey, _bump_seed) =
+            Pubkey::find_program_address(&[&option_market_acct.key.to_bytes()[..32]], &program_id);
+        if market_authority_pubkey != *market_authority_acct.key {
+            return Err(OptionsError::BadMarketAddress.into())
+        }
+
         // validate the Writer Token and Option Token mints are for the market specified
         let option_market_data = option_market_acct.try_borrow_data()?;
         let option_market = OptionMarket::unpack(&option_market_data)?;
-
+        
         if option_market.option_mint != *option_mint_acct.key
             || option_market.writer_token_mint != *writer_token_mint_acct.key
         {
@@ -382,7 +400,7 @@ impl Processor {
             &spl_program_acct.key,
             &underlying_asset_pool_acct.key,
             &underlying_asset_dest_acct.key,
-            &option_mint_authority_acct.key,
+            &market_authority_acct.key,
             &[],
             option_market.underlying_amount_per_contract,
         )?;
@@ -391,7 +409,7 @@ impl Processor {
             &[
                 underlying_asset_pool_acct.clone(),
                 underlying_asset_dest_acct.clone(),
-                option_mint_authority_acct.clone(),
+                market_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
             &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
@@ -400,11 +418,11 @@ impl Processor {
         Ok(())
     }
 
-    pub fn process_close_post_expiration(accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
+    pub fn process_close_post_expiration(program_id: &Pubkey, accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let option_market_acct = next_account_info(account_info_iter)?;
         let option_mint_acct = next_account_info(account_info_iter)?;
-        let option_mint_authority_acct = next_account_info(account_info_iter)?;
+        let market_authority_acct = next_account_info(account_info_iter)?;
         let writer_token_mint_acct = next_account_info(account_info_iter)?;
         let writer_token_source_acct = next_account_info(account_info_iter)?;
         let writer_token_source_authority_acct = next_account_info(account_info_iter)?;
@@ -412,6 +430,15 @@ impl Processor {
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
         let clock_sysvar_info = next_account_info(account_info_iter)?;
+
+        // Assert that the derived address from the given option market account is 
+        // the same as the OptionMarket. This blocks adversaries from spoofing an 
+        // option market to drain the vaults.
+        let (market_authority_pubkey, _bump_seed) =
+            Pubkey::find_program_address(&[&option_market_acct.key.to_bytes()[..32]], &program_id);
+        if market_authority_pubkey != *market_authority_acct.key {
+            return Err(OptionsError::BadMarketAddress.into())
+        }
 
         let option_market_data = option_market_acct.try_borrow_data()?;
         let option_market = OptionMarket::unpack(&option_market_data)?;
@@ -450,7 +477,7 @@ impl Processor {
             &spl_program_acct.key,
             &underlying_asset_pool_acct.key,
             &underlying_asset_dest_acct.key,
-            &option_mint_authority_acct.key,
+            &market_authority_acct.key,
             &[],
             option_market.underlying_amount_per_contract,
         )?;
@@ -459,7 +486,7 @@ impl Processor {
             &[
                 underlying_asset_pool_acct.clone(),
                 underlying_asset_dest_acct.clone(),
-                option_mint_authority_acct.clone(),
+                market_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
             &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
@@ -469,19 +496,29 @@ impl Processor {
     }
 
     pub fn process_exchange_writer_token_for_quote(
+        program_id: &Pubkey,
         accounts: &[AccountInfo],
         bump_seed: u8,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let option_market_acct = next_account_info(account_info_iter)?;
         let option_mint_acct = next_account_info(account_info_iter)?;
-        let option_market_authority_acct = next_account_info(account_info_iter)?;
+        let market_authority_acct = next_account_info(account_info_iter)?;
         let writer_token_mint_acct = next_account_info(account_info_iter)?;
         let writer_token_source_acct = next_account_info(account_info_iter)?;
         let writer_token_source_authority_acct = next_account_info(account_info_iter)?;
         let quote_asset_dest_acct = next_account_info(account_info_iter)?;
         let quote_asset_pool_acct = next_account_info(account_info_iter)?;
         let spl_token_program_acct = next_account_info(account_info_iter)?;
+
+        // Assert that the derived address from the given option market account is 
+        // the same as the OptionMarket. This blocks adversaries from spoofing an 
+        // option market to drain the vaults.
+        let (market_authority_pubkey, _bump_seed) =
+            Pubkey::find_program_address(&[&option_market_acct.key.to_bytes()[..32]], &program_id);
+        if market_authority_pubkey != *market_authority_acct.key {
+            return Err(OptionsError::BadMarketAddress.into())
+        }
 
         let option_market_data = option_market_acct.try_borrow_data()?;
         let option_market = OptionMarket::unpack(&option_market_data)?;
@@ -518,7 +555,7 @@ impl Processor {
             &spl_token_program_acct.key,
             &option_market.quote_asset_pool,
             &quote_asset_dest_acct.key,
-            &option_market_authority_acct.key,
+            &market_authority_acct.key,
             &[],
             option_market.quote_amount_per_contract,
         )?;
@@ -527,7 +564,7 @@ impl Processor {
             &[
                 quote_asset_pool_acct.clone(),
                 quote_asset_dest_acct.clone(),
-                option_market_authority_acct.clone(),
+                market_authority_acct.clone(),
                 spl_token_program_acct.clone(),
             ],
             &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
@@ -555,16 +592,16 @@ impl Processor {
                 Self::process_mint_covered_call(program_id, accounts, bump_seed)
             }
             OptionsInstruction::ExerciseCoveredCall { bump_seed } => {
-                Self::process_exercise_covered_call(accounts, bump_seed)
+                Self::process_exercise_covered_call(program_id, accounts, bump_seed)
             }
             OptionsInstruction::ClosePostExpiration { bump_seed } => {
-                Self::process_close_post_expiration(accounts, bump_seed)
+                Self::process_close_post_expiration(program_id, accounts, bump_seed)
             }
             OptionsInstruction::ClosePosition { bump_seed } => {
-                Self::process_close_position(accounts, bump_seed)
+                Self::process_close_position(program_id, accounts, bump_seed)
             }
             OptionsInstruction::ExchangeWriterTokenForQuote { bump_seed } => {
-                Self::process_exchange_writer_token_for_quote(accounts, bump_seed)
+                Self::process_exchange_writer_token_for_quote(program_id, accounts, bump_seed)
             }
         }
     }
