@@ -538,6 +538,7 @@ mod tests {
         assert_eq!(unpacked, check);
     }
 
+    #[test]
     fn test_pack_unpack_exchange_writer_token_for_quote() {
         let bump_seed = 1;
         let check = OptionsInstruction::ExchangeWriterTokenForQuote { bump_seed };

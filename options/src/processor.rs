@@ -167,7 +167,7 @@ impl Processor {
         let transfer_tokens_ix = token_instruction::transfer(
             &spl_program_acct.key,
             &underyling_asset_src_acct.key,
-            &underlying_asset_pool_acct.key,
+            &option_market.underlying_asset_pool,
             &authority_acct.key,
             &[],
             option_market.underlying_amount_per_contract,
@@ -185,7 +185,7 @@ impl Processor {
         // mint an option token to the user
         let mint_option_ix = token_instruction::mint_to(
             &spl_program_acct.key,
-            &option_mint_acct.key,
+            &option_market.option_mint,
             &minted_option_dest_acct.key,
             &market_authority_acct.key,
             &[],
@@ -205,7 +205,7 @@ impl Processor {
         // mint a writer token to the user
         let mint_writer_token_ix = token_instruction::mint_to(
             &spl_program_acct.key,
-            &writer_token_mint_acct.key,
+            &option_market.writer_token_mint,
             &writer_token_dest_acct.key,
             &market_authority_acct.key,
             &[],
