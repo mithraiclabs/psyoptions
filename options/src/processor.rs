@@ -262,7 +262,7 @@ impl Processor {
         let burn_option_ix = token_instruction::burn(
             &spl_program_acct.key,
             &option_token_acct.key,
-            &option_mint_acct.key,
+            &option_market.option_mint,
             &option_token_authority_acct.key,
             &[],
             1,
@@ -282,7 +282,7 @@ impl Processor {
         let transer_quote_tokens_ix = token_instruction::transfer(
             &spl_program_acct.key,
             &exerciser_quote_asset_acct.key,
-            &quote_asset_pool_acct.key,
+            &option_market.quote_asset_pool,
             &exerciser_authority_acct.key,
             &[],
             option_market.quote_amount_per_contract,
@@ -300,7 +300,7 @@ impl Processor {
         // transfer underlying asset from the pool to the exerciser's account
         let transfer_underlying_tokens_ix = token_instruction::transfer(
             &spl_program_acct.key,
-            &underlying_asset_pool_acct.key,
+            &option_market.underlying_asset_pool,
             &exerciser_underlying_asset_acct.key,
             &market_authority_acct.key,
             &[],
@@ -359,7 +359,7 @@ impl Processor {
         let burn_writer_token_ix = token_instruction::burn(
             &spl_program_acct.key,
             &writer_token_source_acct.key,
-            &writer_token_mint_acct.key,
+            &option_market.writer_token_mint,
             &writer_token_source_authority_acct.key,
             &[],
             1,
@@ -379,7 +379,7 @@ impl Processor {
         let burn_option_token_ix = token_instruction::burn(
             &spl_program_acct.key,
             &option_token_src_acct.key,
-            &option_mint_acct.key,
+            &option_market.option_mint,
             &option_token_src_auth_acct.key,
             &[],
             1,
@@ -398,7 +398,7 @@ impl Processor {
         // transfer underlying asset from the pool to the option writers's account
         let transfer_underlying_tokens_ix = token_instruction::transfer(
             &spl_program_acct.key,
-            &underlying_asset_pool_acct.key,
+            &option_market.underlying_asset_pool,
             &underlying_asset_dest_acct.key,
             &market_authority_acct.key,
             &[],
@@ -456,7 +456,7 @@ impl Processor {
         let burn_writer_token_ix = token_instruction::burn(
             &spl_program_acct.key,
             &writer_token_source_acct.key,
-            &writer_token_mint_acct.key,
+            &option_market.writer_token_mint,
             &writer_token_source_authority_acct.key,
             &[],
             1,
@@ -475,7 +475,7 @@ impl Processor {
         // transfer underlying asset from the pool to the option writers's account
         let transfer_underlying_tokens_ix = token_instruction::transfer(
             &spl_program_acct.key,
-            &underlying_asset_pool_acct.key,
+            &option_market.underlying_asset_pool,
             &underlying_asset_dest_acct.key,
             &market_authority_acct.key,
             &[],
@@ -534,7 +534,7 @@ impl Processor {
         let burn_writer_token_ix = token_instruction::burn(
             &spl_token_program_acct.key,
             &writer_token_source_acct.key,
-            &writer_token_mint_acct.key,
+            &option_market.writer_token_mint,
             &writer_token_source_authority_acct.key,
             &[],
             1,
