@@ -34,6 +34,8 @@ pub enum OptionsInstruction {
         quote_amount_per_contract: u64,
         /// The Unix timestamp at which the contracts in this market expire
         expiration_unix_timestamp: UnixTimestamp,
+        /// Bump Seed for the program derived address
+        bump_seed: u8,
     },
     /// Mints an Options token to represent a Covered Call
     ///
@@ -122,11 +124,13 @@ impl OptionsInstruction {
             0 => {
                 let (underlying_amount_per_contract, rest) = Self::unpack_u64(rest)?;
                 let (quote_amount_per_contract, rest) = Self::unpack_u64(rest)?;
-                let (expiration_unix_timestamp, _rest) = Self::unpack_timestamp(rest)?;
+                let (expiration_unix_timestamp, rest) = Self::unpack_timestamp(rest)?;
+                let (bump_seed, _rest) = Self::unpack_u8(rest)?;
                 Self::InitializeMarket {
                     underlying_amount_per_contract,
                     quote_amount_per_contract,
                     expiration_unix_timestamp,
+                    bump_seed,
                 }
             }
             1 => {
@@ -161,11 +165,13 @@ impl OptionsInstruction {
                 ref underlying_amount_per_contract,
                 ref quote_amount_per_contract,
                 ref expiration_unix_timestamp,
+                ref bump_seed,
             } => {
                 buf.push(0);
                 buf.extend_from_slice(&underlying_amount_per_contract.to_le_bytes());
                 buf.extend_from_slice(&quote_amount_per_contract.to_le_bytes());
                 buf.extend_from_slice(&expiration_unix_timestamp.to_le_bytes());
+                buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
             &Self::MintCoveredCall { ref bump_seed } => {
                 buf.push(1);
@@ -237,12 +243,13 @@ pub fn initialize_market(
     quote_amount_per_contract: u64,
     expiration_unix_timestamp: UnixTimestamp,
 ) -> Result<Instruction, ProgramError> {
-    let (option_mint_authority, _bump_seed) =
+    let (option_mint_authority, bump_seed) =
         Pubkey::find_program_address(&[&option_mint.to_bytes()[..32]], &program_id);
     let data = OptionsInstruction::InitializeMarket {
         underlying_amount_per_contract,
         quote_amount_per_contract,
         expiration_unix_timestamp,
+        bump_seed,
     }
     .pack();
 
@@ -449,7 +456,10 @@ pub fn exchange_writer_token_for_quote(
     accounts.push(AccountMeta::new_readonly(option_market_authority, false));
     accounts.push(AccountMeta::new(*writer_token_mint, false));
     accounts.push(AccountMeta::new(*writer_token_source, false));
-    accounts.push(AccountMeta::new_readonly(*writer_token_source_authority, true));
+    accounts.push(AccountMeta::new_readonly(
+        *writer_token_source_authority,
+        true,
+    ));
     accounts.push(AccountMeta::new(*quote_asset_dest, false));
     accounts.push(AccountMeta::new(*quote_asset_pool, false));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
@@ -470,10 +480,12 @@ mod tests {
         let underlying_amount_per_contract: u64 = 100;
         let quote_amount_per_contract: u64 = 500; // strike price of 5
         let expiration_unix_timestamp: UnixTimestamp = 1607743435;
+        let bump_seed: u8 = 1;
         let check = OptionsInstruction::InitializeMarket {
             underlying_amount_per_contract,
             quote_amount_per_contract,
             expiration_unix_timestamp,
+            bump_seed,
         };
         let packed = check.pack();
         // add the tag to the expected buffer
@@ -482,6 +494,7 @@ mod tests {
         expect.extend_from_slice(&underlying_amount_per_contract.to_le_bytes());
         expect.extend_from_slice(&quote_amount_per_contract.to_le_bytes());
         expect.extend_from_slice(&expiration_unix_timestamp.to_le_bytes());
+        expect.extend_from_slice(&bump_seed.to_le_bytes());
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);

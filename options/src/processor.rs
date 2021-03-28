@@ -19,6 +19,7 @@ impl Processor {
         underlying_amount_per_contract: u64,
         quote_amount_per_contract: u64,
         expiration_unix_timestamp: UnixTimestamp,
+        bump_seed: u8,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let underlying_asset_mint_acct = next_account_info(account_info_iter)?;
@@ -117,6 +118,7 @@ impl Processor {
                 expiration_unix_timestamp,
                 underlying_asset_pool: *underlying_asset_pool_acct.key,
                 quote_asset_pool: *quote_asset_pool_acct.key,
+                bump_seed,
             },
             &mut option_market_data_acct.data.borrow_mut(),
         )?;
@@ -528,12 +530,14 @@ impl Processor {
                 underlying_amount_per_contract,
                 quote_amount_per_contract,
                 expiration_unix_timestamp,
+                bump_seed,
             } => Self::process_init_market(
                 program_id,
                 accounts,
                 underlying_amount_per_contract,
                 quote_amount_per_contract,
                 expiration_unix_timestamp,
+                bump_seed,
             ),
             OptionsInstruction::MintCoveredCall { bump_seed } => {
                 Self::process_mint_covered_call(accounts, bump_seed)
