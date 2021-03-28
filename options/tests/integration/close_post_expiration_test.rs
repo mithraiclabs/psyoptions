@@ -347,7 +347,7 @@ pub fn test_panic_when_non_underlying_asset_pool_is_used() {
   .unwrap();
 
   let (option_mint_authority, bump_seed) =
-    Pubkey::find_program_address(&[&option_mint_keys.pubkey().to_bytes()[..32]], &program_id);
+    Pubkey::find_program_address(&[&option_market_key.to_bytes()[..32]], &program_id);
 
   let data = OptionsInstruction::ClosePostExpiration { bump_seed }.pack();
 

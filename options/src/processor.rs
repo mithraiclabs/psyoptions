@@ -123,7 +123,7 @@ impl Processor {
         Ok(())
     }
 
-    pub fn process_mint_covered_call(accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
+    pub fn process_mint_covered_call(program_id: &Pubkey, accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let option_mint_acct = next_account_info(account_info_iter)?;
         let minted_option_dest_acct = next_account_info(account_info_iter)?;
@@ -139,6 +139,15 @@ impl Processor {
         // Get the amount of underlying asset for transfer
         let option_market_data = option_market_acct.try_borrow_data()?;
         let option_market = OptionMarket::unpack(&option_market_data)?;
+
+        // Assert that the derived address from the given option market account is 
+        // the same as the OptionMarket. This blocks adversaries from spoofing an 
+        // option market to drain the vaults.
+        let (option_mint_authority_pubkey, _bump_seed) =
+            Pubkey::find_program_address(&[&option_market_acct.key.to_bytes()[..32]], &program_id);
+        if option_mint_authority_pubkey != *option_mint_authority_acct.key {
+            return Err(OptionsError::BadMarketAddress.into())
+        }
 
         // Validate that the option mint and writer token mint are the same as the market
         if option_market.option_mint != *option_mint_acct.key
@@ -190,7 +199,7 @@ impl Processor {
                 option_mint_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
         )?;
 
         // mint a writer token to the user
@@ -210,7 +219,7 @@ impl Processor {
                 writer_token_mint_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
         )?;
 
         Ok(())
@@ -257,7 +266,7 @@ impl Processor {
                 option_token_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
         )?;
 
         // transfer the quote asset from the Exerciser to the quote asset pool
@@ -296,7 +305,7 @@ impl Processor {
                 options_spl_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
         )?;
 
         Ok(())
@@ -345,7 +354,7 @@ impl Processor {
                 writer_token_source_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
         )?;
 
         // Burn Option Token
@@ -365,7 +374,7 @@ impl Processor {
                 option_token_src_auth_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
         )?;
 
         // transfer underlying asset from the pool to the option writers's account
@@ -385,7 +394,7 @@ impl Processor {
                 option_mint_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
         )?;
 
         Ok(())
@@ -433,7 +442,7 @@ impl Processor {
                 writer_token_source_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
         )?;
 
         // transfer underlying asset from the pool to the option writers's account
@@ -453,7 +462,7 @@ impl Processor {
                 option_mint_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
         )?;
 
         Ok(())
@@ -501,7 +510,7 @@ impl Processor {
                 writer_token_source_authority_acct.clone(),
                 spl_token_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
         )?;
 
         // transfer quote asset from the pool to the destination account
@@ -521,7 +530,7 @@ impl Processor {
                 option_market_authority_acct.clone(),
                 spl_token_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
         )?;
 
         Ok(())
@@ -543,7 +552,7 @@ impl Processor {
                 expiration_unix_timestamp,
             ),
             OptionsInstruction::MintCoveredCall { bump_seed } => {
-                Self::process_mint_covered_call(accounts, bump_seed)
+                Self::process_mint_covered_call(program_id, accounts, bump_seed)
             }
             OptionsInstruction::ExerciseCoveredCall { bump_seed } => {
                 Self::process_exercise_covered_call(accounts, bump_seed)

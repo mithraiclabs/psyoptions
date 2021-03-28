@@ -31,6 +31,9 @@ pub enum OptionsError {
     /// The Option Token or Writer Token does not match the Option Market
     #[error("Option or writer token does not match market")]
     IncorrectMarketTokens,
+    /// The OptionMarket address provided does not match
+    #[error("The OptionMarket address does not match")]
+    BadMarketAddress
 }
 impl From<OptionsError> for ProgramError {
     fn from(e: OptionsError) -> Self {

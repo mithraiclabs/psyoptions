@@ -230,7 +230,7 @@ pub fn initialize_market(
     quote_asset_mint: &Pubkey,
     option_mint: &Pubkey,
     writer_token_mint: &Pubkey,
-    option_market: &Pubkey,
+    options_market: &Pubkey,
     underlying_asset_pool: &Pubkey,
     quote_asset_pool: &Pubkey,
     underlying_amount_per_contract: u64,
@@ -238,7 +238,7 @@ pub fn initialize_market(
     expiration_unix_timestamp: UnixTimestamp,
 ) -> Result<Instruction, ProgramError> {
     let (option_mint_authority, _bump_seed) =
-        Pubkey::find_program_address(&[&option_mint.to_bytes()[..32]], &program_id);
+        Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
     let data = OptionsInstruction::InitializeMarket {
         underlying_amount_per_contract,
         quote_amount_per_contract,
@@ -251,7 +251,7 @@ pub fn initialize_market(
         AccountMeta::new_readonly(*quote_asset_mint, false),
         AccountMeta::new(*option_mint, false),
         AccountMeta::new(*writer_token_mint, false),
-        AccountMeta::new(*option_market, false),
+        AccountMeta::new(*options_market, false),
         AccountMeta::new_readonly(option_mint_authority, false),
         AccountMeta::new(*underlying_asset_pool, false),
         AccountMeta::new(*quote_asset_pool, false),
@@ -290,7 +290,7 @@ pub fn mint_covered_call(
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
 
     let (option_mint_authority_pubkey, bump_seed) =
-        Pubkey::find_program_address(&[&option_mint.to_bytes()[..32]], &program_id);
+        Pubkey::find_program_address(&[&option_market.to_bytes()[..32]], &program_id);
     accounts.push(AccountMeta::new_readonly(
         option_mint_authority_pubkey,
         false,
@@ -319,7 +319,7 @@ pub fn close_position(
     underlying_asset_dest: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
     let (option_mint_authority, bump_seed) =
-        Pubkey::find_program_address(&[&option_mint_key.to_bytes()[..32]], &program_id);
+        Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
 
     let data = OptionsInstruction::ClosePosition { bump_seed }.pack();
 
@@ -361,7 +361,7 @@ pub fn close_post_expiration(
     underlying_asset_dest: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
     let (option_mint_authority, bump_seed) =
-        Pubkey::find_program_address(&[&option_mint_key.to_bytes()[..32]], &program_id);
+        Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
 
     let data = OptionsInstruction::ClosePostExpiration { bump_seed }.pack();
 
@@ -401,7 +401,7 @@ pub fn exercise_covered_call(
     option_token_authority: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
     let (options_spl_authority_pubkey, bump_seed) =
-        Pubkey::find_program_address(&[&option_mint.to_bytes()[..32]], &program_id);
+        Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
     let data = OptionsInstruction::ExerciseCoveredCall { bump_seed }.pack();
 
     let mut accounts = Vec::with_capacity(12);
@@ -431,7 +431,7 @@ pub fn exercise_covered_call(
 /// Creates a `ExchangeWriterTokenForQuote` instructions
 pub fn exchange_writer_token_for_quote(
     program_id: &Pubkey,
-    option_market: &Pubkey,
+    options_market: &Pubkey,
     option_mint: &Pubkey,
     writer_token_mint: &Pubkey,
     writer_token_source: &Pubkey,
@@ -440,11 +440,11 @@ pub fn exchange_writer_token_for_quote(
     quote_asset_pool: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
     let (option_market_authority, bump_seed) =
-        Pubkey::find_program_address(&[&option_mint.to_bytes()[..32]], &program_id);
+        Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
     let data = OptionsInstruction::ExchangeWriterTokenForQuote { bump_seed }.pack();
 
     let mut accounts = Vec::with_capacity(9);
-    accounts.push(AccountMeta::new_readonly(*option_market, false));
+    accounts.push(AccountMeta::new_readonly(*options_market, false));
     accounts.push(AccountMeta::new_readonly(*option_mint, false));
     accounts.push(AccountMeta::new_readonly(option_market_authority, false));
     accounts.push(AccountMeta::new(*writer_token_mint, false));
