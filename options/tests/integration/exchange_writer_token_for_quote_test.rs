@@ -313,11 +313,11 @@ pub fn test_panic_when_non_quote_asset_pool_is_used() {
   )
   .unwrap();
 
-  let (option_market_authority, bump_seed) = Pubkey::find_program_address(
+  let (option_market_authority, _bump_seed) = Pubkey::find_program_address(
     &[&option_market_key.to_bytes()[..32]],
     &options_program_id,
   );
-  let data = OptionsInstruction::ExchangeWriterTokenForQuote { bump_seed }.pack();
+  let data = OptionsInstruction::ExchangeWriterTokenForQuote {}.pack();
   let mut accounts = Vec::with_capacity(9);
   accounts.push(AccountMeta::new_readonly(option_market_key, false));
   accounts.push(AccountMeta::new_readonly(option_mint_keys.pubkey(), false));
@@ -468,11 +468,11 @@ pub fn test_panic_when_option_token_is_used() {
   )
   .unwrap();
 
-  let (option_market_authority, bump_seed) = Pubkey::find_program_address(
+  let (option_market_authority, _bump_seed) = Pubkey::find_program_address(
     &[&option_market_key.to_bytes()[..32]],
     &options_program_id,
   );
-  let data = OptionsInstruction::ExchangeWriterTokenForQuote { bump_seed }.pack();
+  let data = OptionsInstruction::ExchangeWriterTokenForQuote {}.pack();
   let mut accounts = Vec::with_capacity(8);
   accounts.push(AccountMeta::new_readonly(option_market_key, false));
   accounts.push(AccountMeta::new_readonly(option_market_authority, false));

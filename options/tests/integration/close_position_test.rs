@@ -1,5 +1,3 @@
-use solana_program::instruction::Instruction;
-use solana_program::instruction::AccountMeta;
 use crate::{
   option_helpers::{create_and_add_option_writer, init_option_market},
   solana_helpers, PROGRAM_KEY,
@@ -8,14 +6,11 @@ use serial_test::serial;
 use solana_client::rpc_client::RpcClient;
 use solana_options::{instruction::OptionsInstruction, market::OptionMarket};
 use solana_program::{
-  clock::Clock,
+  instruction::{AccountMeta, Instruction},
   program_pack::Pack,
   pubkey::Pubkey,
-  sysvar::{clock, Sysvar},
 };
-use solana_sdk::{
-  commitment_config::CommitmentConfig, signature::Signer,
-};
+use solana_sdk::{commitment_config::CommitmentConfig, signature::Signer};
 use spl_token::state::{Account, Mint};
 
 #[test]
@@ -104,9 +99,7 @@ pub fn test_sucessful_close_position() {
     .unwrap();
   let initial_writer_token_mint_act = Mint::unpack(&initial_writer_token_mint_data[..]).unwrap();
 
-  let initial_option_token_mint_data = client
-    .get_account_data(&option_mint_keys.pubkey())
-    .unwrap();
+  let initial_option_token_mint_data = client.get_account_data(&option_mint_keys.pubkey()).unwrap();
   let initial_option_token_mint_act = Mint::unpack(&initial_option_token_mint_data[..]).unwrap();
 
   // Get the initial amounts of the writers writer token account
@@ -171,9 +164,7 @@ pub fn test_sucessful_close_position() {
   );
 
   // assert the Option Token supply decreased (i.e. should burn not transfer)
-  let option_token_mint_data = client
-    .get_account_data(&option_mint_keys.pubkey())
-    .unwrap();
+  let option_token_mint_data = client.get_account_data(&option_mint_keys.pubkey()).unwrap();
   let option_mint_acct = Mint::unpack(&option_token_mint_data[..]).unwrap();
   assert_eq!(
     option_mint_acct.supply,
@@ -222,7 +213,7 @@ pub fn test_sucessful_close_position() {
 #[test]
 #[serial]
 #[should_panic(expected = "Error processing Instruction 0: custom program error: 0x6")]
-pub fn test_panic_when_non_underlying_asset_pool_is_used() {
+pub fn test_panic_when_non_underlying_asset_pool_is_used_close_position() {
   let client = RpcClient::new_with_commitment(
     "http://localhost:8899".to_string(),
     CommitmentConfig::processed(),
@@ -271,26 +262,29 @@ pub fn test_panic_when_non_underlying_asset_pool_is_used() {
   )
   .unwrap();
 
-  let (option_mint_authority, bump_seed) =
+  let (option_mint_authority, _bump_seed) =
     Pubkey::find_program_address(&[&option_market_key.to_bytes()[..32]], &program_id);
 
-  let data = OptionsInstruction::ClosePosition { bump_seed }.pack();
+  let data = OptionsInstruction::ClosePosition {}.pack();
 
   let mut accounts = Vec::with_capacity(11);
-    accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
-    accounts.push(AccountMeta::new_readonly(option_market_key, false));
-    accounts.push(AccountMeta::new(option_mint_keys.pubkey(), false));
-    accounts.push(AccountMeta::new_readonly(
-        option_mint_authority,
-        false,
-    ));
-    accounts.push(AccountMeta::new(option_writer_option_keys.pubkey(), false));
-    accounts.push(AccountMeta::new_readonly(option_writer_keys.pubkey(), true));
-    accounts.push(AccountMeta::new(writer_token_mint_keys.pubkey(), false));
-    accounts.push(AccountMeta::new(option_writer_writer_token_keys.pubkey(), false));
-    accounts.push(AccountMeta::new_readonly(option_writer_keys.pubkey(), true));
-    accounts.push(AccountMeta::new(option_writer_underlying_asset_keys.pubkey(), false));
-    accounts.push(AccountMeta::new(quote_asset_pool_key, false));
+  accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
+  accounts.push(AccountMeta::new_readonly(option_market_key, false));
+  accounts.push(AccountMeta::new(option_mint_keys.pubkey(), false));
+  accounts.push(AccountMeta::new_readonly(option_mint_authority, false));
+  accounts.push(AccountMeta::new(option_writer_option_keys.pubkey(), false));
+  accounts.push(AccountMeta::new_readonly(option_writer_keys.pubkey(), true));
+  accounts.push(AccountMeta::new(writer_token_mint_keys.pubkey(), false));
+  accounts.push(AccountMeta::new(
+    option_writer_writer_token_keys.pubkey(),
+    false,
+  ));
+  accounts.push(AccountMeta::new_readonly(option_writer_keys.pubkey(), true));
+  accounts.push(AccountMeta::new(
+    option_writer_underlying_asset_keys.pubkey(),
+    false,
+  ));
+  accounts.push(AccountMeta::new(quote_asset_pool_key, false));
 
   // generate the close_position instruction
   let close_position_ix = Instruction {

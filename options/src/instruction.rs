@@ -34,6 +34,8 @@ pub enum OptionsInstruction {
         quote_amount_per_contract: u64,
         /// The Unix timestamp at which the contracts in this market expire
         expiration_unix_timestamp: UnixTimestamp,
+        /// Bump Seed for the program derived address
+        bump_seed: u8,
     },
     /// Mints an Options token to represent a Covered Call
     ///
@@ -50,7 +52,7 @@ pub enum OptionsInstruction {
     ///   9. `[]` Program Derived Address for the authority over the Option Mint
     ///   10. `[]` SysVar clock account
     ///   
-    MintCoveredCall { bump_seed: u8 },
+    MintCoveredCall {},
     /// Exercise an Options token representing a Covered Call
     ///
     ///   0. `[]` Sysvar clock
@@ -65,7 +67,7 @@ pub enum OptionsInstruction {
     ///   9. `[writeable]` Option Mint
     ///   10. `[writeable]` Option Token Account
     ///   11. `[signer]` Option Token Account Authority
-    ExerciseCoveredCall { bump_seed: u8 },
+    ExerciseCoveredCall {},
     /// Close a single option contract post expiration.
     /// Transfers the underlying asset back to the Option Writer
     ///
@@ -79,7 +81,7 @@ pub enum OptionsInstruction {
     /// 7. `[writeable]` Underlying Asset Pool
     /// 8. `[]` Sysvar clock
     /// 9. `[]` SPL Token Program
-    ClosePostExpiration { bump_seed: u8 },
+    ClosePostExpiration {},
     /// Close a single option contract prior to expiration.
     /// Burns the _option token_ and the _writer token_ and returns the
     /// underlying asset back to the writer (or address specified).
@@ -95,7 +97,7 @@ pub enum OptionsInstruction {
     /// 8. `[]` Writer Token Source Authority
     /// 9. `[writable]` Underlying Asset Destination
     /// 10. `[writable]` Underlying Asset Pool
-    ClosePosition { bump_seed: u8 },
+    ClosePosition {},
     /// Allow a user to exchange their Writer Token for Quote Asset.
     /// Burns the Writer Token and transfers the Quote Asset amount
     /// relative to the option market
@@ -109,7 +111,7 @@ pub enum OptionsInstruction {
     /// 6. `[writeable]` Quote Asset Destination
     /// 7. `[writeable]` Quote Asset Pool
     /// 8. `[]` SPL token program
-    ExchangeWriterTokenForQuote { bump_seed: u8 },
+    ExchangeWriterTokenForQuote {},
 }
 
 impl OptionsInstruction {
@@ -122,33 +124,20 @@ impl OptionsInstruction {
             0 => {
                 let (underlying_amount_per_contract, rest) = Self::unpack_u64(rest)?;
                 let (quote_amount_per_contract, rest) = Self::unpack_u64(rest)?;
-                let (expiration_unix_timestamp, _rest) = Self::unpack_timestamp(rest)?;
+                let (expiration_unix_timestamp, rest) = Self::unpack_timestamp(rest)?;
+                let (bump_seed, _rest) = Self::unpack_u8(rest)?;
                 Self::InitializeMarket {
                     underlying_amount_per_contract,
                     quote_amount_per_contract,
                     expiration_unix_timestamp,
+                    bump_seed,
                 }
             }
-            1 => {
-                let (bump_seed, _rest) = Self::unpack_u8(rest)?;
-                Self::MintCoveredCall { bump_seed }
-            }
-            2 => {
-                let (bump_seed, _rest) = Self::unpack_u8(rest)?;
-                Self::ExerciseCoveredCall { bump_seed }
-            }
-            3 => {
-                let (bump_seed, _rest) = Self::unpack_u8(rest)?;
-                Self::ClosePostExpiration { bump_seed }
-            }
-            4 => {
-                let (bump_seed, _rest) = Self::unpack_u8(rest)?;
-                Self::ClosePosition { bump_seed }
-            }
-            5 => {
-                let (bump_seed, _rest) = Self::unpack_u8(rest)?;
-                Self::ExchangeWriterTokenForQuote { bump_seed }
-            }
+            1 => Self::MintCoveredCall {},
+            2 => Self::ExerciseCoveredCall {},
+            3 => Self::ClosePostExpiration {},
+            4 => Self::ClosePosition {},
+            5 => Self::ExchangeWriterTokenForQuote {},
             _ => return Err(ProgramError::InvalidInstructionData.into()),
         })
     }
@@ -161,31 +150,28 @@ impl OptionsInstruction {
                 ref underlying_amount_per_contract,
                 ref quote_amount_per_contract,
                 ref expiration_unix_timestamp,
+                ref bump_seed,
             } => {
                 buf.push(0);
                 buf.extend_from_slice(&underlying_amount_per_contract.to_le_bytes());
                 buf.extend_from_slice(&quote_amount_per_contract.to_le_bytes());
                 buf.extend_from_slice(&expiration_unix_timestamp.to_le_bytes());
+                buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
-            &Self::MintCoveredCall { ref bump_seed } => {
+            &Self::MintCoveredCall {} => {
                 buf.push(1);
-                buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
-            &Self::ExerciseCoveredCall { ref bump_seed } => {
+            &Self::ExerciseCoveredCall {} => {
                 buf.push(2);
-                buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
-            &Self::ClosePostExpiration { ref bump_seed } => {
+            &Self::ClosePostExpiration {} => {
                 buf.push(3);
-                buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
-            &Self::ClosePosition { ref bump_seed } => {
+            &Self::ClosePosition {} => {
                 buf.push(4);
-                buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
-            &Self::ExchangeWriterTokenForQuote { ref bump_seed } => {
+            &Self::ExchangeWriterTokenForQuote {} => {
                 buf.push(5);
-                buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
         };
         buf
@@ -237,12 +223,13 @@ pub fn initialize_market(
     quote_amount_per_contract: u64,
     expiration_unix_timestamp: UnixTimestamp,
 ) -> Result<Instruction, ProgramError> {
-    let (market_authority, _bump_seed) =
+    let (market_authority, bump_seed) =
         Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
     let data = OptionsInstruction::InitializeMarket {
         underlying_amount_per_contract,
         quote_amount_per_contract,
         expiration_unix_timestamp,
+        bump_seed,
     }
     .pack();
 
@@ -289,15 +276,12 @@ pub fn mint_covered_call(
     accounts.push(AccountMeta::new_readonly(*authority_pubkey, true));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
 
-    let (market_authority, bump_seed) =
+    let (market_authority, _bump_seed) =
         Pubkey::find_program_address(&[&option_market.to_bytes()[..32]], &program_id);
-    accounts.push(AccountMeta::new_readonly(
-        market_authority,
-        false,
-    ));
+    accounts.push(AccountMeta::new_readonly(market_authority, false));
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
 
-    let data = OptionsInstruction::MintCoveredCall { bump_seed }.pack();
+    let data = OptionsInstruction::MintCoveredCall {}.pack();
     Ok(Instruction {
         program_id: *program_id,
         data,
@@ -318,10 +302,10 @@ pub fn close_position(
     writer_token_source_authority: &Pubkey,
     underlying_asset_dest: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
-    let (market_authority, bump_seed) =
+    let (market_authority, _bump_seed) =
         Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
 
-    let data = OptionsInstruction::ClosePosition { bump_seed }.pack();
+    let data = OptionsInstruction::ClosePosition {}.pack();
 
     let mut accounts = Vec::with_capacity(11);
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
@@ -359,10 +343,9 @@ pub fn close_post_expiration(
     writer_token_source_authority: &Pubkey,
     underlying_asset_dest: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
-    let (market_authority, bump_seed) =
+    let (market_authority, _bump_seed) =
         Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
-
-    let data = OptionsInstruction::ClosePostExpiration { bump_seed }.pack();
+    let data = OptionsInstruction::ClosePostExpiration {}.pack();
 
     let mut accounts = Vec::with_capacity(9);
     accounts.push(AccountMeta::new_readonly(*options_market, false));
@@ -398,9 +381,9 @@ pub fn exercise_covered_call(
     option_token_key: &Pubkey,
     option_token_authority: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
-    let (options_spl_authority_pubkey, bump_seed) =
+    let (options_spl_authority_pubkey, _bump_seed) =
         Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
-    let data = OptionsInstruction::ExerciseCoveredCall { bump_seed }.pack();
+    let data = OptionsInstruction::ExerciseCoveredCall {}.pack();
 
     let mut accounts = Vec::with_capacity(12);
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
@@ -436,16 +419,19 @@ pub fn exchange_writer_token_for_quote(
     quote_asset_dest: &Pubkey,
     quote_asset_pool: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
-    let (option_market_authority, bump_seed) =
+    let (option_market_authority, _bump_seed) =
         Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
-    let data = OptionsInstruction::ExchangeWriterTokenForQuote { bump_seed }.pack();
+    let data = OptionsInstruction::ExchangeWriterTokenForQuote {}.pack();
 
     let mut accounts = Vec::with_capacity(8);
     accounts.push(AccountMeta::new_readonly(*options_market, false));
     accounts.push(AccountMeta::new_readonly(option_market_authority, false));
     accounts.push(AccountMeta::new(*writer_token_mint, false));
     accounts.push(AccountMeta::new(*writer_token_source, false));
-    accounts.push(AccountMeta::new_readonly(*writer_token_source_authority, true));
+    accounts.push(AccountMeta::new_readonly(
+        *writer_token_source_authority,
+        true,
+    ));
     accounts.push(AccountMeta::new(*quote_asset_dest, false));
     accounts.push(AccountMeta::new(*quote_asset_pool, false));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
@@ -466,10 +452,12 @@ mod tests {
         let underlying_amount_per_contract: u64 = 100;
         let quote_amount_per_contract: u64 = 500; // strike price of 5
         let expiration_unix_timestamp: UnixTimestamp = 1607743435;
+        let bump_seed: u8 = 1;
         let check = OptionsInstruction::InitializeMarket {
             underlying_amount_per_contract,
             quote_amount_per_contract,
             expiration_unix_timestamp,
+            bump_seed,
         };
         let packed = check.pack();
         // add the tag to the expected buffer
@@ -478,6 +466,7 @@ mod tests {
         expect.extend_from_slice(&underlying_amount_per_contract.to_le_bytes());
         expect.extend_from_slice(&quote_amount_per_contract.to_le_bytes());
         expect.extend_from_slice(&expiration_unix_timestamp.to_le_bytes());
+        expect.extend_from_slice(&bump_seed.to_le_bytes());
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
@@ -485,11 +474,10 @@ mod tests {
 
     #[test]
     fn test_pack_unpack_mint_covered_call() {
-        let bump_seed = 1;
-        let check = OptionsInstruction::MintCoveredCall { bump_seed };
+        let check = OptionsInstruction::MintCoveredCall {};
         let packed = check.pack();
         // add the tag to the expected buffer
-        let expect = Vec::from([1u8, bump_seed]);
+        let expect = Vec::from([1u8]);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
@@ -497,12 +485,10 @@ mod tests {
 
     #[test]
     fn test_pack_unpack_exercise_covered_call() {
-        let bump_seed = 1;
-        let check = OptionsInstruction::ExerciseCoveredCall { bump_seed };
+        let check = OptionsInstruction::ExerciseCoveredCall {};
         let packed = check.pack();
         // add the tag to the expected buffer
-        let mut expect = Vec::from([2u8]);
-        expect.push(bump_seed);
+        let expect = Vec::from([2u8]);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
@@ -510,12 +496,10 @@ mod tests {
 
     #[test]
     fn test_pack_unpack_close_post_expiration() {
-        let bump_seed = 1;
-        let check = OptionsInstruction::ClosePostExpiration { bump_seed };
+        let check = OptionsInstruction::ClosePostExpiration {};
         let packed = check.pack();
         // add the tag to the expected buffer
-        let mut expect = Vec::from([3u8]);
-        expect.push(bump_seed);
+        let expect = Vec::from([3u8]);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
@@ -523,12 +507,10 @@ mod tests {
 
     #[test]
     fn test_pack_unpack_close_position() {
-        let bump_seed = 1;
-        let check = OptionsInstruction::ClosePosition { bump_seed };
+        let check = OptionsInstruction::ClosePosition {};
         let packed = check.pack();
         // add the tag to the expected buffer
-        let mut expect = Vec::from([4u8]);
-        expect.push(bump_seed);
+        let expect = Vec::from([4u8]);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
@@ -536,12 +518,10 @@ mod tests {
 
     #[test]
     fn test_pack_unpack_exchange_writer_token_for_quote() {
-        let bump_seed = 1;
-        let check = OptionsInstruction::ExchangeWriterTokenForQuote { bump_seed };
+        let check = OptionsInstruction::ExchangeWriterTokenForQuote {};
         let packed = check.pack();
         // add the tag to the expected buffer
         let mut expect = Vec::from([5u8]);
-        expect.push(bump_seed);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
