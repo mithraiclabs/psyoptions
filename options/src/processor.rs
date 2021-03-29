@@ -136,9 +136,8 @@ impl Processor {
         let spl_program_acct = next_account_info(account_info_iter)?;
         let market_authority_acct = next_account_info(account_info_iter)?;
         let clock_sysvar_info = next_account_info(account_info_iter)?;
-        // Get the amount of underlying asset for transfer
-        let option_market_data = option_market_acct.try_borrow_data()?;
-        let option_market = OptionMarket::unpack(&option_market_data)?;
+
+        let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 
         // Assert that the derived address from the given option market account is 
         // the same as the OptionMarket. This blocks adversaries from spoofing an 
@@ -240,8 +239,7 @@ impl Processor {
         let option_token_acct = next_account_info(account_info_iter)?;
         let option_token_authority_acct = next_account_info(account_info_iter)?;
 
-        let option_market_data = option_market_acct.try_borrow_data()?;
-        let option_market = OptionMarket::unpack(&option_market_data)?;
+        let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 
         // Assert that the derived address from the given option market account is 
         // the same as the OptionMarket. This blocks adversaries from spoofing an 
@@ -343,10 +341,9 @@ impl Processor {
             return Err(OptionsError::BadMarketAddress.into())
         }
 
+        let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
+
         // validate the Writer Token and Option Token mints are for the market specified
-        let option_market_data = option_market_acct.try_borrow_data()?;
-        let option_market = OptionMarket::unpack(&option_market_data)?;
-        
         if option_market.option_mint != *option_mint_acct.key
             || option_market.writer_token_mint != *writer_token_mint_acct.key
         {
@@ -440,8 +437,7 @@ impl Processor {
             return Err(OptionsError::BadMarketAddress.into())
         }
 
-        let option_market_data = option_market_acct.try_borrow_data()?;
-        let option_market = OptionMarket::unpack(&option_market_data)?;
+        let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 
         let clock = Clock::from_account_info(&clock_sysvar_info)?;
         // Verify that the OptionMarket has already expired
@@ -520,8 +516,7 @@ impl Processor {
             return Err(OptionsError::BadMarketAddress.into())
         }
 
-        let option_market_data = option_market_acct.try_borrow_data()?;
-        let option_market = OptionMarket::unpack(&option_market_data)?;
+        let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 
         if *quote_asset_pool_acct.key != option_market.quote_asset_pool {
             return Err(OptionsError::IncorrectPool.into());

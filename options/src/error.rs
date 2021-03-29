@@ -33,7 +33,10 @@ pub enum OptionsError {
     IncorrectMarketTokens,
     /// The OptionMarket address provided does not match
     #[error("The OptionMarket address does not match")]
-    BadMarketAddress
+    BadMarketAddress,
+    /// The OptionMarket owner is not the program
+    #[error("The OptionMarket owner is incorrect")]
+    BadMarketOwner,
 }
 impl From<OptionsError> for ProgramError {
     fn from(e: OptionsError) -> Self {
