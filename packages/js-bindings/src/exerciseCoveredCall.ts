@@ -43,7 +43,7 @@ export const exerciseCoveredCallInstruction = async ({
 
   // Generate the program derived address needed
   const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
-    [optionMintKey.toBuffer()],
+    [optionMarketKey.toBuffer()],
     programId,
   );
   EXERCISE_COVERED_CALL_LAYOUT.encode(

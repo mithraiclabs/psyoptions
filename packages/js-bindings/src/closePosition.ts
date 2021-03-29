@@ -38,7 +38,7 @@ export const closePositionInstruction = async ({
   const closePositionBuffer = Buffer.alloc(CLOSE_POSITION.span);
   // Generate the program derived address needed
   const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
-    [optionMintKey.toBuffer()],
+    [optionMarketKey.toBuffer()],
     programId,
   );
 

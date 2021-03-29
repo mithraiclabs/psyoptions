@@ -391,7 +391,6 @@ impl Processor {
     pub fn process_close_post_expiration(program_id: &Pubkey, accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let option_market_acct = next_account_info(account_info_iter)?;
-        let option_mint_acct = next_account_info(account_info_iter)?;
         let market_authority_acct = next_account_info(account_info_iter)?;
         let writer_token_mint_acct = next_account_info(account_info_iter)?;
         let writer_token_source_acct = next_account_info(account_info_iter)?;
@@ -462,7 +461,6 @@ impl Processor {
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let option_market_acct = next_account_info(account_info_iter)?;
-        let option_mint_acct = next_account_info(account_info_iter)?;
         let market_authority_acct = next_account_info(account_info_iter)?;
         let writer_token_mint_acct = next_account_info(account_info_iter)?;
         let writer_token_source_acct = next_account_info(account_info_iter)?;

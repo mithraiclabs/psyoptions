@@ -95,7 +95,7 @@ export const initializeMarketInstruction = async ({
   let marketAuthorityKey;
   try {
     const [_marketAuthorityKey] = await PublicKey.findProgramAddress(
-      [optionMintKey.toBuffer()],
+      [optionMarketKey.toBuffer()],
       programId,
     );
     marketAuthorityKey = _marketAuthorityKey;
@@ -252,6 +252,7 @@ export const initializeMarket = async ({
   const signers = [
     payer,
     optionMintAccount,
+    writerTokenMintAccount,
     underlyingAssetPoolAccount,
     optionMarketDataAccount,
     quoteAssetPoolAccount,

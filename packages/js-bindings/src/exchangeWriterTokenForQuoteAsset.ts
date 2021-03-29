@@ -15,7 +15,6 @@ export const EXCHANGE_WRITER_TOKEN_FOR_QUOTE = struct([u8('bumpSeed')]);
 export const exchangeWriterTokenForQuoteInstruction = async ({
   programId,
   optionMarketKey,
-  optionMintKey,
   writerTokenMintKey,
   writerTokenSourceKey,
   writerTokenSourceAuthorityKey,
@@ -24,7 +23,6 @@ export const exchangeWriterTokenForQuoteInstruction = async ({
 }: {
   programId: PublicKey;
   optionMarketKey: PublicKey;
-  optionMintKey: PublicKey;
   writerTokenMintKey: PublicKey;
   writerTokenSourceKey: PublicKey;
   writerTokenSourceAuthorityKey: PublicKey;
@@ -36,7 +34,7 @@ export const exchangeWriterTokenForQuoteInstruction = async ({
   );
   // Generate the program derived address needed
   const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
-    [optionMintKey.toBuffer()],
+    [optionMarketKey.toBuffer()],
     programId,
   );
 
@@ -60,7 +58,6 @@ export const exchangeWriterTokenForQuoteInstruction = async ({
 
   const keys: AccountMeta[] = [
     { pubkey: optionMarketKey, isSigner: false, isWritable: false },
-    { pubkey: optionMintKey, isSigner: false, isWritable: true },
     { pubkey: marketAuthorityKey, isSigner: false, isWritable: false },
     { pubkey: writerTokenMintKey, isSigner: false, isWritable: true },
     { pubkey: writerTokenSourceKey, isSigner: false, isWritable: true },
@@ -86,7 +83,6 @@ export const exchangeWriterTokenForQuote = async ({
   payer,
   programId,
   optionMarketKey,
-  optionMintKey,
   writerTokenMintKey,
   writerTokenSourceKey,
   writerTokenSourceAuthorityKey,
@@ -97,7 +93,6 @@ export const exchangeWriterTokenForQuote = async ({
   payer: Account;
   programId: PublicKey | string;
   optionMarketKey: PublicKey;
-  optionMintKey: PublicKey;
   writerTokenMintKey: PublicKey;
   writerTokenSourceKey: PublicKey;
   writerTokenSourceAuthorityKey: PublicKey;
@@ -111,7 +106,6 @@ export const exchangeWriterTokenForQuote = async ({
   const closePositionIx = await exchangeWriterTokenForQuoteInstruction({
     programId: programPubkey,
     optionMarketKey,
-    optionMintKey,
     writerTokenMintKey,
     writerTokenSourceKey,
     writerTokenSourceAuthorityKey,

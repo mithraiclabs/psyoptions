@@ -354,7 +354,6 @@ pub fn close_post_expiration(
     program_id: &Pubkey,
     options_market: &Pubkey,
     underlying_asset_pool: &Pubkey,
-    option_mint_key: &Pubkey,
     writer_token_mint: &Pubkey,
     writer_token_source: &Pubkey,
     writer_token_source_authority: &Pubkey,
@@ -365,9 +364,8 @@ pub fn close_post_expiration(
 
     let data = OptionsInstruction::ClosePostExpiration { bump_seed }.pack();
 
-    let mut accounts = Vec::with_capacity(10);
+    let mut accounts = Vec::with_capacity(9);
     accounts.push(AccountMeta::new_readonly(*options_market, false));
-    accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
     accounts.push(AccountMeta::new_readonly(market_authority, false));
     accounts.push(AccountMeta::new(*writer_token_mint, false));
     accounts.push(AccountMeta::new(*writer_token_source, false));
@@ -432,7 +430,6 @@ pub fn exercise_covered_call(
 pub fn exchange_writer_token_for_quote(
     program_id: &Pubkey,
     options_market: &Pubkey,
-    option_mint: &Pubkey,
     writer_token_mint: &Pubkey,
     writer_token_source: &Pubkey,
     writer_token_source_authority: &Pubkey,
@@ -443,9 +440,8 @@ pub fn exchange_writer_token_for_quote(
         Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
     let data = OptionsInstruction::ExchangeWriterTokenForQuote { bump_seed }.pack();
 
-    let mut accounts = Vec::with_capacity(9);
+    let mut accounts = Vec::with_capacity(8);
     accounts.push(AccountMeta::new_readonly(*options_market, false));
-    accounts.push(AccountMeta::new_readonly(*option_mint, false));
     accounts.push(AccountMeta::new_readonly(option_market_authority, false));
     accounts.push(AccountMeta::new(*writer_token_mint, false));
     accounts.push(AccountMeta::new(*writer_token_source, false));

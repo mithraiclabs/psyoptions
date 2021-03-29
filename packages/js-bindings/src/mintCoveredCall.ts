@@ -39,7 +39,7 @@ export const mintCoveredCallInstruction = async ({
   const mintCoveredCallBuffer = Buffer.alloc(MINT_COVERED_CALL_LAYOUT.span);
   // Generate the program derived address needed
   const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
-    [optionMintKey.toBuffer()],
+    [optionMarketKey.toBuffer()],
     programId,
   );
   MINT_COVERED_CALL_LAYOUT.encode({ bumpSeed }, mintCoveredCallBuffer, 0);
