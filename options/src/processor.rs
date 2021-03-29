@@ -26,7 +26,7 @@ impl Processor {
         let option_mint_acct = next_account_info(account_info_iter)?;
         let writer_token_mint_acct = next_account_info(account_info_iter)?;
         let option_market_data_acct = next_account_info(account_info_iter)?;
-        let option_mint_authority = next_account_info(account_info_iter)?;
+        let market_authority_acct = next_account_info(account_info_iter)?;
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let quote_asset_pool_acct = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
@@ -39,7 +39,7 @@ impl Processor {
         let init_option_mint_ix = token_instruction::initialize_mint(
             &spl_token::id(),
             option_mint_acct.key,
-            option_mint_authority.key,
+            market_authority_acct.key,
             None,
             0,
         )?;
@@ -56,7 +56,7 @@ impl Processor {
         let init_writer_token_mint_ix = token_instruction::initialize_mint(
             &spl_token::id(),
             writer_token_mint_acct.key,
-            option_mint_authority.key,
+            market_authority_acct.key,
             None,
             0,
         )?;
@@ -74,14 +74,14 @@ impl Processor {
             &spl_token::id(),
             underlying_asset_pool_acct.key,
             underlying_asset_mint_acct.key,
-            option_mint_authority.key,
+            market_authority_acct.key,
         )?;
         invoke(
             &init_underlying_pool_ix,
             &[
                 underlying_asset_pool_acct.clone(),
                 underlying_asset_mint_acct.clone(),
-                option_mint_authority.clone(),
+                market_authority_acct.clone(),
                 rent_info.clone(),
                 spl_program_acct.clone(),
             ],
@@ -92,14 +92,14 @@ impl Processor {
             &spl_token::id(),
             quote_asset_pool_acct.key,
             quote_asset_mint_acct.key,
-            option_mint_authority.key,
+            market_authority_acct.key,
         )?;
         invoke(
             &init_quote_asset_pool_ix,
             &[
                 quote_asset_pool_acct.clone(),
                 quote_asset_mint_acct.clone(),
-                option_mint_authority.clone(),
+                market_authority_acct.clone(),
                 rent_info.clone(),
                 spl_program_acct.clone(),
             ],

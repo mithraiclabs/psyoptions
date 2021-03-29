@@ -237,7 +237,7 @@ pub fn initialize_market(
     quote_amount_per_contract: u64,
     expiration_unix_timestamp: UnixTimestamp,
 ) -> Result<Instruction, ProgramError> {
-    let (option_mint_authority, _bump_seed) =
+    let (market_authority, _bump_seed) =
         Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
     let data = OptionsInstruction::InitializeMarket {
         underlying_amount_per_contract,
@@ -252,7 +252,7 @@ pub fn initialize_market(
         AccountMeta::new(*option_mint, false),
         AccountMeta::new(*writer_token_mint, false),
         AccountMeta::new(*options_market, false),
-        AccountMeta::new_readonly(option_mint_authority, false),
+        AccountMeta::new_readonly(market_authority, false),
         AccountMeta::new(*underlying_asset_pool, false),
         AccountMeta::new(*quote_asset_pool, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
@@ -289,10 +289,10 @@ pub fn mint_covered_call(
     accounts.push(AccountMeta::new_readonly(*authority_pubkey, true));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
 
-    let (option_mint_authority_pubkey, bump_seed) =
+    let (market_authority, bump_seed) =
         Pubkey::find_program_address(&[&option_market.to_bytes()[..32]], &program_id);
     accounts.push(AccountMeta::new_readonly(
-        option_mint_authority_pubkey,
+        market_authority,
         false,
     ));
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
@@ -318,7 +318,7 @@ pub fn close_position(
     writer_token_source_authority: &Pubkey,
     underlying_asset_dest: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
-    let (option_mint_authority, bump_seed) =
+    let (market_authority, bump_seed) =
         Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
 
     let data = OptionsInstruction::ClosePosition { bump_seed }.pack();
@@ -327,7 +327,7 @@ pub fn close_position(
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
     accounts.push(AccountMeta::new_readonly(*options_market, false));
     accounts.push(AccountMeta::new(*option_mint_key, false));
-    accounts.push(AccountMeta::new_readonly(option_mint_authority, false));
+    accounts.push(AccountMeta::new_readonly(market_authority, false));
     accounts.push(AccountMeta::new(*option_token_source, false));
     accounts.push(AccountMeta::new_readonly(
         *option_token_source_authority,
@@ -360,7 +360,7 @@ pub fn close_post_expiration(
     writer_token_source_authority: &Pubkey,
     underlying_asset_dest: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
-    let (option_mint_authority, bump_seed) =
+    let (market_authority, bump_seed) =
         Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
 
     let data = OptionsInstruction::ClosePostExpiration { bump_seed }.pack();
@@ -368,7 +368,7 @@ pub fn close_post_expiration(
     let mut accounts = Vec::with_capacity(10);
     accounts.push(AccountMeta::new_readonly(*options_market, false));
     accounts.push(AccountMeta::new_readonly(*option_mint_key, false));
-    accounts.push(AccountMeta::new_readonly(option_mint_authority, false));
+    accounts.push(AccountMeta::new_readonly(market_authority, false));
     accounts.push(AccountMeta::new(*writer_token_mint, false));
     accounts.push(AccountMeta::new(*writer_token_source, false));
     accounts.push(AccountMeta::new_readonly(

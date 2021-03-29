@@ -37,7 +37,7 @@ export const closePositionInstruction = async ({
 }) => {
   const closePositionBuffer = Buffer.alloc(CLOSE_POSITION.span);
   // Generate the program derived address needed
-  const [optionMintAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
+  const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
     [optionMintKey.toBuffer()],
     programId,
   );
@@ -63,7 +63,7 @@ export const closePositionInstruction = async ({
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: optionMarketKey, isSigner: false, isWritable: false },
     { pubkey: optionMintKey, isSigner: false, isWritable: true },
-    { pubkey: optionMintAuthorityKey, isSigner: false, isWritable: false },
+    { pubkey: marketAuthorityKey, isSigner: false, isWritable: false },
     { pubkey: optionTokenSrcKey, isSigner: false, isWritable: true },
     { pubkey: optionTokenSrcAuthKey, isSigner: false, isWritable: false },
     { pubkey: writerTokenMintKey, isSigner: false, isWritable: true },

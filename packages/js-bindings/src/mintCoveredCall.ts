@@ -38,10 +38,10 @@ export const mintCoveredCallInstruction = async ({
 }) => {
   const mintCoveredCallBuffer = Buffer.alloc(MINT_COVERED_CALL_LAYOUT.span);
   // Generate the program derived address needed
-  const [
-    optionMintAuthorityPubkey,
-    bumpSeed,
-  ] = await PublicKey.findProgramAddress([optionMintKey.toBuffer()], programId);
+  const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
+    [optionMintKey.toBuffer()],
+    programId,
+  );
   MINT_COVERED_CALL_LAYOUT.encode({ bumpSeed }, mintCoveredCallBuffer, 0);
 
   /*
@@ -64,7 +64,7 @@ export const mintCoveredCallInstruction = async ({
     { pubkey: optionMarketKey, isSigner: false, isWritable: false },
     { pubkey: authorityPubkey, isSigner: true, isWritable: false },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-    { pubkey: optionMintAuthorityPubkey, isSigner: false, isWritable: false },
+    { pubkey: marketAuthorityKey, isSigner: false, isWritable: false },
     { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
   ];
 

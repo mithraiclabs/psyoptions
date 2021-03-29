@@ -3,7 +3,6 @@ use arrayref::{array_mut_ref, array_ref, array_refs, mut_array_refs};
 use solana_program::{
     account_info::AccountInfo,
     clock::UnixTimestamp,
-    msg,
     program_error::ProgramError,
     program_pack::{IsInitialized, Pack, Sealed},
     pubkey::Pubkey,
@@ -42,10 +41,6 @@ impl OptionMarket {
         account_info: &AccountInfo,
         program_id: &Pubkey,
     ) -> Result<Self, ProgramError> {
-        msg!(
-            "account_info.owner = {}",
-            account_info.owner
-        );
         if account_info.owner != program_id {
             return Err(ProgramError::InvalidArgument);
         }

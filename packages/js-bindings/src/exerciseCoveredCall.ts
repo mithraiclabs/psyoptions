@@ -42,10 +42,10 @@ export const exerciseCoveredCallInstruction = async ({
   );
 
   // Generate the program derived address needed
-  const [
-    optionsSplAuthorityPubkey,
-    bumpSeed,
-  ] = await PublicKey.findProgramAddress([optionMintKey.toBuffer()], programId);
+  const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
+    [optionMintKey.toBuffer()],
+    programId,
+  );
   EXERCISE_COVERED_CALL_LAYOUT.encode(
     {
       bumpSeed,
@@ -77,7 +77,7 @@ export const exerciseCoveredCallInstruction = async ({
     { pubkey: exerciserUnderlyingAssetKey, isSigner: false, isWritable: true },
     { pubkey: underlyingAssetPoolKey, isSigner: false, isWritable: true },
     { pubkey: quoteAssetPoolKey, isSigner: false, isWritable: true },
-    { pubkey: optionsSplAuthorityPubkey, isSigner: false, isWritable: false },
+    { pubkey: marketAuthorityKey, isSigner: false, isWritable: false },
     { pubkey: optionMintKey, isSigner: false, isWritable: true },
     { pubkey: optionTokenKey, isSigner: false, isWritable: true },
     {

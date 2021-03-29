@@ -35,10 +35,10 @@ export const exchangeWriterTokenForQuoteInstruction = async ({
     EXCHANGE_WRITER_TOKEN_FOR_QUOTE.span,
   );
   // Generate the program derived address needed
-  const [
-    optionMarketAuthorityKey,
-    bumpSeed,
-  ] = await PublicKey.findProgramAddress([optionMintKey.toBuffer()], programId);
+  const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
+    [optionMintKey.toBuffer()],
+    programId,
+  );
 
   EXCHANGE_WRITER_TOKEN_FOR_QUOTE.encode(
     {
@@ -61,7 +61,7 @@ export const exchangeWriterTokenForQuoteInstruction = async ({
   const keys: AccountMeta[] = [
     { pubkey: optionMarketKey, isSigner: false, isWritable: false },
     { pubkey: optionMintKey, isSigner: false, isWritable: true },
-    { pubkey: optionMarketAuthorityKey, isSigner: false, isWritable: false },
+    { pubkey: marketAuthorityKey, isSigner: false, isWritable: false },
     { pubkey: writerTokenMintKey, isSigner: false, isWritable: true },
     { pubkey: writerTokenSourceKey, isSigner: false, isWritable: true },
     {
