@@ -77,7 +77,7 @@ fn test_initialize_market() {
     .unwrap();
 
     let (option_authority_pubkey, _bump_seed) = Pubkey::find_program_address(
-        &[&option_mint_keys.pubkey().to_bytes()[..32]],
+        &[&options_market_keys.pubkey().to_bytes()[..32]],
         &options_program_id,
     );
 

@@ -15,7 +15,6 @@ export const EXCHANGE_WRITER_TOKEN_FOR_QUOTE = struct([u8('bumpSeed')]);
 export const exchangeWriterTokenForQuoteInstruction = async ({
   programId,
   optionMarketKey,
-  optionMintKey,
   writerTokenMintKey,
   writerTokenSourceKey,
   writerTokenSourceAuthorityKey,
@@ -24,7 +23,6 @@ export const exchangeWriterTokenForQuoteInstruction = async ({
 }: {
   programId: PublicKey;
   optionMarketKey: PublicKey;
-  optionMintKey: PublicKey;
   writerTokenMintKey: PublicKey;
   writerTokenSourceKey: PublicKey;
   writerTokenSourceAuthorityKey: PublicKey;
@@ -35,10 +33,10 @@ export const exchangeWriterTokenForQuoteInstruction = async ({
     EXCHANGE_WRITER_TOKEN_FOR_QUOTE.span,
   );
   // Generate the program derived address needed
-  const [
-    optionMarketAuthorityKey,
-    bumpSeed,
-  ] = await PublicKey.findProgramAddress([optionMintKey.toBuffer()], programId);
+  const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
+    [optionMarketKey.toBuffer()],
+    programId,
+  );
 
   EXCHANGE_WRITER_TOKEN_FOR_QUOTE.encode(
     {
@@ -60,8 +58,7 @@ export const exchangeWriterTokenForQuoteInstruction = async ({
 
   const keys: AccountMeta[] = [
     { pubkey: optionMarketKey, isSigner: false, isWritable: false },
-    { pubkey: optionMintKey, isSigner: false, isWritable: true },
-    { pubkey: optionMarketAuthorityKey, isSigner: false, isWritable: false },
+    { pubkey: marketAuthorityKey, isSigner: false, isWritable: false },
     { pubkey: writerTokenMintKey, isSigner: false, isWritable: true },
     { pubkey: writerTokenSourceKey, isSigner: false, isWritable: true },
     {
@@ -86,7 +83,6 @@ export const exchangeWriterTokenForQuote = async ({
   payer,
   programId,
   optionMarketKey,
-  optionMintKey,
   writerTokenMintKey,
   writerTokenSourceKey,
   writerTokenSourceAuthorityKey,
@@ -97,7 +93,6 @@ export const exchangeWriterTokenForQuote = async ({
   payer: Account;
   programId: PublicKey | string;
   optionMarketKey: PublicKey;
-  optionMintKey: PublicKey;
   writerTokenMintKey: PublicKey;
   writerTokenSourceKey: PublicKey;
   writerTokenSourceAuthorityKey: PublicKey;
@@ -111,7 +106,6 @@ export const exchangeWriterTokenForQuote = async ({
   const closePositionIx = await exchangeWriterTokenForQuoteInstruction({
     programId: programPubkey,
     optionMarketKey,
-    optionMintKey,
     writerTokenMintKey,
     writerTokenSourceKey,
     writerTokenSourceAuthorityKey,

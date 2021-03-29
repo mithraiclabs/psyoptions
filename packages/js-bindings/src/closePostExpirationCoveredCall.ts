@@ -17,7 +17,6 @@ export const CLOSE_POST_EXPIRATION_COVERED_CALL = struct([u8('bumpSeed')]);
 export const closePostExpirationCoveredCallInstruction = async ({
   programId,
   optionMarketKey,
-  optionMintKey,
   underlyingAssetDestKey,
   underlyingAssetPoolKey,
   writerTokenMintKey,
@@ -25,7 +24,6 @@ export const closePostExpirationCoveredCallInstruction = async ({
   writerTokenSourceKey,
 }: {
   programId: PublicKey;
-  optionMintKey: PublicKey;
   optionMarketKey: PublicKey;
   underlyingAssetPoolKey: PublicKey;
   writerTokenMintKey: PublicKey;
@@ -38,10 +36,10 @@ export const closePostExpirationCoveredCallInstruction = async ({
   );
 
   // Generate the program derived address needed
-  const [
-    optionMintAuthorityPubkey,
-    bumpSeed,
-  ] = await PublicKey.findProgramAddress([optionMintKey.toBuffer()], programId);
+  const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
+    [optionMarketKey.toBuffer()],
+    programId,
+  );
 
   CLOSE_POST_EXPIRATION_COVERED_CALL.encode(
     {
@@ -63,8 +61,7 @@ export const closePostExpirationCoveredCallInstruction = async ({
 
   const keys: AccountMeta[] = [
     { pubkey: optionMarketKey, isSigner: false, isWritable: false },
-    { pubkey: optionMintKey, isSigner: false, isWritable: false },
-    { pubkey: optionMintAuthorityPubkey, isSigner: false, isWritable: false },
+    { pubkey: marketAuthorityKey, isSigner: false, isWritable: false },
     { pubkey: writerTokenMintKey, isSigner: false, isWritable: true },
     { pubkey: writerTokenSourceKey, isSigner: false, isWritable: true },
     {
@@ -90,7 +87,6 @@ export const closePostExpirationCoveredCall = async ({
   payer,
   programId,
   optionMarketKey,
-  optionMintKey,
   underlyingAssetPoolKey,
   underlyingAssetDestKey,
   writerTokenMintKey,
@@ -114,7 +110,6 @@ export const closePostExpirationCoveredCall = async ({
   const transaction = new Transaction();
   const closePostExpiration = await closePostExpirationCoveredCallInstruction({
     programId: programPubkey,
-    optionMintKey,
     optionMarketKey,
     underlyingAssetPoolKey,
     underlyingAssetDestKey,
@@ -166,7 +161,6 @@ export const closePostExpirationOption = async ({
   const closePostExpiration = await closePostExpirationCoveredCallInstruction({
     programId: programPubkey,
     optionMarketKey,
-    optionMintKey: optionMarketData.optionMintKey,
     underlyingAssetDestKey,
     underlyingAssetPoolKey: optionMarketData.underlyingAssetPoolKey,
     writerTokenMintKey: optionMarketData.writerTokenMintKey,

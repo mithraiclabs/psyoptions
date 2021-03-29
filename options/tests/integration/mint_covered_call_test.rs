@@ -275,7 +275,7 @@ fn test_mint_covered_call_fail_fake_market_account() {
     asset_authority_keys,
     underlying_asset_pool_key,
     _quote_asset_pool_key,
-    option_market_key,
+    _option_market_key,
   ) = init_option_market(
     &client,
     &options_program_id,
@@ -288,14 +288,14 @@ fn test_mint_covered_call_fail_fake_market_account() {
   let fake_underlying_amount_per_contract = 1;
   let fake_quote_amount_per_contract = 5;
   let (
-    fake_underlying_asset_mint_keys,
-    fake_quote_asset_mint_keys,
-    fake_option_mint_keys,
-    fake_writer_token_mint_keys,
-    fake_asset_authority_keys,
-    fake_underlying_asset_pool_key,
-    fake_quote_asset_pool_key,
-    fake_option_market_key,
+    _fake_underlying_asset_mint_keys,
+    _fake_quote_asset_mint_keys,
+    _fake_option_mint_keys,
+    _fake_writer_token_mint_keys,
+    _fake_asset_authority_keys,
+    _fake_underlying_asset_pool_key,
+    _fake_quote_asset_pool_key,
+    fake_option_market_key,        
   ) = init_option_market(
     &client,
     &options_program_id,

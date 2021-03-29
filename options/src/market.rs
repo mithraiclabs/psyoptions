@@ -1,6 +1,7 @@
 use crate::error::OptionsError;
 use arrayref::{array_mut_ref, array_ref, array_refs, mut_array_refs};
 use solana_program::{
+    account_info::AccountInfo,
     clock::UnixTimestamp,
     program_error::ProgramError,
     program_pack::{IsInitialized, Pack, Sealed},
@@ -33,6 +34,19 @@ pub struct OptionMarket {
     /// Address for the liquidity pool that contains the quote asset when
     /// options are exercised
     pub quote_asset_pool: Pubkey,
+}
+
+impl OptionMarket {
+    pub fn from_account_info(
+        account_info: &AccountInfo,
+        program_id: &Pubkey,
+    ) -> Result<Self, ProgramError> {
+        if account_info.owner != program_id {
+            return Err(ProgramError::InvalidArgument);
+        }
+        let option_market_data = account_info.try_borrow_data()?;
+        OptionMarket::unpack(&option_market_data)
+    }
 }
 
 impl IsInitialized for OptionMarket {

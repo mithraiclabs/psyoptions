@@ -96,7 +96,6 @@ pub fn test_sucessful_close_post_expiration() {
     &options_program_id,
     &option_market_key,
     &option_market.underlying_asset_pool,
-    &option_mint_keys.pubkey(),
     &writer_token_mint_keys.pubkey(),
     &option_writer_writer_token_keys.pubkey(),
     &option_writer_keys.pubkey(),
@@ -258,7 +257,6 @@ pub fn test_panic_when_expiration_has_not_passed_close_post_exp() {
     &options_program_id,
     &option_market_key,
     &option_market.underlying_asset_pool,
-    &option_mint_keys.pubkey(),
     &writer_token_mint_keys.pubkey(),
     &option_writer_writer_token_keys.pubkey(),
     &option_writer_keys.pubkey(),
@@ -347,13 +345,12 @@ pub fn test_panic_when_non_underlying_asset_pool_is_used() {
   .unwrap();
 
   let (option_mint_authority, bump_seed) =
-    Pubkey::find_program_address(&[&option_mint_keys.pubkey().to_bytes()[..32]], &program_id);
+    Pubkey::find_program_address(&[&option_market_key.to_bytes()[..32]], &program_id);
 
   let data = OptionsInstruction::ClosePostExpiration { bump_seed }.pack();
 
-  let mut accounts = Vec::with_capacity(10);
+  let mut accounts = Vec::with_capacity(9);
   accounts.push(AccountMeta::new_readonly(option_market_key, false));
-  accounts.push(AccountMeta::new_readonly(option_mint_keys.pubkey(), false));
   accounts.push(AccountMeta::new_readonly(option_mint_authority, false));
   accounts.push(AccountMeta::new(writer_token_mint_keys.pubkey(), false));
   accounts.push(AccountMeta::new(option_writer_writer_token_keys.pubkey(), false));

@@ -92,13 +92,13 @@ export const initializeMarketInstruction = async ({
   const data = Buffer.concat([tagBuffer, initializeMarketBuffer]);
 
   // Generate the program derived address needed
-  let optionMintAuthorityKey;
+  let marketAuthorityKey;
   try {
-    const [_optionMintAuthorityKey] = await PublicKey.findProgramAddress(
-      [optionMintKey.toBuffer()],
+    const [_marketAuthorityKey] = await PublicKey.findProgramAddress(
+      [optionMarketKey.toBuffer()],
       programId,
     );
-    optionMintAuthorityKey = _optionMintAuthorityKey;
+    marketAuthorityKey = _marketAuthorityKey;
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('findProgramAddress Error: ', error);
@@ -112,7 +112,7 @@ export const initializeMarketInstruction = async ({
       { pubkey: writerTokenMintKey, isSigner: false, isWritable: true },
       { pubkey: optionMarketKey, isSigner: false, isWritable: true },
       {
-        pubkey: optionMintAuthorityKey,
+        pubkey: marketAuthorityKey,
         isSigner: false,
         isWritable: false,
       },
@@ -252,6 +252,7 @@ export const initializeMarket = async ({
   const signers = [
     payer,
     optionMintAccount,
+    writerTokenMintAccount,
     underlyingAssetPoolAccount,
     optionMarketDataAccount,
     quoteAssetPoolAccount,
