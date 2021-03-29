@@ -139,15 +139,6 @@ impl Processor {
 
         let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 
-        // Assert that the derived address from the given option market account is 
-        // the same as the OptionMarket. This blocks adversaries from spoofing an 
-        // option market to drain the vaults.
-        let (market_authority_pubkey, _bump_seed) =
-            Pubkey::find_program_address(&[&option_market_acct.key.to_bytes()[..32]], &program_id);
-        if market_authority_pubkey != *market_authority_acct.key {
-            return Err(OptionsError::BadMarketAddress.into())
-        }
-
         // Validate that the option mint and writer token mint are the same as the market
         if option_market.option_mint != *option_mint_acct.key
             || option_market.writer_token_mint != *writer_token_mint_acct.key
@@ -241,15 +232,6 @@ impl Processor {
 
         let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 
-        // Assert that the derived address from the given option market account is 
-        // the same as the OptionMarket. This blocks adversaries from spoofing an 
-        // option market to drain the vaults.
-        let (market_authority_pubkey, _bump_seed) =
-            Pubkey::find_program_address(&[&option_market_acct.key.to_bytes()[..32]], &program_id);
-        if market_authority_pubkey != *market_authority_acct.key {
-            return Err(OptionsError::BadMarketAddress.into())
-        }
-
         let clock = Clock::from_account_info(&clock_sysvar_info)?;
         // Verify that the OptionMarket has not expired
         if clock.unix_timestamp > option_market.expiration_unix_timestamp {
@@ -331,15 +313,6 @@ impl Processor {
         let writer_token_source_authority_acct = next_account_info(account_info_iter)?;
         let underlying_asset_dest_acct = next_account_info(account_info_iter)?;
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
-
-        // Assert that the derived address from the given option market account is 
-        // the same as the OptionMarket. This blocks adversaries from spoofing an 
-        // option market to drain the vaults.
-        let (market_authority_pubkey, _bump_seed) =
-            Pubkey::find_program_address(&[&option_market_acct.key.to_bytes()[..32]], &program_id);
-        if market_authority_pubkey != *market_authority_acct.key {
-            return Err(OptionsError::BadMarketAddress.into())
-        }
 
         let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 
@@ -428,15 +401,6 @@ impl Processor {
         let spl_program_acct = next_account_info(account_info_iter)?;
         let clock_sysvar_info = next_account_info(account_info_iter)?;
 
-        // Assert that the derived address from the given option market account is 
-        // the same as the OptionMarket. This blocks adversaries from spoofing an 
-        // option market to drain the vaults.
-        let (market_authority_pubkey, _bump_seed) =
-            Pubkey::find_program_address(&[&option_market_acct.key.to_bytes()[..32]], &program_id);
-        if market_authority_pubkey != *market_authority_acct.key {
-            return Err(OptionsError::BadMarketAddress.into())
-        }
-
         let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 
         let clock = Clock::from_account_info(&clock_sysvar_info)?;
@@ -506,15 +470,6 @@ impl Processor {
         let quote_asset_dest_acct = next_account_info(account_info_iter)?;
         let quote_asset_pool_acct = next_account_info(account_info_iter)?;
         let spl_token_program_acct = next_account_info(account_info_iter)?;
-
-        // Assert that the derived address from the given option market account is 
-        // the same as the OptionMarket. This blocks adversaries from spoofing an 
-        // option market to drain the vaults.
-        let (market_authority_pubkey, _bump_seed) =
-            Pubkey::find_program_address(&[&option_market_acct.key.to_bytes()[..32]], &program_id);
-        if market_authority_pubkey != *market_authority_acct.key {
-            return Err(OptionsError::BadMarketAddress.into())
-        }
 
         let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 
