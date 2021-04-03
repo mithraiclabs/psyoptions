@@ -5,7 +5,6 @@ export * from './exerciseCoveredCall';
 export * from './exchangeWriterTokenForQuoteAsset';
 export * from './closePosition';
 export * from './initializeMarket';
-export * from './initializeSerumMarket';
 export * from './mintCoveredCall';
 export * from './market';
 
