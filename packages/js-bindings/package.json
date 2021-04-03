@@ -1,6 +1,6 @@
 {
   "name": "@mithraic-labs/options-js-bindings",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Smart contract instructions bindings for mithraiclabs' solana options",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
@@ -18,9 +18,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@project-serum/serum": "^0.13.23",
-    "@solana/spl-token": "^0.0.13",
-    "@solana/web3.js": "^0.91.2",
+    "@solana/spl-token": "^0.1.1",
+    "@solana/web3.js": "^0.93.0",
     "bignumber.js": "^9.0.1",
     "bn.js": "^5.2.0",
     "buffer-layout": "^1.2.0",
