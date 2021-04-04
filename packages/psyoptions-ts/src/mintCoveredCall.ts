@@ -14,6 +14,25 @@ import { getOptionMarketData } from './utils/getOptionMarketData';
 
 export const MINT_COVERED_CALL_LAYOUT = struct([u8('bumpSeed')]);
 
+/**
+ * Generate the instruction for `MintCoveredCall`
+ *
+ * Mints an Option Token and Writer Token after successfully transfering
+ * underlying asset to the option market's pool.
+ *
+ * @param programId the public key for the PsyOptions program
+ * @param optionMarketKey public key for the opton market
+ * @param optionMintKey public key of the option token mint for the option market
+ * @param mintedOptionDestKey public key where the option will be minted to
+ * @param writerTokenDestKey public key where the Writer Token will be minted to
+ * @param writerTokenMintKey public key of the Writer Token mint for the option market
+ * @param underlyingAssetPoolKey public key of the underlying asset pool
+ * for the market, where the asset will be transfered to
+ * @param underlyingAssetSrcKey account the underlying asset will be transfered from
+ * @param authorityPubkey onwer of the underlyingAssetSrcKey, likely the wallet
+ * making the transaction
+ * @returns
+ */
 export const mintCoveredCallInstruction = async ({
   authorityPubkey,
   programId,

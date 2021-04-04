@@ -18,7 +18,7 @@ export const CLOSE_POSITION = struct([u8('bumpSeed')]);
  * This instruction will burn a Writer Token and an Option Token. Upon burning
  * these tokens, the program will transfer the locked underlying asset to the specified
  * public key. The amount of underlying asset transfered depends on the underlying amount
- * per contract, aka the contract size.
+ * per contract, aka `contract size`.
  *
  * @param programId the public key for the PsyOptions program
  * @param optionMarketKey public key for the opton market
@@ -30,12 +30,11 @@ export const CLOSE_POSITION = struct([u8('bumpSeed')]);
  * owns the account
  * @param writerTokenMintKey public key of the writer token mint for the option market
  * @param writerTokenSourceKey public key of the account where the Writer Token will be burned from
- * @param writerTokenSourceAuthorityKey Onwer of the writerTokenSourceKey, likely the wallet that
- * owns the account
+ * @param writerTokenSourceAuthorityKey owner of the writerTokenSourceKey, likely the wallet making
+ * the transaction
  * @param underlyingAssetDestKey public key of the account to send the underlying asset to
  * @returns
  */
-
 export const closePositionInstruction = async ({
   programId,
   optionMarketKey,

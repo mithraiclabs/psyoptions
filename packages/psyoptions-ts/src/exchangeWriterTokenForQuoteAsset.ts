@@ -12,6 +12,26 @@ import { TOKEN_PROGRAM_ID } from './utils';
 
 export const EXCHANGE_WRITER_TOKEN_FOR_QUOTE = struct([u8('bumpSeed')]);
 
+/**
+ * Generate the instruction for `ExchangeWriterTokenForQuote`
+ *
+ * This instruction will burn a Writer Token and transfer quote asset to the
+ * specified account. The amount of quote asset transfered depends on the quote
+ * amount per contract, aka `contract size * price`.
+ *
+ * **Note this instruction can only be called after an option has been exercised**
+ *
+ * @param programId the public key for the PsyOptions program
+ * @param optionMarketKey public key for the opton market
+ * @param writerTokenMintKey public key of the writer token mint for the option market
+ * @param writerTokenSourceKey public key of the account where the Writer Token will be burned from
+ * @param writerTokenSourceAuthorityKey owner of the writerTokenSourceKey, likely the wallet
+ * making the transaction
+ * @param quoteAssetDestKey public key of the account to send the quote asset to
+ * @param quoteAssetPoolKey public key of the quote asset pool
+ * for the market, where the asset will be transfered from
+ * @returns
+ */
 export const exchangeWriterTokenForQuoteInstruction = async ({
   programId,
   optionMarketKey,

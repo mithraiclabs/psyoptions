@@ -14,6 +14,33 @@ import { getOptionMarketData } from './utils/getOptionMarketData';
 
 export const EXERCISE_COVERED_CALL_LAYOUT = struct([u8('bumpSeed')]);
 
+/**
+ * Generate the instruction for `ExerciseCoveredCall`.
+ *
+ * This instruction will burn an Option Token, transfer quote asset
+ * to the quote asset pool, and transfer underlying asset from the
+ * underlying asset pool to the specified account. The amount of underlying asset
+ * transfered depends on the underlying amount per contract, aka `contract size`.
+ * The amount of quote asset transfered depends on the quote amount
+ * per contract, aka `contract size * price`.
+ *
+ * **Note this instruction may only be called prior to the option market expiration**
+ *
+ * @param programId the public key for the PsyOptions program
+ * @param optionMintKey public key of the option token mint for the option market
+ * @param optionMarketKey public key for the opton market
+ * @param exerciserQuoteAssetKey public key where the quote asset will be transfered from
+ * @param exerciserUnderlyingAssetKey public key where the underlying asset will be transfered to
+ * @param exerciserQuoteAssetAuthorityKey owner of the exerciserQuoteAssetKey, likely the wallet
+ * @param underlyingAssetPoolKey public key of the underlying asset pool
+ * for the market, where the asset will be transfered from
+ * @param quoteAssetPoolKey public key of the quote asset pool
+ * for the market, where the asset will be transfered to
+ * @param optionTokenKey public key of the account where the Option Token will be burned from
+ * @param optionTokenAuthorityKey onwer of the optionTokenKey, likely the wallet
+ * making the transaction
+ * @returns
+ */
 export const exerciseCoveredCallInstruction = async ({
   programId,
   optionMintKey,
