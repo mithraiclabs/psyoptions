@@ -1,7 +1,7 @@
 {
-  "name": "@mithraic-labs/options-js-bindings",
-  "version": "0.7.2",
-  "description": "Smart contract instructions bindings for mithraiclabs' solana options",
+  "name": "@mithraic-labs/psyoptions",
+  "version": "0.1.0",
+  "description": "Solana program instruction bindings for mithraiclabs' PsyOptions",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
   "files": [
