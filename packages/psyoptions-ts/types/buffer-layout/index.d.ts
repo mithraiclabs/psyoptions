@@ -1,3 +1,7 @@
+/* eslint-disable no-shadow */
+/* eslint-disable class-methods-use-this */
+/* eslint-disable no-unused-vars */
+/* eslint-disable max-classes-per-file */
 declare module 'buffer-layout' {
   // TODO: remove `any`.
   export class Layout<T = any> {
@@ -16,13 +20,9 @@ declare module 'buffer-layout' {
     replicate(name: string): this;
   }
   export class ExternalLayout {
-    encode(span: any, b: Buffer, offset: number) {
-      throw new Error('Method not implemented.');
-    }
+    encode(span: any, b: Buffer, offset: number): number;
 
-    isCount() {
-      throw new Error('Method not implemented.');
-    }
+    isCount(): any;
   }
   export class Blob extends Layout {
     length: any;
@@ -33,9 +33,9 @@ declare module 'buffer-layout' {
 
     constructor(span: number, property?: string);
 
-    decode(b: Buffer, offset?: number): T;
+    decode(b: Buffer, offset?: number): any;
 
-    encode(src: T, b: Buffer, offset?: number): number;
+    encode(src: any, b: Buffer, offset?: number): number;
   }
   // TODO: remove any.
   export class Structure<T = any> extends Layout<T> {
