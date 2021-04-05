@@ -14,6 +14,26 @@ import { getOptionMarketData } from './utils/getOptionMarketData';
 
 export const CLOSE_POST_EXPIRATION_COVERED_CALL = struct([u8('bumpSeed')]);
 
+/**
+ * Generate the instruction for `ClosePostExpiration`
+ *
+ * This instruction will burn a Writer Token and transfer underlying asset back to the
+ * specified account. The amount of underlying asset transfered depends on the underlying
+ * amount per contract, aka `contract size`.
+ *
+ * **Note this instruction can only be called after the option market has expired**
+ *
+ * @param programId the public key for the PsyOptions program
+ * @param optionMarketKey public key for the opton market
+ * @param underlyingAssetDestKey public key of the account to send the underlying asset to
+ * @param underlyingAssetPoolKey public key of the underlying asset pool
+ * for the market, where the asset will be transfered from
+ * @param writerTokenMintKey public key of the writer token mint for the option market
+ * @param writerTokenSourceKey public key of the account where the Writer Token will be burned from
+ * @param writerTokenSourceAuthorityKey owner of the writerTokenSourceKey, likely the wallet
+ * making the transaction
+ * @returns
+ */
 export const closePostExpirationCoveredCallInstruction = async ({
   programId,
   optionMarketKey,

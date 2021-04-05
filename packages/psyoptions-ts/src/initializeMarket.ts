@@ -34,6 +34,27 @@ export const INITIALIZE_MARKET_LAYOUT = struct([
   ns64('expirationUnixTimestamp'),
 ]);
 
+/**
+ * Generate the instruction for `InitializeMarket`
+ *
+ * Instruction to initialize a new option market. Strike price is determined by
+ * `quote amount per contract / underlying amount per contract`
+ *
+ * @param programId the public key for the PsyOptions program
+ * @param underlyingAssetMintKey SPL Token mint of the underlying asset
+ * @param quoteAssetMintKey SPL Token mint of the quote asset
+ * @param optionMintKey uninitialized SPL Token mint to be used as the Option Token mint
+ * for the new option market
+ * @param writerTokenMintKey uninitialized SPL Token mint to be used as the Writer Token mint
+ * for the new option market
+ * @param optionMarketKey key for a new Account that will store the data for the options market
+ * @param underlyingAssetPoolKey unintitialized SPL Token account to store locked underlying asset
+ * @param quoteAssetPoolKey unintitialized SPL Token account to store locked quote asset
+ * @param underlyingAmountPerContract amount of underlying asset needed to mint an Option Token
+ * @param quoteAmountPerContract amount of quote needed to exercise the option
+ * @param expirationUnixTimestamp unix timestamp when the option market expires
+ * @returns
+ */
 export const initializeMarketInstruction = async ({
   programId,
   underlyingAssetMintKey,
