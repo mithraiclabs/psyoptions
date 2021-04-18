@@ -81,7 +81,7 @@ pub enum OptionsInstruction {
     /// 7. `[writeable]` Underlying Asset Pool
     /// 8. `[]` Sysvar clock
     /// 9. `[]` SPL Token Program
-    ClosePostExpiration { bump_seed: u8 },
+    ClosePostExpiration {},
     /// Close a single option contract prior to expiration.
     /// Burns the _option token_ and the _writer token_ and returns the
     /// underlying asset back to the writer (or address specified).
@@ -135,10 +135,7 @@ impl OptionsInstruction {
             }
             1 => Self::MintCoveredCall {},
             2 => Self::ExerciseCoveredCall {},
-            3 => {
-                let (bump_seed, _rest) = Self::unpack_u8(rest)?;
-                Self::ClosePostExpiration { bump_seed }
-            }
+            3 => Self::ClosePostExpiration {},
             4 => {
                 let (bump_seed, _rest) = Self::unpack_u8(rest)?;
                 Self::ClosePosition { bump_seed }
@@ -173,9 +170,8 @@ impl OptionsInstruction {
             &Self::ExerciseCoveredCall {} => {
                 buf.push(2);
             }
-            &Self::ClosePostExpiration { ref bump_seed } => {
+            &Self::ClosePostExpiration {} => {
                 buf.push(3);
-                buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
             &Self::ClosePosition { ref bump_seed } => {
                 buf.push(4);
@@ -359,10 +355,10 @@ pub fn close_post_expiration(
     writer_token_source_authority: &Pubkey,
     underlying_asset_dest: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
-    let (option_mint_authority, bump_seed) =
+    let (option_mint_authority, _bump_seed) =
         Pubkey::find_program_address(&[&option_mint_key.to_bytes()[..32]], &program_id);
 
-    let data = OptionsInstruction::ClosePostExpiration { bump_seed }.pack();
+    let data = OptionsInstruction::ClosePostExpiration {}.pack();
 
     let mut accounts = Vec::with_capacity(10);
     accounts.push(AccountMeta::new_readonly(*options_market, false));
@@ -508,7 +504,7 @@ mod tests {
         let check = OptionsInstruction::ExerciseCoveredCall {};
         let packed = check.pack();
         // add the tag to the expected buffer
-        let mut expect = Vec::from([2u8]);
+        let expect = Vec::from([2u8]);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
@@ -516,12 +512,10 @@ mod tests {
 
     #[test]
     fn test_pack_unpack_close_post_expiration() {
-        let bump_seed = 1;
-        let check = OptionsInstruction::ClosePostExpiration { bump_seed };
+        let check = OptionsInstruction::ClosePostExpiration {};
         let packed = check.pack();
         // add the tag to the expected buffer
-        let mut expect = Vec::from([3u8]);
-        expect.push(bump_seed);
+        let expect = Vec::from([3u8]);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);

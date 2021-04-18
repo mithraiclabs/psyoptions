@@ -385,7 +385,7 @@ impl Processor {
         Ok(())
     }
 
-    pub fn process_close_post_expiration(accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
+    pub fn process_close_post_expiration(accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let option_market_acct = next_account_info(account_info_iter)?;
         let option_mint_acct = next_account_info(account_info_iter)?;
@@ -427,7 +427,7 @@ impl Processor {
                 writer_token_source_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_mint_acct.key.to_bytes(), &[option_market.bump_seed]]],
         )?;
 
         // transfer underlying asset from the pool to the option writers's account
@@ -447,7 +447,7 @@ impl Processor {
                 option_mint_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_mint_acct.key.to_bytes(), &[option_market.bump_seed]]],
         )?;
 
         Ok(())
@@ -542,8 +542,8 @@ impl Processor {
             OptionsInstruction::ExerciseCoveredCall {} => {
                 Self::process_exercise_covered_call(accounts)
             }
-            OptionsInstruction::ClosePostExpiration { bump_seed } => {
-                Self::process_close_post_expiration(accounts, bump_seed)
+            OptionsInstruction::ClosePostExpiration { } => {
+                Self::process_close_post_expiration(accounts)
             }
             OptionsInstruction::ClosePosition { bump_seed } => {
                 Self::process_close_position(accounts, bump_seed)

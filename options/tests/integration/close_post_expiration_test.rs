@@ -1,5 +1,3 @@
-use solana_program::instruction::Instruction;
-use solana_program::instruction::AccountMeta;
 use crate::{
   option_helpers::{create_and_add_option_writer, init_option_market},
   solana_helpers, PROGRAM_KEY,
@@ -9,6 +7,7 @@ use solana_client::rpc_client::RpcClient;
 use solana_options::{instruction::OptionsInstruction, market::OptionMarket};
 use solana_program::{
   clock::Clock,
+  instruction::{AccountMeta, Instruction},
   program_pack::Pack,
   pubkey::Pubkey,
   sysvar::{clock, Sysvar},
@@ -279,7 +278,7 @@ pub fn test_panic_when_expiration_has_not_passed_close_post_exp() {
 #[test]
 #[serial]
 #[should_panic(expected = "Error processing Instruction 0: custom program error: 0x6")]
-pub fn test_panic_when_non_underlying_asset_pool_is_used() {
+pub fn test_panic_when_non_underlying_asset_pool_is_used_close_post_exp() {
   // Create the options market
   let client = RpcClient::new_with_commitment(
     "http://localhost:8899".to_string(),
@@ -346,22 +345,25 @@ pub fn test_panic_when_non_underlying_asset_pool_is_used() {
   )
   .unwrap();
 
-  let (option_mint_authority, bump_seed) =
+  let (option_mint_authority, _bump_seed) =
     Pubkey::find_program_address(&[&option_mint_keys.pubkey().to_bytes()[..32]], &program_id);
 
-  let data = OptionsInstruction::ClosePostExpiration { bump_seed }.pack();
+  let data = OptionsInstruction::ClosePostExpiration {}.pack();
 
   let mut accounts = Vec::with_capacity(10);
   accounts.push(AccountMeta::new_readonly(option_market_key, false));
   accounts.push(AccountMeta::new_readonly(option_mint_keys.pubkey(), false));
   accounts.push(AccountMeta::new_readonly(option_mint_authority, false));
   accounts.push(AccountMeta::new(writer_token_mint_keys.pubkey(), false));
-  accounts.push(AccountMeta::new(option_writer_writer_token_keys.pubkey(), false));
-  accounts.push(AccountMeta::new_readonly(
-    option_writer_keys.pubkey(),
-    true,
+  accounts.push(AccountMeta::new(
+    option_writer_writer_token_keys.pubkey(),
+    false,
   ));
-  accounts.push(AccountMeta::new(option_writer_quote_asset_keys.pubkey(), false));
+  accounts.push(AccountMeta::new_readonly(option_writer_keys.pubkey(), true));
+  accounts.push(AccountMeta::new(
+    option_writer_quote_asset_keys.pubkey(),
+    false,
+  ));
   accounts.push(AccountMeta::new(quote_asset_pool_key, false));
   accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
   accounts.push(AccountMeta::new_readonly(clock::id(), false));
