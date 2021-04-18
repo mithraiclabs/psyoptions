@@ -210,7 +210,7 @@ impl Processor {
         Ok(())
     }
 
-    pub fn process_exercise_covered_call(accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
+    pub fn process_exercise_covered_call(accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let clock_sysvar_info = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
@@ -251,7 +251,7 @@ impl Processor {
                 option_token_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_mint_acct.key.to_bytes(), &[option_market.bump_seed]]],
         )?;
 
         // transfer the quote asset from the Exerciser to the quote asset pool
@@ -290,7 +290,7 @@ impl Processor {
                 options_spl_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_mint_acct.key.to_bytes(), &[option_market.bump_seed]]],
         )?;
 
         Ok(())
@@ -539,8 +539,8 @@ impl Processor {
                 bump_seed,
             ),
             OptionsInstruction::MintCoveredCall {} => Self::process_mint_covered_call(accounts),
-            OptionsInstruction::ExerciseCoveredCall { bump_seed } => {
-                Self::process_exercise_covered_call(accounts, bump_seed)
+            OptionsInstruction::ExerciseCoveredCall {} => {
+                Self::process_exercise_covered_call(accounts)
             }
             OptionsInstruction::ClosePostExpiration { bump_seed } => {
                 Self::process_close_post_expiration(accounts, bump_seed)

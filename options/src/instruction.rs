@@ -67,7 +67,7 @@ pub enum OptionsInstruction {
     ///   9. `[writeable]` Option Mint
     ///   10. `[writeable]` Option Token Account
     ///   11. `[signer]` Option Token Account Authority
-    ExerciseCoveredCall { bump_seed: u8 },
+    ExerciseCoveredCall {},
     /// Close a single option contract post expiration.
     /// Transfers the underlying asset back to the Option Writer
     ///
@@ -134,10 +134,7 @@ impl OptionsInstruction {
                 }
             }
             1 => Self::MintCoveredCall {},
-            2 => {
-                let (bump_seed, _rest) = Self::unpack_u8(rest)?;
-                Self::ExerciseCoveredCall { bump_seed }
-            }
+            2 => Self::ExerciseCoveredCall {},
             3 => {
                 let (bump_seed, _rest) = Self::unpack_u8(rest)?;
                 Self::ClosePostExpiration { bump_seed }
@@ -173,9 +170,8 @@ impl OptionsInstruction {
             &Self::MintCoveredCall {} => {
                 buf.push(1);
             }
-            &Self::ExerciseCoveredCall { ref bump_seed } => {
+            &Self::ExerciseCoveredCall {} => {
                 buf.push(2);
-                buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
             &Self::ClosePostExpiration { ref bump_seed } => {
                 buf.push(3);
@@ -292,7 +288,7 @@ pub fn mint_covered_call(
     accounts.push(AccountMeta::new_readonly(*authority_pubkey, true));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
 
-    let (option_mint_authority_pubkey, bump_seed) =
+    let (option_mint_authority_pubkey, _bump_seed) =
         Pubkey::find_program_address(&[&option_mint.to_bytes()[..32]], &program_id);
     accounts.push(AccountMeta::new_readonly(
         option_mint_authority_pubkey,
@@ -403,9 +399,9 @@ pub fn exercise_covered_call(
     option_token_key: &Pubkey,
     option_token_authority: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
-    let (options_spl_authority_pubkey, bump_seed) =
+    let (options_spl_authority_pubkey, _bump_seed) =
         Pubkey::find_program_address(&[&option_mint.to_bytes()[..32]], &program_id);
-    let data = OptionsInstruction::ExerciseCoveredCall { bump_seed }.pack();
+    let data = OptionsInstruction::ExerciseCoveredCall {}.pack();
 
     let mut accounts = Vec::with_capacity(12);
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
@@ -498,7 +494,7 @@ mod tests {
 
     #[test]
     fn test_pack_unpack_mint_covered_call() {
-        let check = OptionsInstruction::MintCoveredCall { };
+        let check = OptionsInstruction::MintCoveredCall {};
         let packed = check.pack();
         // add the tag to the expected buffer
         let expect = Vec::from([1u8]);
@@ -509,12 +505,10 @@ mod tests {
 
     #[test]
     fn test_pack_unpack_exercise_covered_call() {
-        let bump_seed = 1;
-        let check = OptionsInstruction::ExerciseCoveredCall { bump_seed };
+        let check = OptionsInstruction::ExerciseCoveredCall {};
         let packed = check.pack();
         // add the tag to the expected buffer
         let mut expect = Vec::from([2u8]);
-        expect.push(bump_seed);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
