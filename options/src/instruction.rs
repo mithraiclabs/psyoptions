@@ -52,7 +52,7 @@ pub enum OptionsInstruction {
     ///   9. `[]` Program Derived Address for the authority over the Option Mint
     ///   10. `[]` SysVar clock account
     ///   
-    MintCoveredCall { bump_seed: u8 },
+    MintCoveredCall {},
     /// Exercise an Options token representing a Covered Call
     ///
     ///   0. `[]` Sysvar clock
@@ -133,10 +133,7 @@ impl OptionsInstruction {
                     bump_seed,
                 }
             }
-            1 => {
-                let (bump_seed, _rest) = Self::unpack_u8(rest)?;
-                Self::MintCoveredCall { bump_seed }
-            }
+            1 => Self::MintCoveredCall {},
             2 => {
                 let (bump_seed, _rest) = Self::unpack_u8(rest)?;
                 Self::ExerciseCoveredCall { bump_seed }
@@ -173,9 +170,8 @@ impl OptionsInstruction {
                 buf.extend_from_slice(&expiration_unix_timestamp.to_le_bytes());
                 buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
-            &Self::MintCoveredCall { ref bump_seed } => {
+            &Self::MintCoveredCall {} => {
                 buf.push(1);
-                buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
             &Self::ExerciseCoveredCall { ref bump_seed } => {
                 buf.push(2);
@@ -304,7 +300,7 @@ pub fn mint_covered_call(
     ));
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
 
-    let data = OptionsInstruction::MintCoveredCall { bump_seed }.pack();
+    let data = OptionsInstruction::MintCoveredCall {}.pack();
     Ok(Instruction {
         program_id: *program_id,
         data,
@@ -502,11 +498,10 @@ mod tests {
 
     #[test]
     fn test_pack_unpack_mint_covered_call() {
-        let bump_seed = 1;
-        let check = OptionsInstruction::MintCoveredCall { bump_seed };
+        let check = OptionsInstruction::MintCoveredCall { };
         let packed = check.pack();
         // add the tag to the expected buffer
-        let expect = Vec::from([1u8, bump_seed]);
+        let expect = Vec::from([1u8]);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
