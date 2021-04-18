@@ -4,5 +4,5 @@ target/
 *.log
 .DS_Store
 packages/**/dist/**/*
-options/deployed_programs/solana_options-local-keypair.json
 docs
+options/deployed_programs/*
