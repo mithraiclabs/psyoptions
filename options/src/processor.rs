@@ -453,10 +453,7 @@ impl Processor {
         Ok(())
     }
 
-    pub fn process_exchange_writer_token_for_quote(
-        accounts: &[AccountInfo],
-        bump_seed: u8,
-    ) -> ProgramResult {
+    pub fn process_exchange_writer_token_for_quote(accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let option_market_acct = next_account_info(account_info_iter)?;
         let option_mint_acct = next_account_info(account_info_iter)?;
@@ -495,7 +492,7 @@ impl Processor {
                 writer_token_source_authority_acct.clone(),
                 spl_token_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_mint_acct.key.to_bytes(), &[option_market.bump_seed]]],
         )?;
 
         // transfer quote asset from the pool to the destination account
@@ -515,7 +512,7 @@ impl Processor {
                 option_market_authority_acct.clone(),
                 spl_token_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_mint_acct.key.to_bytes(), &[option_market.bump_seed]]],
         )?;
 
         Ok(())
@@ -546,8 +543,8 @@ impl Processor {
                 Self::process_close_post_expiration(accounts)
             }
             OptionsInstruction::ClosePosition {} => Self::process_close_position(accounts),
-            OptionsInstruction::ExchangeWriterTokenForQuote { bump_seed } => {
-                Self::process_exchange_writer_token_for_quote(accounts, bump_seed)
+            OptionsInstruction::ExchangeWriterTokenForQuote {} => {
+                Self::process_exchange_writer_token_for_quote(accounts)
             }
         }
     }

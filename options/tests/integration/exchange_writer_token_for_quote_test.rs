@@ -318,7 +318,7 @@ pub fn test_panic_when_non_quote_asset_pool_is_used() {
     &[&option_mint_keys.pubkey().to_bytes()[..32]],
     &options_program_id,
   );
-  let data = OptionsInstruction::ExchangeWriterTokenForQuote { bump_seed }.pack();
+  let data = OptionsInstruction::ExchangeWriterTokenForQuote {}.pack();
   let mut accounts = Vec::with_capacity(9);
   accounts.push(AccountMeta::new_readonly(option_market_key, false));
   accounts.push(AccountMeta::new_readonly(option_mint_keys.pubkey(), false));
@@ -473,7 +473,7 @@ pub fn test_panic_when_option_token_is_used() {
     &[&option_mint_keys.pubkey().to_bytes()[..32]],
     &options_program_id,
   );
-  let data = OptionsInstruction::ExchangeWriterTokenForQuote { bump_seed }.pack();
+  let data = OptionsInstruction::ExchangeWriterTokenForQuote {}.pack();
   let mut accounts = Vec::with_capacity(9);
   accounts.push(AccountMeta::new_readonly(option_market_key, false));
   accounts.push(AccountMeta::new_readonly(option_mint_keys.pubkey(), false));

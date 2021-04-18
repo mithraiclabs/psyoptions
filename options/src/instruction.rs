@@ -111,7 +111,7 @@ pub enum OptionsInstruction {
     /// 6. `[writeable]` Quote Asset Destination
     /// 7. `[writeable]` Quote Asset Pool
     /// 8. `[]` SPL token program
-    ExchangeWriterTokenForQuote { bump_seed: u8 },
+    ExchangeWriterTokenForQuote {},
 }
 
 impl OptionsInstruction {
@@ -137,10 +137,7 @@ impl OptionsInstruction {
             2 => Self::ExerciseCoveredCall {},
             3 => Self::ClosePostExpiration {},
             4 => Self::ClosePosition {},
-            5 => {
-                let (bump_seed, _rest) = Self::unpack_u8(rest)?;
-                Self::ExchangeWriterTokenForQuote { bump_seed }
-            }
+            5 => Self::ExchangeWriterTokenForQuote {},
             _ => return Err(ProgramError::InvalidInstructionData.into()),
         })
     }
@@ -173,9 +170,8 @@ impl OptionsInstruction {
             &Self::ClosePosition {} => {
                 buf.push(4);
             }
-            &Self::ExchangeWriterTokenForQuote { ref bump_seed } => {
+            &Self::ExchangeWriterTokenForQuote {} => {
                 buf.push(5);
-                buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
         };
         buf
@@ -430,9 +426,9 @@ pub fn exchange_writer_token_for_quote(
     quote_asset_dest: &Pubkey,
     quote_asset_pool: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
-    let (option_market_authority, bump_seed) =
+    let (option_market_authority, _bump_seed) =
         Pubkey::find_program_address(&[&option_mint.to_bytes()[..32]], &program_id);
-    let data = OptionsInstruction::ExchangeWriterTokenForQuote { bump_seed }.pack();
+    let data = OptionsInstruction::ExchangeWriterTokenForQuote {}.pack();
 
     let mut accounts = Vec::with_capacity(9);
     accounts.push(AccountMeta::new_readonly(*option_market, false));
@@ -530,12 +526,10 @@ mod tests {
 
     #[test]
     fn test_pack_unpack_exchange_writer_token_for_quote() {
-        let bump_seed = 1;
-        let check = OptionsInstruction::ExchangeWriterTokenForQuote { bump_seed };
+        let check = OptionsInstruction::ExchangeWriterTokenForQuote {};
         let packed = check.pack();
         // add the tag to the expected buffer
         let mut expect = Vec::from([5u8]);
-        expect.push(bump_seed);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
