@@ -97,7 +97,7 @@ pub enum OptionsInstruction {
     /// 8. `[]` Writer Token Source Authority
     /// 9. `[writable]` Underlying Asset Destination
     /// 10. `[writable]` Underlying Asset Pool
-    ClosePosition { bump_seed: u8 },
+    ClosePosition {},
     /// Allow a user to exchange their Writer Token for Quote Asset.
     /// Burns the Writer Token and transfers the Quote Asset amount
     /// relative to the option market
@@ -136,10 +136,7 @@ impl OptionsInstruction {
             1 => Self::MintCoveredCall {},
             2 => Self::ExerciseCoveredCall {},
             3 => Self::ClosePostExpiration {},
-            4 => {
-                let (bump_seed, _rest) = Self::unpack_u8(rest)?;
-                Self::ClosePosition { bump_seed }
-            }
+            4 => Self::ClosePosition {},
             5 => {
                 let (bump_seed, _rest) = Self::unpack_u8(rest)?;
                 Self::ExchangeWriterTokenForQuote { bump_seed }
@@ -173,9 +170,8 @@ impl OptionsInstruction {
             &Self::ClosePostExpiration {} => {
                 buf.push(3);
             }
-            &Self::ClosePosition { ref bump_seed } => {
+            &Self::ClosePosition {} => {
                 buf.push(4);
-                buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
             &Self::ExchangeWriterTokenForQuote { ref bump_seed } => {
                 buf.push(5);
@@ -313,10 +309,10 @@ pub fn close_position(
     writer_token_source_authority: &Pubkey,
     underlying_asset_dest: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
-    let (option_mint_authority, bump_seed) =
+    let (option_mint_authority, _bump_seed) =
         Pubkey::find_program_address(&[&option_mint_key.to_bytes()[..32]], &program_id);
 
-    let data = OptionsInstruction::ClosePosition { bump_seed }.pack();
+    let data = OptionsInstruction::ClosePosition {}.pack();
 
     let mut accounts = Vec::with_capacity(11);
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
@@ -523,17 +519,16 @@ mod tests {
 
     #[test]
     fn test_pack_unpack_close_position() {
-        let bump_seed = 1;
-        let check = OptionsInstruction::ClosePosition { bump_seed };
+        let check = OptionsInstruction::ClosePosition {};
         let packed = check.pack();
         // add the tag to the expected buffer
-        let mut expect = Vec::from([4u8]);
-        expect.push(bump_seed);
+        let expect = Vec::from([4u8]);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
     }
 
+    #[test]
     fn test_pack_unpack_exchange_writer_token_for_quote() {
         let bump_seed = 1;
         let check = OptionsInstruction::ExchangeWriterTokenForQuote { bump_seed };

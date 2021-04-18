@@ -8,7 +8,7 @@ use solana_program::{
     pubkey::Pubkey,
     sysvar::Sysvar,
 };
-use spl_token::{instruction as token_instruction};
+use spl_token::instruction as token_instruction;
 
 pub struct Processor {}
 impl Processor {
@@ -296,7 +296,7 @@ impl Processor {
         Ok(())
     }
 
-    pub fn process_close_position(accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
+    pub fn process_close_position(accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let spl_program_acct = next_account_info(account_info_iter)?;
         let option_market_acct = next_account_info(account_info_iter)?;
@@ -339,7 +339,7 @@ impl Processor {
                 writer_token_source_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_mint_acct.key.to_bytes(), &[option_market.bump_seed]]],
         )?;
 
         // Burn Option Token
@@ -359,7 +359,7 @@ impl Processor {
                 option_token_src_auth_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_mint_acct.key.to_bytes(), &[option_market.bump_seed]]],
         )?;
 
         // transfer underlying asset from the pool to the option writers's account
@@ -379,7 +379,7 @@ impl Processor {
                 option_mint_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_mint_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[&option_mint_acct.key.to_bytes(), &[option_market.bump_seed]]],
         )?;
 
         Ok(())
@@ -542,12 +542,10 @@ impl Processor {
             OptionsInstruction::ExerciseCoveredCall {} => {
                 Self::process_exercise_covered_call(accounts)
             }
-            OptionsInstruction::ClosePostExpiration { } => {
+            OptionsInstruction::ClosePostExpiration {} => {
                 Self::process_close_post_expiration(accounts)
             }
-            OptionsInstruction::ClosePosition { bump_seed } => {
-                Self::process_close_position(accounts, bump_seed)
-            }
+            OptionsInstruction::ClosePosition {} => Self::process_close_position(accounts),
             OptionsInstruction::ExchangeWriterTokenForQuote { bump_seed } => {
                 Self::process_exchange_writer_token_for_quote(accounts, bump_seed)
             }
