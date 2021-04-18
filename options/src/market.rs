@@ -33,6 +33,8 @@ pub struct OptionMarket {
     /// Address for the liquidity pool that contains the quote asset when
     /// options are exercised
     pub quote_asset_pool: Pubkey,
+    /// Bump seed for program derived addresses
+    pub bump_seed: u8,
 }
 
 impl IsInitialized for OptionMarket {
@@ -50,7 +52,8 @@ impl Pack for OptionMarket {
         + 8
         + 8
         + PUBLIC_KEY_LEN
-        + PUBLIC_KEY_LEN;
+        + PUBLIC_KEY_LEN
+        + 1;
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         let src = array_ref![src, 0, OptionMarket::LEN];
         let (
@@ -63,6 +66,7 @@ impl Pack for OptionMarket {
             expiration_unix_timestamp,
             underlying_asset_pool,
             quote_asset_pool,
+            bump_seed,
         ) = array_refs![
             src,
             PUBLIC_KEY_LEN,
@@ -73,7 +77,8 @@ impl Pack for OptionMarket {
             8,
             8,
             PUBLIC_KEY_LEN,
-            PUBLIC_KEY_LEN
+            PUBLIC_KEY_LEN,
+            1
         ];
         Ok(OptionMarket {
             option_mint: Pubkey::new(option_mint),
@@ -85,6 +90,7 @@ impl Pack for OptionMarket {
             expiration_unix_timestamp: UnixTimestamp::from_le_bytes(*expiration_unix_timestamp),
             underlying_asset_pool: Pubkey::new(underlying_asset_pool),
             quote_asset_pool: Pubkey::new(quote_asset_pool),
+            bump_seed: u8::from_le_bytes(*bump_seed),
         })
     }
     fn pack_into_slice(&self, dst: &mut [u8]) {
@@ -99,6 +105,7 @@ impl Pack for OptionMarket {
             expiration_unix_timestamp_ref,
             underlying_asset_pool_ref,
             quote_asset_pool_ref,
+            bump_seed_ref,
         ) = mut_array_refs![
             dest,
             PUBLIC_KEY_LEN,
@@ -109,7 +116,8 @@ impl Pack for OptionMarket {
             8,
             8,
             PUBLIC_KEY_LEN,
-            PUBLIC_KEY_LEN
+            PUBLIC_KEY_LEN,
+            1
         ];
         option_mint_ref.copy_from_slice(&self.option_mint.to_bytes());
         writer_token_mint_ref.copy_from_slice(&self.writer_token_mint.to_bytes());
@@ -123,6 +131,7 @@ impl Pack for OptionMarket {
             .copy_from_slice(&self.expiration_unix_timestamp.to_le_bytes());
         underlying_asset_pool_ref.copy_from_slice(&self.underlying_asset_pool.to_bytes());
         quote_asset_pool_ref.copy_from_slice(&self.quote_asset_pool.to_bytes());
+        bump_seed_ref.copy_from_slice(&self.bump_seed.to_le_bytes());
     }
 }
 
@@ -132,6 +141,7 @@ mod tests {
 
     #[test]
     fn test_pack_unpck_option_market() {
+        let bump_seed: u8 = 1;
         let option_mint = Pubkey::new_unique();
         let writer_token_mint = Pubkey::new_unique();
         let underlying_asset_mint = Pubkey::new_unique();
@@ -152,6 +162,7 @@ mod tests {
             expiration_unix_timestamp,
             underlying_asset_pool,
             quote_asset_pool,
+            bump_seed,
         };
         let cloned_option_market = option_market.clone();
 
@@ -168,6 +179,7 @@ mod tests {
             expiration_unix_timestamp_ref,
             underlying_asset_pool_ref,
             quote_asset_pool_ref,
+            bump_seed_ref,
         ) = array_refs![
             serialized_ref,
             PUBLIC_KEY_LEN,
@@ -178,7 +190,8 @@ mod tests {
             8,
             8,
             PUBLIC_KEY_LEN,
-            PUBLIC_KEY_LEN
+            PUBLIC_KEY_LEN,
+            1
         ];
         assert_eq!(option_mint_ref, &option_mint.to_bytes());
         assert_eq!(writer_token_mint_ref, &writer_token_mint.to_bytes());
@@ -203,5 +216,6 @@ mod tests {
             OptionMarket::unpack(&serialized_option_market).unwrap();
 
         assert_eq!(deserialized_options_market, cloned_option_market);
+        assert_eq!(bump_seed_ref, &bump_seed.to_le_bytes());
     }
 }
