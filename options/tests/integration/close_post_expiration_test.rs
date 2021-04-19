@@ -14,7 +14,9 @@ use solana_program::{
   sysvar::{clock, Sysvar},
 };
 use solana_sdk::{
-  account::create_account_infos, commitment_config::CommitmentConfig, signature::Signer,
+  account_info::AccountInfo,
+  commitment_config::CommitmentConfig,
+  signature::Signer,
 };
 use spl_token::state::{Account, Mint};
 use std::{thread, time::Duration};
@@ -33,8 +35,8 @@ pub fn test_sucessful_close_post_expiration() {
   let quote_amount_per_contract = 500; // strike price of 5
                                        // Get the current network clock time to use as the basis for the expiration
   let sysvar_clock_acct = client.get_account(&clock::id()).unwrap();
-  let accounts = &mut [(clock::id(), sysvar_clock_acct)];
-  let sysvar_clock_acct_info = &create_account_infos(accounts)[0];
+  let clock_info_tuple = & mut (clock::id(), sysvar_clock_acct);
+  let sysvar_clock_acct_info = AccountInfo::from(clock_info_tuple);
   let clock = Clock::from_account_info(&sysvar_clock_acct_info).unwrap();
   let expiry = clock.unix_timestamp + 30;
   // Create the option market
@@ -287,8 +289,8 @@ pub fn test_panic_when_non_underlying_asset_pool_is_used() {
   let amount_per_contract = 100;
   let quote_amount_per_contract = 500;
   let sysvar_clock_acct = client.get_account(&clock::id()).unwrap();
-  let accounts = &mut [(clock::id(), sysvar_clock_acct)];
-  let sysvar_clock_acct_info = &create_account_infos(accounts)[0];
+  let clock_info_tuple = & mut (clock::id(), sysvar_clock_acct);
+  let sysvar_clock_acct_info = AccountInfo::from(clock_info_tuple);
   let clock = Clock::from_account_info(&sysvar_clock_acct_info).unwrap();
   let expiry = clock.unix_timestamp + 20;
   // Create the option market
