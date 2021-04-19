@@ -49,22 +49,12 @@ export const exchangeWriterTokenForQuoteInstruction = async ({
   quoteAssetDestKey: PublicKey;
   quoteAssetPoolKey: PublicKey;
 }) => {
-  const exchangeWriterTokenForQuoteBuffer = Buffer.alloc(
-    EXCHANGE_WRITER_TOKEN_FOR_QUOTE.span,
-  );
   // Generate the program derived address needed
-  const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
+  const [marketAuthorityKey] = await PublicKey.findProgramAddress(
     [optionMarketKey.toBuffer()],
     programId,
   );
 
-  EXCHANGE_WRITER_TOKEN_FOR_QUOTE.encode(
-    {
-      bumpSeed,
-    },
-    exchangeWriterTokenForQuoteBuffer,
-    0,
-  );
   /*
    * Generate the instruction tag. 5 is the tag that denotes the
    * ExchangeWriterTokenForQuote instruction The tags can be found the
@@ -72,9 +62,6 @@ export const exchangeWriterTokenForQuoteInstruction = async ({
    */
   const tagBuffer = Buffer.alloc(INTRUCTION_TAG_LAYOUT.span);
   INTRUCTION_TAG_LAYOUT.encode(5, tagBuffer, 0);
-
-  // concatentate the tag with the data
-  const data = Buffer.concat([tagBuffer, exchangeWriterTokenForQuoteBuffer]);
 
   const keys: AccountMeta[] = [
     { pubkey: optionMarketKey, isSigner: false, isWritable: false },
@@ -93,7 +80,7 @@ export const exchangeWriterTokenForQuoteInstruction = async ({
 
   return new TransactionInstruction({
     keys,
-    data,
+    data: tagBuffer,
     programId,
   });
 };

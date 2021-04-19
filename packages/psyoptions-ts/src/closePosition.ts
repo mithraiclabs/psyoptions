@@ -10,7 +10,7 @@ import { struct, u8 } from 'buffer-layout';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { TOKEN_PROGRAM_ID } from './utils';
 
-export const CLOSE_POSITION = struct([u8('bumpSeed')]);
+export const CLOSE_POSITION = struct([]);
 
 /**
  * Generate the instruction for `ClosePosition`.
@@ -58,29 +58,18 @@ export const closePositionInstruction = async ({
   writerTokenSourceAuthorityKey: PublicKey;
   underlyingAssetDestKey: PublicKey;
 }) => {
-  const closePositionBuffer = Buffer.alloc(CLOSE_POSITION.span);
   // Generate the program derived address needed
-  const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
+  const [marketAuthorityKey] = await PublicKey.findProgramAddress(
     [optionMarketKey.toBuffer()],
     programId,
   );
 
-  CLOSE_POSITION.encode(
-    {
-      bumpSeed,
-    },
-    closePositionBuffer,
-    0,
-  );
   /*
    * Generate the instruction tag. 4 is the tag that denotes the ClosePosition instruction
    * The tags can be found the OptionInstruction.unpack function (instruction.rs)
    */
   const tagBuffer = Buffer.alloc(INTRUCTION_TAG_LAYOUT.span);
   INTRUCTION_TAG_LAYOUT.encode(4, tagBuffer, 0);
-
-  // concatentate the tag with the data
-  const data = Buffer.concat([tagBuffer, closePositionBuffer]);
 
   const keys: AccountMeta[] = [
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
@@ -102,7 +91,7 @@ export const closePositionInstruction = async ({
 
   return new TransactionInstruction({
     keys,
-    data,
+    data: tagBuffer,
     programId,
   });
 };

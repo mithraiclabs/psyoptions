@@ -12,7 +12,7 @@ import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { TOKEN_PROGRAM_ID } from './utils';
 import { getOptionMarketData } from './utils/getOptionMarketData';
 
-export const CLOSE_POST_EXPIRATION_COVERED_CALL = struct([u8('bumpSeed')]);
+export const CLOSE_POST_EXPIRATION_COVERED_CALL = struct([]);
 
 /**
  * Generate the instruction for `ClosePostExpiration`
@@ -51,22 +51,10 @@ export const closePostExpirationCoveredCallInstruction = async ({
   writerTokenSourceAuthorityKey: PublicKey;
   underlyingAssetDestKey: PublicKey;
 }) => {
-  const closePostExpirationBuffer = Buffer.alloc(
-    CLOSE_POST_EXPIRATION_COVERED_CALL.span,
-  );
-
   // Generate the program derived address needed
-  const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
+  const [marketAuthorityKey] = await PublicKey.findProgramAddress(
     [optionMarketKey.toBuffer()],
     programId,
-  );
-
-  CLOSE_POST_EXPIRATION_COVERED_CALL.encode(
-    {
-      bumpSeed,
-    },
-    closePostExpirationBuffer,
-    0,
   );
 
   /*
@@ -75,9 +63,6 @@ export const closePostExpirationCoveredCallInstruction = async ({
    */
   const tagBuffer = Buffer.alloc(INTRUCTION_TAG_LAYOUT.span);
   INTRUCTION_TAG_LAYOUT.encode(3, tagBuffer, 0);
-
-  // concatentate the tag with the data
-  const data = Buffer.concat([tagBuffer, closePostExpirationBuffer]);
 
   const keys: AccountMeta[] = [
     { pubkey: optionMarketKey, isSigner: false, isWritable: false },
@@ -97,7 +82,7 @@ export const closePostExpirationCoveredCallInstruction = async ({
 
   return new TransactionInstruction({
     keys,
-    data,
+    data: tagBuffer,
     programId,
   });
 };
