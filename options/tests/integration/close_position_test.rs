@@ -14,7 +14,7 @@ use solana_program::{
   sysvar::{clock, Sysvar},
 };
 use solana_sdk::{
-  account::create_account_infos, commitment_config::CommitmentConfig, signature::Signer,
+  commitment_config::CommitmentConfig, signature::Signer,
 };
 use spl_token::state::{Account, Mint};
 
