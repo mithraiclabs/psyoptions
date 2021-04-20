@@ -12,7 +12,7 @@ import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { TOKEN_PROGRAM_ID } from './utils';
 import { getOptionMarketData } from './utils/getOptionMarketData';
 
-export const EXERCISE_COVERED_CALL_LAYOUT = struct([u8('bumpSeed')]);
+export const EXERCISE_COVERED_CALL_LAYOUT = struct([]);
 
 /**
  * Generate the instruction for `ExerciseCoveredCall`.
@@ -64,21 +64,10 @@ export const exerciseCoveredCallInstruction = async ({
   optionTokenKey: PublicKey;
   optionTokenAuthorityKey: PublicKey;
 }) => {
-  const exerciseCoveredCallBuffer = Buffer.alloc(
-    EXERCISE_COVERED_CALL_LAYOUT.span,
-  );
-
   // Generate the program derived address needed
-  const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
+  const [marketAuthorityKey] = await PublicKey.findProgramAddress(
     [optionMarketKey.toBuffer()],
     programId,
-  );
-  EXERCISE_COVERED_CALL_LAYOUT.encode(
-    {
-      bumpSeed,
-    },
-    exerciseCoveredCallBuffer,
-    0,
   );
 
   /*
@@ -87,9 +76,6 @@ export const exerciseCoveredCallInstruction = async ({
    */
   const tagBuffer = Buffer.alloc(INTRUCTION_TAG_LAYOUT.span);
   INTRUCTION_TAG_LAYOUT.encode(2, tagBuffer, 0);
-
-  // concatentate the tag with the data
-  const data = Buffer.concat([tagBuffer, exerciseCoveredCallBuffer]);
 
   const keys: AccountMeta[] = [
     { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
@@ -116,7 +102,7 @@ export const exerciseCoveredCallInstruction = async ({
 
   return new TransactionInstruction({
     keys,
-    data,
+    data: tagBuffer,
     programId,
   });
 };

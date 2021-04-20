@@ -12,7 +12,7 @@ import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { TOKEN_PROGRAM_ID } from './utils';
 import { getOptionMarketData } from './utils/getOptionMarketData';
 
-export const MINT_COVERED_CALL_LAYOUT = struct([u8('bumpSeed')]);
+export const MINT_COVERED_CALL_LAYOUT = struct([]);
 
 /**
  * Generate the instruction for `MintCoveredCall`
@@ -55,13 +55,11 @@ export const mintCoveredCallInstruction = async ({
   optionMarketKey: PublicKey;
   authorityPubkey: PublicKey;
 }) => {
-  const mintCoveredCallBuffer = Buffer.alloc(MINT_COVERED_CALL_LAYOUT.span);
   // Generate the program derived address needed
-  const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
+  const [marketAuthorityKey] = await PublicKey.findProgramAddress(
     [optionMarketKey.toBuffer()],
     programId,
   );
-  MINT_COVERED_CALL_LAYOUT.encode({ bumpSeed }, mintCoveredCallBuffer, 0);
 
   /*
    * Generate the instruction tag. 1 is the tag that denotes the MintCoveredCall instructions
@@ -69,9 +67,6 @@ export const mintCoveredCallInstruction = async ({
    */
   const tagBuffer = Buffer.alloc(INTRUCTION_TAG_LAYOUT.span);
   INTRUCTION_TAG_LAYOUT.encode(1, tagBuffer, 0);
-
-  // concatentate the tag with the data
-  const data = Buffer.concat([tagBuffer, mintCoveredCallBuffer]);
 
   const keys: AccountMeta[] = [
     { pubkey: optionMintKey, isSigner: false, isWritable: true },
@@ -89,7 +84,7 @@ export const mintCoveredCallInstruction = async ({
 
   return new TransactionInstruction({
     keys,
-    data,
+    data: tagBuffer,
     programId,
   });
 };

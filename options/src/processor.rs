@@ -3,13 +3,12 @@ use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::{Clock, UnixTimestamp},
     entrypoint::ProgramResult,
-    msg,
     program::{invoke, invoke_signed},
     program_pack::Pack,
     pubkey::Pubkey,
     sysvar::Sysvar,
 };
-use spl_token::{instruction as token_instruction, state::Account as TokenAccount};
+use spl_token::instruction as token_instruction;
 
 pub struct Processor {}
 impl Processor {
@@ -19,6 +18,7 @@ impl Processor {
         underlying_amount_per_contract: u64,
         quote_amount_per_contract: u64,
         expiration_unix_timestamp: UnixTimestamp,
+        bump_seed: u8,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let underlying_asset_mint_acct = next_account_info(account_info_iter)?;
@@ -117,13 +117,17 @@ impl Processor {
                 expiration_unix_timestamp,
                 underlying_asset_pool: *underlying_asset_pool_acct.key,
                 quote_asset_pool: *quote_asset_pool_acct.key,
+                bump_seed,
             },
             &mut option_market_data_acct.data.borrow_mut(),
         )?;
         Ok(())
     }
 
-    pub fn process_mint_covered_call(program_id: &Pubkey, accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
+    pub fn process_mint_covered_call(
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+    ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let option_mint_acct = next_account_info(account_info_iter)?;
         let minted_option_dest_acct = next_account_info(account_info_iter)?;
@@ -189,7 +193,10 @@ impl Processor {
                 option_mint_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[
+                &option_market_acct.key.to_bytes(),
+                &[option_market.bump_seed],
+            ]],
         )?;
 
         // mint a writer token to the user
@@ -209,13 +216,19 @@ impl Processor {
                 writer_token_mint_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[
+                &option_market_acct.key.to_bytes(),
+                &[option_market.bump_seed],
+            ]],
         )?;
 
         Ok(())
     }
 
-    pub fn process_exercise_covered_call(program_id: &Pubkey, accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
+    pub fn process_exercise_covered_call(
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+    ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let clock_sysvar_info = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
@@ -255,7 +268,10 @@ impl Processor {
                 option_token_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[
+                &option_market_acct.key.to_bytes(),
+                &[option_market.bump_seed],
+            ]],
         )?;
 
         // transfer the quote asset from the Exerciser to the quote asset pool
@@ -294,13 +310,16 @@ impl Processor {
                 market_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[
+                &option_market_acct.key.to_bytes(),
+                &[option_market.bump_seed],
+            ]],
         )?;
 
         Ok(())
     }
 
-    pub fn process_close_position(program_id: &Pubkey, accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
+    pub fn process_close_position(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let spl_program_acct = next_account_info(account_info_iter)?;
         let option_market_acct = next_account_info(account_info_iter)?;
@@ -342,7 +361,10 @@ impl Processor {
                 writer_token_source_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[
+                &option_market_acct.key.to_bytes(),
+                &[option_market.bump_seed],
+            ]],
         )?;
 
         // Burn Option Token
@@ -362,7 +384,10 @@ impl Processor {
                 option_token_src_auth_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[
+                &option_market_acct.key.to_bytes(),
+                &[option_market.bump_seed],
+            ]],
         )?;
 
         // transfer underlying asset from the pool to the option writers's account
@@ -382,13 +407,19 @@ impl Processor {
                 market_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[
+                &option_market_acct.key.to_bytes(),
+                &[option_market.bump_seed],
+            ]],
         )?;
 
         Ok(())
     }
 
-    pub fn process_close_post_expiration(program_id: &Pubkey, accounts: &[AccountInfo], bump_seed: u8) -> ProgramResult {
+    pub fn process_close_post_expiration(
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+    ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let option_market_acct = next_account_info(account_info_iter)?;
         let market_authority_acct = next_account_info(account_info_iter)?;
@@ -428,7 +459,10 @@ impl Processor {
                 writer_token_source_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[
+                &option_market_acct.key.to_bytes(),
+                &[option_market.bump_seed],
+            ]],
         )?;
 
         // transfer underlying asset from the pool to the option writers's account
@@ -448,7 +482,10 @@ impl Processor {
                 market_authority_acct.clone(),
                 spl_program_acct.clone(),
             ],
-            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[
+                &option_market_acct.key.to_bytes(),
+                &[option_market.bump_seed],
+            ]],
         )?;
 
         Ok(())
@@ -457,7 +494,6 @@ impl Processor {
     pub fn process_exchange_writer_token_for_quote(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
-        bump_seed: u8,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let option_market_acct = next_account_info(account_info_iter)?;
@@ -495,7 +531,10 @@ impl Processor {
                 writer_token_source_authority_acct.clone(),
                 spl_token_program_acct.clone(),
             ],
-            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[
+                &option_market_acct.key.to_bytes(),
+                &[option_market.bump_seed],
+            ]],
         )?;
 
         // transfer quote asset from the pool to the destination account
@@ -515,7 +554,10 @@ impl Processor {
                 market_authority_acct.clone(),
                 spl_token_program_acct.clone(),
             ],
-            &[&[&option_market_acct.key.to_bytes(), &[bump_seed]]],
+            &[&[
+                &option_market_acct.key.to_bytes(),
+                &[option_market.bump_seed],
+            ]],
         )?;
 
         Ok(())
@@ -529,27 +571,29 @@ impl Processor {
                 underlying_amount_per_contract,
                 quote_amount_per_contract,
                 expiration_unix_timestamp,
+                bump_seed,
             } => Self::process_init_market(
                 program_id,
                 accounts,
                 underlying_amount_per_contract,
                 quote_amount_per_contract,
                 expiration_unix_timestamp,
+                bump_seed,
             ),
-            OptionsInstruction::MintCoveredCall { bump_seed } => {
-                Self::process_mint_covered_call(program_id, accounts, bump_seed)
+            OptionsInstruction::MintCoveredCall {} => {
+                Self::process_mint_covered_call(program_id, accounts)
             }
-            OptionsInstruction::ExerciseCoveredCall { bump_seed } => {
-                Self::process_exercise_covered_call(program_id, accounts, bump_seed)
+            OptionsInstruction::ExerciseCoveredCall {} => {
+                Self::process_exercise_covered_call(program_id, accounts)
             }
-            OptionsInstruction::ClosePostExpiration { bump_seed } => {
-                Self::process_close_post_expiration(program_id, accounts, bump_seed)
+            OptionsInstruction::ClosePostExpiration {} => {
+                Self::process_close_post_expiration(program_id, accounts)
             }
-            OptionsInstruction::ClosePosition { bump_seed } => {
-                Self::process_close_position(program_id, accounts, bump_seed)
+            OptionsInstruction::ClosePosition {} => {
+                Self::process_close_position(program_id, accounts)
             }
-            OptionsInstruction::ExchangeWriterTokenForQuote { bump_seed } => {
-                Self::process_exchange_writer_token_for_quote(program_id, accounts, bump_seed)
+            OptionsInstruction::ExchangeWriterTokenForQuote {} => {
+                Self::process_exchange_writer_token_for_quote(program_id, accounts)
             }
         }
     }
