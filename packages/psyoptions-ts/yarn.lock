@@ -33,9 +33,9 @@
     js-tokens "^4.0.0"
 
 "@babel/runtime@^7.10.5", "@babel/runtime@^7.11.2", "@babel/runtime@^7.12.5":
-  version "7.14.0"
-  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.14.0.tgz#46794bc20b612c5f75e62dd071e24dfd95f1cbe6"
-  integrity sha512-JELkvo/DlpNdJ7dlyw/eY7E0suy5i5GQH+Vlxaq1nsNJ+H7f4Vtv3jMeCEgRhZZQFXTjldYfQgv2qmM6M1v5wA==
+  version "7.13.17"
+  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.13.17.tgz#8966d1fc9593bf848602f0662d6b4d0069e3a7ec"
+  integrity sha512-NCdgJEelPTSh+FEFylhnP1ylq848l1z9t9N0j1Lfbcw0+KXGjsTvUmkxy+voLLXB5SOKMbLLx4jxYliGrYQseA==
   dependencies:
     regenerator-runtime "^0.13.4"
 
@@ -97,9 +97,9 @@
     dotenv "8.2.0"
 
 "@solana/web3.js@^1.2.2":
-  version "1.7.1"
-  resolved "https://registry.yarnpkg.com/@solana/web3.js/-/web3.js-1.7.1.tgz#f365c1f03f296dcf6d5c6aa34c9e4d2b6975a135"
-  integrity sha512-Sh44EeFHWPkmsdV9Va2nZHrFs6ouPHj3jZ7cXkVaOw4NMk3z3csXZV5N4znL0fgsF8I8PYzXgtTsEZ0pkSs3Fw==
+  version "1.5.0"
+  resolved "https://registry.yarnpkg.com/@solana/web3.js/-/web3.js-1.5.0.tgz#4819ecad0408ec55f3d47a227627856002a7358b"
+  integrity sha512-o9Md2wDRKcI7uQksOp6yW6llhfCEm2QyblvM1qTjIbmaxuJn2ID2p0hIsJM7p+p88I/neFt+rodi58kVvk98Cg==
   dependencies:
     "@babel/runtime" "^7.12.5"
     bn.js "^5.0.0"
@@ -159,9 +159,9 @@
   integrity sha512-gUWhy8s45fQp4PqqKecsnOkdW0kt1IaKjgOIR3HPokkzTmQj9ji2wWFID5THu1MKrtO+d4s2lVrlEhXUsPXSvg==
 
 "@types/node@^12.12.54":
-  version "12.20.11"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.20.11.tgz#980832cd56efafff8c18aa148c4085eb02a483f4"
-  integrity sha512-gema+apZ6qLQK7k7F0dGkGCWQYsL0qqKORWOQO6tq46q+x+1C0vbOiOqOwRVlh4RAdbQwV/j/ryr3u5NOG1fPQ==
+  version "12.20.10"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.20.10.tgz#4dcb8a85a8f1211acafb88d72fafc7e3d2685583"
+  integrity sha512-TxCmnSSppKBBOzYzPR2BR25YlX5Oay8z2XGwFBInuA/Co0V9xJhLlW4kjbxKtgeNo3NOMbQP1A5Rc03y+XecPw==
 
 "@types/qs@*":
   version "6.9.6"
@@ -1257,9 +1257,9 @@ isexe@^2.0.0:
   integrity sha1-6PvzdNxVb/iUehDcsFctYz8s+hA=
 
 jayson@^3.4.4:
-  version "3.6.1"
-  resolved "https://registry.yarnpkg.com/jayson/-/jayson-3.6.1.tgz#fc656e7bc0beb58e3bd6e6b32033c4b48b7f3dc6"
-  integrity sha512-VeVDzvUPysKi2IdyKKaFRV+5gUWI2k6/FFNDk68fHv8j2/aHA/1fY9rLbuYbjScviQeMc5QZO9ettgTX+vhF3Q==
+  version "3.4.4"
+  resolved "https://registry.yarnpkg.com/jayson/-/jayson-3.4.4.tgz#dcedffba0c02785c4aa22dbff8c28966cae59773"
+  integrity sha512-fgQflh+Qnhdv9fjxTnpTsa2WUG/dgyeKQzIh5MJ77Qv2sqFyyAZn7mTUYgPjJMFjsKfb4HNsSBh6ktJeeQiAGQ==
   dependencies:
     "@types/connect" "^3.4.33"
     "@types/express-serve-static-core" "^4.17.9"

@@ -1,14 +1,18 @@
-use crate::{error::OptionsError, instruction::OptionsInstruction, market::OptionMarket};
+use crate::{error::OptionsError, fees, instruction::OptionsInstruction, market::OptionMarket};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::{Clock, UnixTimestamp},
     entrypoint::ProgramResult,
+    msg,
     program::{invoke, invoke_signed},
+    program_error::ProgramError,
     program_pack::Pack,
     pubkey::Pubkey,
     sysvar::Sysvar,
+    system_instruction,
+    system_program,
 };
-use spl_token::instruction as token_instruction;
+use spl_token::{instruction as token_instruction, state::Account as SPLTokenAccount};
 
 pub struct Processor {}
 impl Processor {
@@ -29,8 +33,13 @@ impl Processor {
         let market_authority_acct = next_account_info(account_info_iter)?;
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let quote_asset_pool_acct = next_account_info(account_info_iter)?;
-        let rent_info = next_account_info(account_info_iter)?;
-        let spl_program_acct = next_account_info(account_info_iter)?;
+        let funding_account = next_account_info(account_info_iter)?;
+        let fee_owner_acct = next_account_info(account_info_iter)?;
+        let mint_fee_account = next_account_info(account_info_iter)?;
+        let sys_rent_acct = next_account_info(account_info_iter)?;
+        let spl_token_program_acct = next_account_info(account_info_iter)?;
+        let sys_program_acct = next_account_info(account_info_iter)?;
+        let spl_associated_token_acct = next_account_info(account_info_iter)?;
 
         let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 
@@ -41,10 +50,28 @@ impl Processor {
         if quote_asset_mint_acct.key == underlying_asset_mint_acct.key {
             return Err(OptionsError::QuoteAndUnderlyingAssetMustDiffer.into());
         }
+
         if underlying_amount_per_contract == 0 || quote_amount_per_contract == 0 {
             // don't let options with underlying amount 0 be created
             return Err(OptionsError::InvalidInitializationParameters.into());
         }
+
+        if fees::mint_fee(underlying_amount_per_contract) > 0 {
+            // Create the fee account if it doesn't exist already.
+            // If the fee is <= 0 then there will be a flat SOL fee
+            fees::validate_fee_account(
+                funding_account, 
+                spl_associated_token_acct,
+                mint_fee_account,
+                fee_owner_acct,
+                underlying_asset_mint_acct,
+                spl_token_program_acct,
+                sys_program_acct,
+                sys_rent_acct
+            )?;
+            msg!("after fees::validate_fee_account");   
+        }
+
         // Initialize the Option Mint, the SPL token that will denote an options contract
         let init_option_mint_ix = token_instruction::initialize_mint(
             &spl_token::id(),
@@ -57,8 +84,8 @@ impl Processor {
             &init_option_mint_ix,
             &[
                 option_mint_acct.clone(),
-                rent_info.clone(),
-                spl_program_acct.clone(),
+                sys_rent_acct.clone(),
+                spl_token_program_acct.clone(),
             ],
         )?;
 
@@ -74,8 +101,8 @@ impl Processor {
             &init_writer_token_mint_ix,
             &[
                 writer_token_mint_acct.clone(),
-                rent_info.clone(),
-                spl_program_acct.clone(),
+                sys_rent_acct.clone(),
+                spl_token_program_acct.clone(),
             ],
         )?;
 
@@ -92,8 +119,8 @@ impl Processor {
                 underlying_asset_pool_acct.clone(),
                 underlying_asset_mint_acct.clone(),
                 market_authority_acct.clone(),
-                rent_info.clone(),
-                spl_program_acct.clone(),
+                sys_rent_acct.clone(),
+                spl_token_program_acct.clone(),
             ],
         )?;
 
@@ -110,11 +137,12 @@ impl Processor {
                 quote_asset_pool_acct.clone(),
                 quote_asset_mint_acct.clone(),
                 market_authority_acct.clone(),
-                rent_info.clone(),
-                spl_program_acct.clone(),
+                sys_rent_acct.clone(),
+                spl_token_program_acct.clone(),
             ],
         )?;
 
+        msg!("before OptionMarket::pack");
         // Add all relevant data to the OptionMarket data account
         OptionMarket::pack(
             OptionMarket {
@@ -127,10 +155,12 @@ impl Processor {
                 expiration_unix_timestamp,
                 underlying_asset_pool: *underlying_asset_pool_acct.key,
                 quote_asset_pool: *quote_asset_pool_acct.key,
+                mint_fee_account: *mint_fee_account.key,
                 bump_seed,
             },
             &mut option_market_acct.data.borrow_mut(),
         )?;
+        msg!("after OptionMarket::pack");
         Ok(())
     }
 
@@ -139,6 +169,7 @@ impl Processor {
         accounts: &[AccountInfo],
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
+        let funding_acct = next_account_info(account_info_iter)?;
         let option_mint_acct = next_account_info(account_info_iter)?;
         let minted_option_dest_acct = next_account_info(account_info_iter)?;
         let writer_token_mint_acct = next_account_info(account_info_iter)?;
@@ -146,10 +177,13 @@ impl Processor {
         let underyling_asset_src_acct = next_account_info(account_info_iter)?;
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let option_market_acct = next_account_info(account_info_iter)?;
+        let fee_recipient_acct = next_account_info(account_info_iter)?;
+        let fee_owner_acct = next_account_info(account_info_iter)?;
         let authority_acct = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
         let market_authority_acct = next_account_info(account_info_iter)?;
         let clock_sysvar_info = next_account_info(account_info_iter)?;
+        let system_program_acct = next_account_info(account_info_iter)?;
 
         let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 
@@ -185,6 +219,53 @@ impl Processor {
                 spl_program_acct.clone(),
             ],
         )?;
+
+        // transfer the fee amount to the fee_recipient
+        let fee = fees::mint_fee(option_market.underlying_amount_per_contract);
+        if fee > 0 {
+            // validate that the fee account owner is correct
+            {
+                let fee_acct_data = fee_recipient_acct.try_borrow_data()?;
+                let fee_spl_token_account = SPLTokenAccount::unpack_from_slice(&fee_acct_data)?;
+                if fee_spl_token_account.owner != fees::fee_owner_key::ID {
+                    return Err(OptionsError::BadFeeOwner.into());
+                }
+            }
+            // transfer the fee to the designated account
+            let transfer_fee_ix = token_instruction::transfer(
+                &spl_program_acct.key,
+                &underyling_asset_src_acct.key,
+                &fee_recipient_acct.key,
+                &authority_acct.key,
+                &[],
+                fee,
+            )?;
+            invoke(
+                &transfer_fee_ix,
+                &[
+                    underyling_asset_src_acct.clone(),
+                    fee_recipient_acct.clone(),
+                    authority_acct.clone(),
+                    spl_program_acct.clone(),
+                ],
+            )?;
+        } else {
+            if !system_program::check_id(system_program_acct.key) {
+                return Err(ProgramError::InvalidAccountData);
+            }
+            invoke(
+                &system_instruction::transfer(
+                    &funding_acct.key,
+                    fee_owner_acct.key,
+                    fees::NFT_MINT_LAMPORTS,
+                ),
+                &[
+                    funding_acct.clone(),
+                    fee_owner_acct.clone(),
+                    system_program_acct.clone(),
+                ],
+            )?;
+        }
 
         // mint an option token to the user
         let mint_option_ix = token_instruction::mint_to(

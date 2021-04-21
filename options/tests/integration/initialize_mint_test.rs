@@ -52,8 +52,8 @@ fn test_initialize_market() {
     .unwrap();
 
     //create the IX to init the market
-    let underlying_amount_per_contract = 100;
-    let quote_amount_per_contract = 500; // strike price of 5
+    let underlying_amount_per_contract = 10_000_000_000;
+    let quote_amount_per_contract = 50_000_000_000; // strike price of 5
     let expiry = 0;
     let init_market_ix = solana_options::instruction::initialize_market(
         &options_program_id,
@@ -64,6 +64,7 @@ fn test_initialize_market() {
         &options_market_keys.pubkey(),
         &underlying_asset_pool_keys.pubkey(),
         &quote_asset_pool_keys.pubkey(),
+        &payer_keys.pubkey(),
         underlying_amount_per_contract,
         quote_amount_per_contract,
         expiry,
@@ -204,6 +205,7 @@ fn should_fail_with_same_quote_underlying_assets() {
         &options_market_keys.pubkey(),
         &underlying_asset_pool_keys.pubkey(),
         &quote_asset_pool_keys.pubkey(),
+        &payer_keys.pubkey(),
         amount_per_contract,
         quote_amount_per_contract,
         expiry,
@@ -270,6 +272,7 @@ fn should_fail_to_reinitialize_market() {
         &options_market_keys.pubkey(),
         &underlying_asset_pool_keys.pubkey(),
         &quote_asset_pool_keys.pubkey(),
+        &payer_keys.pubkey(),
         underlying_amount_per_contract,
         quote_amount_per_contract,
         expiry,
@@ -315,6 +318,7 @@ fn should_fail_to_reinitialize_market() {
         &options_market_keys.pubkey(),
         &underlying_asset_pool_keys.pubkey(),
         &quote_asset_pool_keys.pubkey(),
+        &payer_keys.pubkey(),
         underlying_amount_per_contract,
         quote_amount_per_contract,
         expiry,

@@ -9,10 +9,16 @@ import {
   SystemProgram,
   Connection,
 } from '@solana/web3.js';
-import { AccountLayout, MintLayout } from '@solana/spl-token';
+import {
+  AccountLayout,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  MintLayout,
+  Token,
+  TOKEN_PROGRAM_ID,
+} from '@solana/spl-token';
 import { OPTION_MARKET_LAYOUT } from './market';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
-import { TOKEN_PROGRAM_ID } from './utils';
+import { FEE_OWNER_KEY } from './fees';
 
 /**
  *
@@ -24,6 +30,9 @@ import { TOKEN_PROGRAM_ID } from './utils';
  *      quote_amount_per_contract: u64,
  *      /// The Unix timestamp at which the contracts in this market expire
  *      expiration_unix_timestamp: UnixTimestamp,
+ *      /// The u8 bump seed for the [Program Derived Address](https://docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses)
+ *      /// which controls a specific OptionMarket's mints and pools
+ *      bump_seed: u8
  *  }
  *
  * UnixTimestamp is really an alias for i64 type.
@@ -51,6 +60,7 @@ export const INITIALIZE_MARKET_LAYOUT = struct([
  * @param optionMarketKey key for a new Account that will store the data for the options market
  * @param underlyingAssetPoolKey unintitialized SPL Token account to store locked underlying asset
  * @param quoteAssetPoolKey unintitialized SPL Token account to store locked quote asset
+ * @param fundingAccountKey The payer account that is funding the SOL for the TX
  * @param underlyingAmountPerContract amount of underlying asset needed to mint an Option Token
  * @param quoteAmountPerContract amount of quote needed to exercise the option
  * @param expirationUnixTimestamp unix timestamp when the option market expires
@@ -58,6 +68,7 @@ export const INITIALIZE_MARKET_LAYOUT = struct([
  */
 export const initializeMarketInstruction = async ({
   programId,
+  fundingAccountKey,
   underlyingAssetMintKey,
   quoteAssetMintKey,
   optionMintKey,
@@ -69,7 +80,10 @@ export const initializeMarketInstruction = async ({
   quoteAmountPerContract,
   expirationUnixTimestamp,
 }: {
-  programId: PublicKey; // the deployed program account
+  // the deployed program account
+  programId: PublicKey;
+  // The payer account that is funding the SOL for the TX
+  fundingAccountKey: PublicKey;
   // The public key of the SPL Token Mint for the underlying asset
   underlyingAssetMintKey: PublicKey;
   // The public key of the SPL Token Mint for the quote asset
@@ -95,6 +109,13 @@ export const initializeMarketInstruction = async ({
   const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
     [optionMarketKey.toBuffer()],
     programId,
+  );
+  // Get the associated fee address
+  const mintFeeKey = await Token.getAssociatedTokenAddress(
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+    TOKEN_PROGRAM_ID,
+    underlyingAssetMintKey,
+    FEE_OWNER_KEY,
   );
 
   // Create a u8 buffer that conforms to the InitializeMarket structure
@@ -139,8 +160,13 @@ export const initializeMarketInstruction = async ({
         isWritable: false,
       },
       { pubkey: quoteAssetPoolKey, isSigner: false, isWritable: false },
+      { pubkey: fundingAccountKey, isSigner: false, isWritable: true },
+      { pubkey: FEE_OWNER_KEY, isSigner: false, isWritable: false },
+      { pubkey: mintFeeKey, isSigner: false, isWritable: true },
       { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
       { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     ],
     data,
     programId,
@@ -253,6 +279,7 @@ export const initializeMarket = async ({
 
   const initMarketInstruction = await initializeMarketInstruction({
     programId: programPubkey,
+    fundingAccountKey: payer.publicKey,
     underlyingAssetMintKey,
     quoteAssetMintKey,
     optionMintKey: optionMintAccount.publicKey,
