@@ -1972,6 +1972,7 @@ dependencies = [
  "solana-program",
  "solana-runtime",
  "solana-sdk",
+ "spl-associated-token-account",
  "spl-token",
  "thiserror",
 ]
