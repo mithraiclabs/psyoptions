@@ -9,12 +9,13 @@ pub mod fee_owner_key {
   declare_id!("7XbrrKfaoEbdSXksZ98ST1Wv6gATVAvFGcZEvxhdKAt2");
 }
 
-/// Given an SPL Token Mint key
+/// Given an SPL Token Mint key and associated fee account (the fee account the instruction passed in)
 /// 1. Get the derived associated token address
-/// 2. Check if the token address is initialized
-/// 3. If not initialized, call cross program invocation to `create_associated_token_account` to
+/// 2. Check that the address is the same as what was passed in and the owner is correct
+/// 3. Check if the token address is initialized
+/// 4. If not initialized, call cross program invocation to `create_associated_token_account` to
 /// initialize
-/// 4. Return the fee accounts public key
+/// 5. Return the fee accounts public key
 pub fn get_or_create_fee_account(mint: Pubkey) {
   let _account_address = get_associated_token_address(&fee_owner_key::ID, &mint);
 
