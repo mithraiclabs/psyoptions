@@ -1,3 +1,4 @@
+use crate::fees::fee_owner_key;
 use arrayref::array_ref;
 use solana_program::{
     clock::UnixTimestamp,
@@ -6,6 +7,7 @@ use solana_program::{
     pubkey::Pubkey,
     sysvar,
 };
+use spl_associated_token_account::get_associated_token_address;
 use spl_token;
 use std::mem::size_of;
 
@@ -48,10 +50,11 @@ pub enum OptionsInstruction {
     ///   4. `[writeable]` Source account for `OptionWriter`'s underlying asset
     ///   5. `[writeable]` Destination account for underlying asset pool
     ///   6. `[writeable]` `OptionMarket` data account
-    ///   7. `[signer]` Authority account for underlying asset source
-    ///   8. `[]` SPL Token Program
-    ///   9. `[]` Program Derived Address for the authority over the Option Mint
-    ///   10. `[]` SysVar clock account
+    ///   7. `[writeable]` Mint fee account (associated token address derived from the `fee_owner_key`)
+    ///   8. `[signer]` Authority account for underlying asset source
+    ///   9. `[]` SPL Token Program
+    ///   10. `[]` Program Derived Address for the authority over the Option Mint
+    ///   11. `[]` SysVar clock account
     ///   
     MintCoveredCall {},
     /// Exercise an Options token representing a Covered Call
@@ -264,8 +267,11 @@ pub fn mint_covered_call(
     underyling_asset_src: &Pubkey,
     underlying_asset_pool: &Pubkey,
     option_market: &Pubkey,
+    underlying_asset_mint: &Pubkey,
     authority_pubkey: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
+    let fee_key = get_associated_token_address(&fee_owner_key::ID, underlying_asset_mint);
+
     let mut accounts = Vec::with_capacity(11);
     accounts.push(AccountMeta::new(*option_mint, false));
     accounts.push(AccountMeta::new(*minted_option_dest, false));
@@ -274,6 +280,7 @@ pub fn mint_covered_call(
     accounts.push(AccountMeta::new(*underyling_asset_src, false));
     accounts.push(AccountMeta::new(*underlying_asset_pool, false));
     accounts.push(AccountMeta::new_readonly(*option_market, false));
+    accounts.push(AccountMeta::new(fee_key, false));
     accounts.push(AccountMeta::new_readonly(*authority_pubkey, true));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
 

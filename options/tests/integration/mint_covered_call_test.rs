@@ -99,6 +99,7 @@ fn test_mint_covered_call_integration() {
     &option_writer_underlying_asset_keys.pubkey(),
     &underlying_asset_pool_key,
     &option_market_key,
+    &underlying_asset_mint_keys.pubkey(),
     &option_writer_keys.pubkey(),
   )
   .unwrap();
@@ -241,6 +242,7 @@ fn test_mint_covered_call_fail_post_expiry() {
     &option_writer_underlying_asset_keys.pubkey(),
     &underlying_asset_pool_key,
     &option_market_key,
+    &underlying_asset_mint_keys.pubkey(),
     &option_writer_keys.pubkey(),
   )
   .unwrap();
@@ -362,6 +364,7 @@ fn test_mint_covered_call_fail_fake_market_account() {
     &option_writer_underlying_asset_keys.pubkey(),
     &underlying_asset_pool_key,
     &fake_option_market_key,
+    &underlying_asset_mint_keys.pubkey(),
     &option_writer_keys.pubkey(),
   )
   .unwrap();
