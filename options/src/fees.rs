@@ -7,7 +7,7 @@ use solana_program::{
   pubkey::Pubkey,
 };
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
-use spl_token::state::{Account, Mint};
+use spl_token::state::{Account};
 
 /// The fee_owner_key will own all of the associated accounts where token fees are paid to.
 /// In the future this should be a program derived address owned by a fully decntralized

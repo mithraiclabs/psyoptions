@@ -8,8 +8,9 @@ import {
   Transaction,
   TransactionInstruction,
 } from '@solana/web3.js';
+import { ASSOCIATED_TOKEN_PROGRAM_ID, Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { FEE_OWNER_KEY } from './fees';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
-import { TOKEN_PROGRAM_ID } from './utils';
 import { getOptionMarketData } from './utils/getOptionMarketData';
 
 export const MINT_COVERED_CALL_LAYOUT = struct([]);
@@ -41,6 +42,7 @@ export const mintCoveredCallInstruction = async ({
   mintedOptionDestKey,
   writerTokenDestKey,
   writerTokenMintKey,
+  underlyingMintKey,
   underlyingAssetPoolKey,
   underlyingAssetSrcKey,
 }: {
@@ -50,6 +52,7 @@ export const mintCoveredCallInstruction = async ({
   mintedOptionDestKey: PublicKey;
   writerTokenMintKey: PublicKey;
   writerTokenDestKey: PublicKey;
+  underlyingMintKey: PublicKey;
   underlyingAssetSrcKey: PublicKey;
   underlyingAssetPoolKey: PublicKey;
   optionMarketKey: PublicKey;
@@ -60,6 +63,14 @@ export const mintCoveredCallInstruction = async ({
     [optionMarketKey.toBuffer()],
     programId,
   );
+
+  // Get the associated fee address
+  const feeRecipientKey = await Token.getAssociatedTokenAddress(
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+    TOKEN_PROGRAM_ID,
+    underlyingMintKey,
+    FEE_OWNER_KEY,
+  )
 
   /*
    * Generate the instruction tag. 1 is the tag that denotes the MintCoveredCall instructions
@@ -76,6 +87,7 @@ export const mintCoveredCallInstruction = async ({
     { pubkey: underlyingAssetSrcKey, isSigner: false, isWritable: true },
     { pubkey: underlyingAssetPoolKey, isSigner: false, isWritable: true },
     { pubkey: optionMarketKey, isSigner: false, isWritable: false },
+    { pubkey: feeRecipientKey, isSigner: false, isWritable: true },
     { pubkey: authorityPubkey, isSigner: true, isWritable: false },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: marketAuthorityKey, isSigner: false, isWritable: false },
@@ -95,6 +107,7 @@ export const mintCoveredCall = async ({
   payer,
   programId,
   mintedOptionDestKey,
+  underlyingMintKey,
   underlyingAssetSrcKey,
   underlyingAssetPoolKey,
   optionMintKey,
@@ -112,6 +125,7 @@ export const mintCoveredCall = async ({
   authorityAccount: Account;
   // The following arguments should be read from the OptionMarket data account
   optionMintKey: PublicKey;
+  underlyingMintKey: PublicKey;
   underlyingAssetPoolKey: PublicKey;
   writerTokenMintKey: PublicKey;
   writerTokenDestKey: PublicKey;
@@ -126,6 +140,7 @@ export const mintCoveredCall = async ({
     mintedOptionDestKey,
     writerTokenMintKey,
     writerTokenDestKey,
+    underlyingMintKey,
     underlyingAssetSrcKey,
     underlyingAssetPoolKey,
     optionMarketKey,
@@ -183,6 +198,7 @@ export const readMarketAndMintCoveredCall = async ({
     optionMarketKey,
     authorityAccount: underlyingAssetAuthorityAccount,
     optionMintKey: optionMarketData.optionMintKey,
+    underlyingMintKey: optionMarketData.underlyingAssetMintKey,
     underlyingAssetPoolKey: optionMarketData.underlyingAssetPoolKey,
     writerTokenMintKey: optionMarketData.writerTokenMintKey,
     writerTokenDestKey,

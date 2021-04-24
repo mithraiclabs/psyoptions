@@ -265,6 +265,7 @@ pub fn create_and_add_option_writer(
         &option_writer_underlying_asset_keys.pubkey(),
         &underlying_asset_pool_key,
         &option_market_key,
+        &underlying_asset_mint_keys.pubkey(),
         &option_writer_keys.pubkey(),
     )
     .unwrap();
