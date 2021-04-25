@@ -46,21 +46,18 @@ impl U64F64 {
 /// 3. Check if the token address is initialized
 /// 4. If not initialized, call cross program invocation to `create_associated_token_account` to
 /// initialize
-/// 5. Return the fee accounts public key
-pub fn validate_fee_account<'a>(
+pub fn validate_fee_account<'a, 'b>(
   mint: Pubkey,
   funding_account: &AccountInfo<'a>,
   spl_associated_token_program_acct: &AccountInfo<'a>,
   fee_account: &AccountInfo<'a>,
   fee_owner_acct: &AccountInfo<'a>,
   underlying_mint_acct: &AccountInfo<'a>,
-  spl_program_acct: &AccountInfo<'a>,
+  spl_token_program_acct: &AccountInfo<'a>,
   sys_program_acct: &AccountInfo<'a>,
   sys_rent_acct: &AccountInfo<'a>,
 ) -> Result<(), ProgramError> {
-  msg!("validating fee account");
   let account_address = get_associated_token_address(&fee_owner_key::ID, &mint);
-  msg!("derived_account_address = {:?}", account_address);
   // Validate the fee recipient account is correct
   if account_address != *fee_account.key {
     return Err(ProgramError::InvalidAccountData);
@@ -71,17 +68,10 @@ pub fn validate_fee_account<'a>(
   }
   let has_token_account_data = {
     let account_data = fee_account.try_borrow_data()?;
-    msg!("borrowed the data = {:?}", account_data);
     account_data.len() == Account::LEN
   };
+  msg!("before create_associated_token_account, {}", !has_token_account_data);
   if !has_token_account_data {
-    msg!(
-      "create_associated_token_account accounts = {:?} {:?} {:?} {:?}",
-      funding_account.key,
-      spl_associated_token_program_acct.key,
-      fee_owner_key::ID,
-      mint,
-    );
     let create_account_ix =
       create_associated_token_account(&funding_account.key, &fee_owner_key::ID, &mint);
     invoke(
@@ -92,7 +82,7 @@ pub fn validate_fee_account<'a>(
         fee_account.clone(),
         fee_owner_acct.clone(),
         underlying_mint_acct.clone(),
-        spl_program_acct.clone(),
+        spl_token_program_acct.clone(),
         sys_program_acct.clone(),
         sys_rent_acct.clone(),
       ],

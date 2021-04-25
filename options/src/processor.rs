@@ -30,12 +30,31 @@ impl Processor {
         let market_authority_acct = next_account_info(account_info_iter)?;
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let quote_asset_pool_acct = next_account_info(account_info_iter)?;
-        let rent_info = next_account_info(account_info_iter)?;
-        let spl_program_acct = next_account_info(account_info_iter)?;
+        let funding_account = next_account_info(account_info_iter)?;
+        let fee_owner_acct = next_account_info(account_info_iter)?;
+        let mint_fee_account = next_account_info(account_info_iter)?;
+        let sys_rent_acct = next_account_info(account_info_iter)?;
+        let spl_token_program_acct = next_account_info(account_info_iter)?;
+        let sys_program_acct = next_account_info(account_info_iter)?;
+        let spl_associated_token_acct = next_account_info(account_info_iter)?;
 
         if quote_asset_mint_acct.key == underlying_asset_mint_acct.key {
             return Err(OptionsError::QuoteAndUnderlyingAssetMustDiffer.into());
         }
+        // Create the fee account if it doesn't exist already
+        fees::validate_fee_account(
+            *underlying_asset_mint_acct.key,
+            funding_account, 
+            spl_associated_token_acct,
+            mint_fee_account,
+            fee_owner_acct,
+            underlying_asset_mint_acct,
+            spl_token_program_acct,
+            sys_program_acct,
+            sys_rent_acct
+        )?;
+        msg!("after fees::validate_fee_account");
+
         // Initialize the Option Mint, the SPL token that will denote an options contract
         let init_option_mint_ix = token_instruction::initialize_mint(
             &spl_token::id(),
@@ -48,8 +67,8 @@ impl Processor {
             &init_option_mint_ix,
             &[
                 option_mint_acct.clone(),
-                rent_info.clone(),
-                spl_program_acct.clone(),
+                sys_rent_acct.clone(),
+                spl_token_program_acct.clone(),
             ],
         )?;
 
@@ -65,8 +84,8 @@ impl Processor {
             &init_writer_token_mint_ix,
             &[
                 writer_token_mint_acct.clone(),
-                rent_info.clone(),
-                spl_program_acct.clone(),
+                sys_rent_acct.clone(),
+                spl_token_program_acct.clone(),
             ],
         )?;
 
@@ -83,8 +102,8 @@ impl Processor {
                 underlying_asset_pool_acct.clone(),
                 underlying_asset_mint_acct.clone(),
                 market_authority_acct.clone(),
-                rent_info.clone(),
-                spl_program_acct.clone(),
+                sys_rent_acct.clone(),
+                spl_token_program_acct.clone(),
             ],
         )?;
 
@@ -101,11 +120,12 @@ impl Processor {
                 quote_asset_pool_acct.clone(),
                 quote_asset_mint_acct.clone(),
                 market_authority_acct.clone(),
-                rent_info.clone(),
-                spl_program_acct.clone(),
+                sys_rent_acct.clone(),
+                spl_token_program_acct.clone(),
             ],
         )?;
 
+        msg!("before OptionMarket::pack");
         // Add all relevant data to the OptionMarket data account
         OptionMarket::pack(
             OptionMarket {
@@ -118,10 +138,12 @@ impl Processor {
                 expiration_unix_timestamp,
                 underlying_asset_pool: *underlying_asset_pool_acct.key,
                 quote_asset_pool: *quote_asset_pool_acct.key,
+                mint_fee_account: *mint_fee_account.key,
                 bump_seed,
             },
             &mut option_market_data_acct.data.borrow_mut(),
         )?;
+        msg!("after OptionMarket::pack");
         Ok(())
     }
 
@@ -185,14 +207,8 @@ impl Processor {
 
         // transfer the fee amount to the fee_recipient
         let fee = fees::mint_fee(&option_market);
-        msg!("fee amount = {}", fee);
         if fee > 0 {
             // 0 fees means the SPL Token of the underlying asset cannot
-            msg!(
-                "option_market.underlying_asset_mint = {}",
-                option_market.underlying_asset_mint
-            );
-            msg!("fee key = {}", fee_recipient_acct.key);
             // validate the fee recipient account
             fees::validate_fee_account(
                 option_market.underlying_asset_mint,
