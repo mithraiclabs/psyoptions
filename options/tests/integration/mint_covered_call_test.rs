@@ -21,8 +21,8 @@ fn test_mint_covered_call_integration() {
     CommitmentConfig::processed(),
   );
   let options_program_id = &PROGRAM_KEY;
-  let underlying_amount_per_contract = 100;
-  let quote_amount_per_contract = 500;
+  let underlying_amount_per_contract = 10_000_000_000;
+  let quote_amount_per_contract = 50_000_000_000;
   let expiry = 999_999_999_999_999_999;
   let (
     underlying_asset_mint_keys,
@@ -59,7 +59,7 @@ fn test_mint_covered_call_integration() {
     &option_writer_underlying_asset_keys.pubkey(),
     &asset_authority_keys.pubkey(),
     vec![&asset_authority_keys],
-    underlying_amount_per_contract,
+    2 * underlying_amount_per_contract,
   )
   .unwrap();
 
@@ -164,8 +164,8 @@ fn test_mint_covered_call_fail_post_expiry() {
     CommitmentConfig::processed(),
   );
   let options_program_id = &PROGRAM_KEY;
-  let amount_per_contract = 100;
-  let quote_amount_per_contract = 500; // strike price of 5
+  let amount_per_contract = 10_000_000_000;
+  let quote_amount_per_contract = 50_000_000_000; // strike price of 5
   let expiry = 10;
   let (
     underlying_asset_mint_keys,
@@ -202,7 +202,7 @@ fn test_mint_covered_call_fail_post_expiry() {
     &option_writer_underlying_asset_keys.pubkey(),
     &asset_authority_keys.pubkey(),
     vec![&asset_authority_keys],
-    amount_per_contract,
+    2 * amount_per_contract,
   )
   .unwrap();
 
@@ -266,8 +266,8 @@ fn test_mint_covered_call_fail_fake_market_account() {
     CommitmentConfig::processed(),
   );
   let options_program_id = &PROGRAM_KEY;
-  let underlying_amount_per_contract = 100;
-  let quote_amount_per_contract = 500;
+  let underlying_amount_per_contract = 10_000_000_000;
+  let quote_amount_per_contract = 50_000_000_000;
   let expiry = 999_999_999_999_999_999;
   let (
     underlying_asset_mint_keys,
@@ -324,7 +324,7 @@ fn test_mint_covered_call_fail_fake_market_account() {
     &option_writer_underlying_asset_keys.pubkey(),
     &asset_authority_keys.pubkey(),
     vec![&asset_authority_keys],
-    underlying_amount_per_contract,
+    2 * underlying_amount_per_contract,
   )
   .unwrap();
 

@@ -52,8 +52,8 @@ fn test_initialize_market() {
     .unwrap();
 
     //create the IX to init the market
-    let underlying_amount_per_contract = 100;
-    let quote_amount_per_contract = 500; // strike price of 5
+    let underlying_amount_per_contract = 10_000_000_000;
+    let quote_amount_per_contract = 50_000_000_000; // strike price of 5
     let expiry = 0;
     let init_market_ix = solana_options::instruction::initialize_market(
         &options_program_id,

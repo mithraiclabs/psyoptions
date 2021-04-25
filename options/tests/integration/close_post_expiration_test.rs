@@ -30,9 +30,9 @@ pub fn test_sucessful_close_post_expiration() {
     CommitmentConfig::processed(),
   );
   let options_program_id = &PROGRAM_KEY;
-  let underlying_amount_per_contract = 100;
-  let quote_amount_per_contract = 500; // strike price of 5
-                                       // Get the current network clock time to use as the basis for the expiration
+  let underlying_amount_per_contract = 10_000_000_000;
+  let quote_amount_per_contract = 50_000_000_000; // strike price of 5
+  // Get the current network clock time to use as the basis for the expiration
   let sysvar_clock_acct = client.get_account(&clock::id()).unwrap();
   let clock_info_tuple = & mut (clock::id(), sysvar_clock_acct);
   let sysvar_clock_acct_info = AccountInfo::from(clock_info_tuple);
