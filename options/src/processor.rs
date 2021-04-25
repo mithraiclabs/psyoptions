@@ -1,8 +1,9 @@
-use crate::{error::OptionsError, instruction::OptionsInstruction, market::OptionMarket};
+use crate::{error::OptionsError, fees, instruction::OptionsInstruction, market::OptionMarket};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::{Clock, UnixTimestamp},
     entrypoint::ProgramResult,
+    msg,
     program::{invoke, invoke_signed},
     program_pack::Pack,
     pubkey::Pubkey,
@@ -136,11 +137,16 @@ impl Processor {
         let underyling_asset_src_acct = next_account_info(account_info_iter)?;
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let option_market_acct = next_account_info(account_info_iter)?;
-        let _fee_recipient_acct = next_account_info(account_info_iter)?;
+        let fee_recipient_acct = next_account_info(account_info_iter)?;
+        let underlying_mint_acct = next_account_info(account_info_iter)?;
+        let fee_owner_acct = next_account_info(account_info_iter)?;
+        let spl_associated_token_program_acct = next_account_info(account_info_iter)?;
         let authority_acct = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
         let market_authority_acct = next_account_info(account_info_iter)?;
         let clock_sysvar_info = next_account_info(account_info_iter)?;
+        let sys_program_acct = next_account_info(account_info_iter)?;
+        let sys_rent_acct = next_account_info(account_info_iter)?;
 
         let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 
@@ -176,6 +182,48 @@ impl Processor {
                 spl_program_acct.clone(),
             ],
         )?;
+
+        // transfer the fee amount to the fee_recipient
+        let fee = fees::mint_fee(&option_market);
+        msg!("fee amount = {}", fee);
+        if fee > 0 {
+            // 0 fees means the SPL Token of the underlying asset cannot
+            msg!(
+                "option_market.underlying_asset_mint = {}",
+                option_market.underlying_asset_mint
+            );
+            msg!("fee key = {}", fee_recipient_acct.key);
+            // validate the fee recipient account
+            fees::validate_fee_account(
+                option_market.underlying_asset_mint,
+                authority_acct,
+                spl_associated_token_program_acct,
+                fee_recipient_acct,
+                fee_owner_acct,
+                underlying_mint_acct,
+                spl_program_acct,
+                sys_program_acct,
+                sys_rent_acct,
+            )?;
+            // accommodate the fee basis points
+            let transfer_fee_ix = token_instruction::transfer(
+                &spl_program_acct.key,
+                &underyling_asset_src_acct.key,
+                &fee_recipient_acct.key,
+                &authority_acct.key,
+                &[],
+                fee,
+            )?;
+            invoke(
+                &transfer_fee_ix,
+                &[
+                    underyling_asset_src_acct.clone(),
+                    fee_recipient_acct.clone(),
+                    authority_acct.clone(),
+                    spl_program_acct.clone(),
+                ],
+            )?;
+        }
 
         // mint an option token to the user
         let mint_option_ix = token_instruction::mint_to(

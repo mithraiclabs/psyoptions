@@ -225,7 +225,7 @@ pub fn create_and_add_option_writer(
         &option_writer_underlying_asset_keys.pubkey(),
         &asset_authority_keys.pubkey(),
         vec![&asset_authority_keys],
-        amount_per_contract,
+        2 * amount_per_contract,
     )
     .unwrap();
 

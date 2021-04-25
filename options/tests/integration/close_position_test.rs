@@ -23,8 +23,8 @@ pub fn test_sucessful_close_position() {
     CommitmentConfig::processed(),
   );
   let options_program_id = &PROGRAM_KEY;
-  let underlying_amount_per_contract = 100;
-  let quote_amount_per_contract = 500; // strike price of 5
+  let underlying_amount_per_contract = 10_000_000_000;
+  let quote_amount_per_contract = 50_000_000_000; // strike price of 5
   let expiry = 999_999_999_999_999_999;
   // Create the option market
   let (

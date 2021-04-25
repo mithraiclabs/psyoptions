@@ -51,10 +51,15 @@ pub enum OptionsInstruction {
     ///   5. `[writeable]` Destination account for underlying asset pool
     ///   6. `[writeable]` `OptionMarket` data account
     ///   7. `[writeable]` Mint fee account (associated token address derived from the `fee_owner_key`)
-    ///   8. `[signer]` Authority account for underlying asset source
-    ///   9. `[]` SPL Token Program
-    ///   10. `[]` Program Derived Address for the authority over the Option Mint
-    ///   11. `[]` SysVar clock account
+    ///   8. `[]` Underlying asset mint 
+    ///   9. `[]` Fee owner key
+    ///   10. `[]` SPL Associated Token Account
+    ///   11. `[signer]` Authority account for underlying asset source
+    ///   12. `[]` SPL Token Program
+    ///   13. `[]` Program Derived Address for the authority over the Option Mint
+    ///   14. `[]` SysVar clock account
+    ///   15. `[]` System Program account
+    ///   16. `[]` SysVar Rent account
     ///   
     MintCoveredCall {},
     /// Exercise an Options token representing a Covered Call
@@ -272,7 +277,7 @@ pub fn mint_covered_call(
 ) -> Result<Instruction, ProgramError> {
     let fee_key = get_associated_token_address(&fee_owner_key::ID, underlying_asset_mint);
 
-    let mut accounts = Vec::with_capacity(11);
+    let mut accounts = Vec::with_capacity(17);
     accounts.push(AccountMeta::new(*option_mint, false));
     accounts.push(AccountMeta::new(*minted_option_dest, false));
     accounts.push(AccountMeta::new(*writer_token_mint, false));
@@ -281,6 +286,9 @@ pub fn mint_covered_call(
     accounts.push(AccountMeta::new(*underlying_asset_pool, false));
     accounts.push(AccountMeta::new_readonly(*option_market, false));
     accounts.push(AccountMeta::new(fee_key, false));
+    accounts.push(AccountMeta::new_readonly(*underlying_asset_mint, false));
+    accounts.push(AccountMeta::new_readonly(fee_owner_key::ID, false));
+    accounts.push(AccountMeta::new_readonly(spl_associated_token_account::id(), false));
     accounts.push(AccountMeta::new_readonly(*authority_pubkey, true));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
 
@@ -288,6 +296,8 @@ pub fn mint_covered_call(
         Pubkey::find_program_address(&[&option_market.to_bytes()[..32]], &program_id);
     accounts.push(AccountMeta::new_readonly(market_authority, false));
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
+    accounts.push(AccountMeta::new_readonly(solana_program::system_program::id(), false));
+    accounts.push(AccountMeta::new_readonly(sysvar::rent::id(), false));
 
     let data = OptionsInstruction::MintCoveredCall {}.pack();
     Ok(Instruction {
