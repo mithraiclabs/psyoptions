@@ -172,6 +172,7 @@ pub fn init_option_market(
         &options_market_keys.pubkey(),
         &underlying_asset_pool_keys.pubkey(),
         &quote_asset_pool_keys.pubkey(),
+        &payer_keys.pubkey(),
         amount_per_contract,
         quote_amount_per_contract,
         expiry,

@@ -228,6 +228,7 @@ pub fn initialize_market(
     options_market: &Pubkey,
     underlying_asset_pool: &Pubkey,
     quote_asset_pool: &Pubkey,
+    funding_account: &Pubkey,
     underlying_amount_per_contract: u64,
     quote_amount_per_contract: u64,
     expiration_unix_timestamp: UnixTimestamp,
@@ -242,6 +243,10 @@ pub fn initialize_market(
     }
     .pack();
 
+    // TODO handle conditional where underlying amount per contract can't
+    //  handle lowest non zero fee rate
+    let mint_fee_key = get_associated_token_address(&fee_owner_key::ID, underlying_asset_mint);
+
     let accounts = vec![
         AccountMeta::new_readonly(*underlying_asset_mint, false),
         AccountMeta::new_readonly(*quote_asset_mint, false),
@@ -251,8 +256,13 @@ pub fn initialize_market(
         AccountMeta::new_readonly(market_authority, false),
         AccountMeta::new(*underlying_asset_pool, false),
         AccountMeta::new(*quote_asset_pool, false),
+        AccountMeta::new_readonly(*funding_account, true),
+        AccountMeta::new_readonly(fee_owner_key::ID, false),
+        AccountMeta::new(mint_fee_key, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
+        AccountMeta::new_readonly(solana_program::system_program::id(), false),
+        AccountMeta::new_readonly(spl_associated_token_account::id(), false),
     ];
     Ok(Instruction {
         program_id: *program_id,
