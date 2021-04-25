@@ -90,15 +90,10 @@ export const mintCoveredCallInstruction = async ({
     { pubkey: underlyingAssetPoolKey, isSigner: false, isWritable: true },
     { pubkey: optionMarketKey, isSigner: false, isWritable: false },
     { pubkey: feeRecipientKey, isSigner: false, isWritable: true },
-    { pubkey: underlyingMintKey, isSigner: false, isWritable: false },
-    { pubkey: FEE_OWNER_KEY, isSigner: false, isWritable: false },
-    { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: authorityPubkey, isSigner: true, isWritable: false },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: marketAuthorityKey, isSigner: false, isWritable: false },
     { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
-    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-    { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
   ];
 
   return new TransactionInstruction({

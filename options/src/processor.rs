@@ -9,7 +9,7 @@ use solana_program::{
     pubkey::Pubkey,
     sysvar::Sysvar,
 };
-use spl_token::instruction as token_instruction;
+use spl_token::{instruction as token_instruction, state::Account as SPLTokenAccount};
 
 pub struct Processor {}
 impl Processor {
@@ -43,7 +43,6 @@ impl Processor {
         }
         // Create the fee account if it doesn't exist already
         fees::validate_fee_account(
-            *underlying_asset_mint_acct.key,
             funding_account, 
             spl_associated_token_acct,
             mint_fee_account,
@@ -160,15 +159,10 @@ impl Processor {
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let option_market_acct = next_account_info(account_info_iter)?;
         let fee_recipient_acct = next_account_info(account_info_iter)?;
-        let underlying_mint_acct = next_account_info(account_info_iter)?;
-        let fee_owner_acct = next_account_info(account_info_iter)?;
-        let spl_associated_token_program_acct = next_account_info(account_info_iter)?;
         let authority_acct = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
         let market_authority_acct = next_account_info(account_info_iter)?;
         let clock_sysvar_info = next_account_info(account_info_iter)?;
-        let sys_program_acct = next_account_info(account_info_iter)?;
-        let sys_rent_acct = next_account_info(account_info_iter)?;
 
         let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 
@@ -208,20 +202,13 @@ impl Processor {
         // transfer the fee amount to the fee_recipient
         let fee = fees::mint_fee(&option_market);
         if fee > 0 {
-            // 0 fees means the SPL Token of the underlying asset cannot
-            // validate the fee recipient account
-            fees::validate_fee_account(
-                option_market.underlying_asset_mint,
-                authority_acct,
-                spl_associated_token_program_acct,
-                fee_recipient_acct,
-                fee_owner_acct,
-                underlying_mint_acct,
-                spl_program_acct,
-                sys_program_acct,
-                sys_rent_acct,
-            )?;
-            // accommodate the fee basis points
+            // validate that the fee account owner is correct
+            let fee_acct_data = fee_recipient_acct.try_borrow_data()?;
+            let fee_spl_token_account = SPLTokenAccount::unpack_from_slice(&fee_acct_data)?;
+            if fee_spl_token_account.owner != fees::fee_owner_key::ID {
+                return Err(OptionsError::BadFeeOwner.into());
+            }
+            // transfer the fee to the designated account
             let transfer_fee_ix = token_instruction::transfer(
                 &spl_program_acct.key,
                 &underyling_asset_src_acct.key,

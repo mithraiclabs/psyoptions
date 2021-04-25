@@ -37,6 +37,9 @@ pub enum OptionsError {
     /// The OptionMarket owner is not the program
     #[error("The OptionMarket owner is incorrect")]
     BadMarketOwner,
+    /// The fee owner does not match the program's designated fee owner
+    #[error("The fee owner is incorrect")]
+    BadFeeOwner,
 }
 impl From<OptionsError> for ProgramError {
     fn from(e: OptionsError) -> Self {
