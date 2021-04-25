@@ -47,7 +47,6 @@ impl U64F64 {
 /// 4. If not initialized, call cross program invocation to `create_associated_token_account` to
 /// initialize
 pub fn validate_fee_account<'a, 'b>(
-  mint: Pubkey,
   funding_account: &AccountInfo<'a>,
   spl_associated_token_program_acct: &AccountInfo<'a>,
   fee_account: &AccountInfo<'a>,
@@ -57,7 +56,7 @@ pub fn validate_fee_account<'a, 'b>(
   sys_program_acct: &AccountInfo<'a>,
   sys_rent_acct: &AccountInfo<'a>,
 ) -> Result<(), ProgramError> {
-  let account_address = get_associated_token_address(&fee_owner_key::ID, &mint);
+  let account_address = get_associated_token_address(&fee_owner_key::ID, &underlying_mint_acct.key);
   // Validate the fee recipient account is correct
   if account_address != *fee_account.key {
     return Err(ProgramError::InvalidAccountData);
@@ -73,7 +72,7 @@ pub fn validate_fee_account<'a, 'b>(
   msg!("before create_associated_token_account, {}", !has_token_account_data);
   if !has_token_account_data {
     let create_account_ix =
-      create_associated_token_account(&funding_account.key, &fee_owner_key::ID, &mint);
+      create_associated_token_account(&funding_account.key, &fee_owner_key::ID, &underlying_mint_acct.key);
     invoke(
       &create_account_ix,
       &[

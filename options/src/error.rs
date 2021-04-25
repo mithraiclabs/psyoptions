@@ -43,6 +43,9 @@ pub enum OptionsError {
     /// Initalizing the market with invalid parameters
     #[error("Initializing the market with invalid parameters")]
     InvalidInitializationParameters,
+    /// The fee owner does not match the program's designated fee owner
+    #[error("The fee owner is incorrect")]
+    BadFeeOwner,
 }
 impl From<OptionsError> for ProgramError {
     fn from(e: OptionsError) -> Self {
