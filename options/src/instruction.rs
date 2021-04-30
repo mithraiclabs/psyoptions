@@ -256,7 +256,7 @@ pub fn initialize_market(
         AccountMeta::new_readonly(market_authority, false),
         AccountMeta::new(*underlying_asset_pool, false),
         AccountMeta::new(*quote_asset_pool, false),
-        AccountMeta::new_readonly(*funding_account, true),
+        AccountMeta::new(*funding_account, true),
         AccountMeta::new_readonly(fee_owner_key::ID, false),
         AccountMeta::new(mint_fee_key, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
