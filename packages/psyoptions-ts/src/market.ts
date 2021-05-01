@@ -25,6 +25,7 @@ export const OPTION_MARKET_LAYOUT = BufferLayout.struct([
   BufferLayout.ns64('expirationUnixTimestamp'),
   Layout.publicKey('underlyingAssetPoolKey'),
   Layout.publicKey('quoteAssetPoolKey'),
+  BufferLayout.u8('bumpSeed'),
 ]);
 
 export class Market {

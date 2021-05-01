@@ -1,5 +1,5 @@
 import BigNumber from 'bignumber.js';
-import { struct, nu64, ns64 } from 'buffer-layout';
+import { struct, u8, nu64, ns64 } from 'buffer-layout';
 import {
   PublicKey,
   TransactionInstruction,
@@ -32,6 +32,7 @@ export const INITIALIZE_MARKET_LAYOUT = struct([
   nu64('underlyingAmountPerContract'),
   nu64('quoteAmountPerContract'),
   ns64('expirationUnixTimestamp'),
+  u8('bumpSeed'),
 ]);
 
 /**
@@ -90,6 +91,12 @@ export const initializeMarketInstruction = async ({
   quoteAmountPerContract: number;
   expirationUnixTimestamp: number;
 }): Promise<TransactionInstruction> => {
+  // Generate the program derived address needed
+  const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
+    [optionMarketKey.toBuffer()],
+    programId,
+  );
+
   // Create a u8 buffer that conforms to the InitializeMarket structure
   const initializeMarketBuffer = Buffer.alloc(INITIALIZE_MARKET_LAYOUT.span);
   INITIALIZE_MARKET_LAYOUT.encode(
@@ -97,6 +104,7 @@ export const initializeMarketInstruction = async ({
       underlyingAmountPerContract,
       quoteAmountPerContract,
       expirationUnixTimestamp,
+      bumpSeed,
     },
     initializeMarketBuffer,
     0,
@@ -112,18 +120,6 @@ export const initializeMarketInstruction = async ({
   // concatentate the tag with the data
   const data = Buffer.concat([tagBuffer, initializeMarketBuffer]);
 
-  // Generate the program derived address needed
-  let marketAuthorityKey;
-  try {
-    const [_marketAuthorityKey] = await PublicKey.findProgramAddress(
-      [optionMarketKey.toBuffer()],
-      programId,
-    );
-    marketAuthorityKey = _marketAuthorityKey;
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('findProgramAddress Error: ', error);
-  }
   return new TransactionInstruction({
     // The order of the accounts must match the instruction.rs implementation
     keys: [

@@ -47,5 +47,5 @@ The old program address for Devnet testing is deployed @ `{"programId":"CgetkVhj
 
 # Deploying the bindings to NPM
 1. Sign into mithraics npm account via cli
-2. build the new package `cd packages/js-bindings` `yarn build:package`
+2. build the new package `cd packages/psyoptions-ts` `yarn build:package`
 3. publish to npm `npm publish --access public`
