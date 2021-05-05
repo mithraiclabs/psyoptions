@@ -215,10 +215,12 @@ impl Processor {
         let fee = fees::mint_fee(&option_market);
         if fee > 0 {
             // validate that the fee account owner is correct
-            let fee_acct_data = fee_recipient_acct.try_borrow_data()?;
-            let fee_spl_token_account = SPLTokenAccount::unpack_from_slice(&fee_acct_data)?;
-            if fee_spl_token_account.owner != fees::fee_owner_key::ID {
-                return Err(OptionsError::BadFeeOwner.into());
+            {
+                let fee_acct_data = fee_recipient_acct.try_borrow_data()?;
+                let fee_spl_token_account = SPLTokenAccount::unpack_from_slice(&fee_acct_data)?;
+                if fee_spl_token_account.owner != fees::fee_owner_key::ID {
+                    return Err(OptionsError::BadFeeOwner.into());
+                }
             }
             // transfer the fee to the designated account
             let transfer_fee_ix = token_instruction::transfer(
