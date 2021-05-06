@@ -37,6 +37,12 @@ pub enum OptionsError {
     /// The OptionMarket owner is not the program
     #[error("The OptionMarket owner is incorrect")]
     BadMarketOwner,
+    /// The OptionMarket has already been initiated
+    #[error("The OptionMarket is already initiated")]
+    MarketAlreadyInitialized,
+    /// Initalizing the market with invalid parameters
+    #[error("Initializing the market with invalid parameters")]
+    InvalidInitializationParameters,
 }
 impl From<OptionsError> for ProgramError {
     fn from(e: OptionsError) -> Self {

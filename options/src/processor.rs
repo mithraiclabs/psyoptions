@@ -13,7 +13,7 @@ use spl_token::instruction as token_instruction;
 pub struct Processor {}
 impl Processor {
     pub fn process_init_market(
-        _program_id: &Pubkey,
+        program_id: &Pubkey,
         accounts: &[AccountInfo],
         underlying_amount_per_contract: u64,
         quote_amount_per_contract: u64,
@@ -25,15 +25,25 @@ impl Processor {
         let quote_asset_mint_acct = next_account_info(account_info_iter)?;
         let option_mint_acct = next_account_info(account_info_iter)?;
         let writer_token_mint_acct = next_account_info(account_info_iter)?;
-        let option_market_data_acct = next_account_info(account_info_iter)?;
+        let option_market_acct = next_account_info(account_info_iter)?;
         let market_authority_acct = next_account_info(account_info_iter)?;
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let quote_asset_pool_acct = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
 
+        let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
+
+        if option_market.underlying_amount_per_contract > 0 {
+            // if the underlying amount is non zero, then we know the market has been initialized
+            return Err(OptionsError::MarketAlreadyInitialized.into());
+        }
         if quote_asset_mint_acct.key == underlying_asset_mint_acct.key {
             return Err(OptionsError::QuoteAndUnderlyingAssetMustDiffer.into());
+        }
+        if underlying_amount_per_contract == 0 || quote_amount_per_contract == 0 {
+            // don't let options with underlying amount 0 be created
+            return Err(OptionsError::InvalidInitializationParameters.into());
         }
         // Initialize the Option Mint, the SPL token that will denote an options contract
         let init_option_mint_ix = token_instruction::initialize_mint(
@@ -119,7 +129,7 @@ impl Processor {
                 quote_asset_pool: *quote_asset_pool_acct.key,
                 bump_seed,
             },
-            &mut option_market_data_acct.data.borrow_mut(),
+            &mut option_market_acct.data.borrow_mut(),
         )?;
         Ok(())
     }
