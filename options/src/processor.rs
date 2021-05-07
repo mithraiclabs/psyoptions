@@ -205,8 +205,12 @@ impl Processor {
         let clock_sysvar_info = next_account_info(account_info_iter)?;
         let system_program_acct = next_account_info(account_info_iter)?;
 
+        if writer_token_mint_acct.owner != spl_program_acct.key
+            || option_mint_acct.owner != spl_program_acct.key
+        {
+            return Err(OptionsError::InvalidTokenProgram.into());
+        }
         let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
-
         // Validate that the option mint and writer token mint are the same as the market
         if option_market.option_mint != *option_mint_acct.key
             || option_market.writer_token_mint != *writer_token_mint_acct.key
@@ -338,8 +342,10 @@ impl Processor {
             return Err(ProgramError::InvalidAccountData);
         }
 
+        if option_mint_acct.owner != spl_program_acct.key {
+            return Err(OptionsError::InvalidTokenProgram.into());
+        }
         let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
-
         let clock = Clock::from_account_info(&clock_sysvar_info)?;
         // Verify that the OptionMarket has not expired
         if clock.unix_timestamp > option_market.expiration_unix_timestamp {
@@ -441,8 +447,12 @@ impl Processor {
         let underlying_asset_dest_acct = next_account_info(account_info_iter)?;
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
 
+        if writer_token_mint_acct.owner != spl_program_acct.key
+            || option_mint_acct.owner != spl_program_acct.key
+        {
+            return Err(OptionsError::InvalidTokenProgram.into());
+        }
         let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
-
         // validate the Writer Token and Option Token mints are for the market specified
         if option_market.option_mint != *option_mint_acct.key
             || option_market.writer_token_mint != *writer_token_mint_acct.key
@@ -539,8 +549,10 @@ impl Processor {
         let spl_program_acct = next_account_info(account_info_iter)?;
         let clock_sysvar_info = next_account_info(account_info_iter)?;
 
+        if writer_token_mint_acct.owner != spl_program_acct.key {
+            return Err(OptionsError::InvalidTokenProgram.into());
+        }
         let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
-
         let clock = Clock::from_account_info(&clock_sysvar_info)?;
         // Verify that the OptionMarket has already expired
         if clock.unix_timestamp <= option_market.expiration_unix_timestamp {
@@ -613,6 +625,9 @@ impl Processor {
         let quote_asset_pool_acct = next_account_info(account_info_iter)?;
         let spl_token_program_acct = next_account_info(account_info_iter)?;
 
+        if writer_token_mint_acct.owner != spl_token_program_acct.key {
+            return Err(OptionsError::InvalidTokenProgram.into());
+        }
         let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 
         if *quote_asset_pool_acct.key != option_market.quote_asset_pool {
