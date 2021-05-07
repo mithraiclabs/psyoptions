@@ -46,6 +46,9 @@ pub enum OptionsError {
     /// The fee owner does not match the program's designated fee owner
     #[error("The fee owner is incorrect")]
     BadFeeOwner,
+    /// Incorrect token program ID
+    #[error("Invalid token program id")]
+    InvalidTokenProgram,
 }
 impl From<OptionsError> for ProgramError {
     fn from(e: OptionsError) -> Self {
