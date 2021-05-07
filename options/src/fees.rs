@@ -18,6 +18,15 @@ pub mod fee_owner_key {
   declare_id!("7XbrrKfaoEbdSXksZ98ST1Wv6gATVAvFGcZEvxhdKAt2");
 }
 
+/// The mint for the NFT flat fees
+pub mod nft_fee_mint {
+  use solana_program::declare_id;
+  declare_id!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+}
+
+/// Flat 5 USDC fee to write a contract for an NFT
+pub const NFT_MINT_FEE: u64 = 5_000_000;
+
 /// Floating points are not ideal for the Solana runtime, so we need a integer type than
 /// can handle fraction parts for us. The highest 64 bits are the integer, the lower 64
 /// bits are the decimals.
@@ -51,12 +60,23 @@ pub fn validate_fee_account<'a, 'b>(
   spl_associated_token_program_acct: &AccountInfo<'a>,
   fee_account: &AccountInfo<'a>,
   fee_owner_acct: &AccountInfo<'a>,
-  underlying_mint_acct: &AccountInfo<'a>,
+  // TODO: To handle the NFT case this shouldn't be the underlying_mint_account, this should be the 
+  // fee mint account
+  mint_fee_mint_acct: &AccountInfo<'a>,
   spl_token_program_acct: &AccountInfo<'a>,
   sys_program_acct: &AccountInfo<'a>,
   sys_rent_acct: &AccountInfo<'a>,
+  option_market: &OptionMarket,
 ) -> Result<(), ProgramError> {
-  let account_address = get_associated_token_address(&fee_owner_key::ID, &underlying_mint_acct.key);
+
+  let account_address = {
+    if mint_fee(option_market.underlying_amount_per_contract) > 0 {
+      get_associated_token_address(&fee_owner_key::ID, &option_market.underlying_asset_mint)
+    } else {
+      // Handle the case of an NFT
+      get_associated_token_address(&fee_owner_key::ID, &nft_fee_mint::ID)
+    }
+  };
   // Validate the fee recipient account is correct
   if account_address != *fee_account.key {
     return Err(ProgramError::InvalidAccountData);
@@ -69,10 +89,11 @@ pub fn validate_fee_account<'a, 'b>(
     let account_data = fee_account.try_borrow_data()?;
     account_data.len() == Account::LEN
   };
-  msg!("before create_associated_token_account, {}", !has_token_account_data);
+
   if !has_token_account_data {
+    msg!("before create_associated_token_account");
     let create_account_ix =
-      create_associated_token_account(&funding_account.key, &fee_owner_key::ID, &underlying_mint_acct.key);
+      create_associated_token_account(&funding_account.key, &fee_owner_key::ID, &mint_fee_mint_acct.key);
     invoke(
       &create_account_ix,
       &[
@@ -80,7 +101,7 @@ pub fn validate_fee_account<'a, 'b>(
         funding_account.clone(),
         fee_account.clone(),
         fee_owner_acct.clone(),
-        underlying_mint_acct.clone(),
+        mint_fee_mint_acct.clone(),
         spl_token_program_acct.clone(),
         sys_program_acct.clone(),
         sys_rent_acct.clone(),
@@ -105,16 +126,7 @@ fn fee_rate() -> U64F64 {
 /// NOTE: SPL Tokens have an arbitrary amount of decimals. So an option market
 /// for an NFT will have `underlying_amount_per_contract` and should return a
 /// mint fee of 0. This is something to keep in mind.
-pub fn mint_fee(market: &OptionMarket) -> u64 {
+pub fn mint_fee(underlying_amount_per_contract: u64) -> u64 {
   let rate = fee_rate();
-  msg!("fee rate = {:?}", rate);
-  msg!(
-    "market.underlying_amount_per_contract = {:?}",
-    market.underlying_amount_per_contract
-  );
-  msg!(
-    "fee mul = {:?}",
-    rate.mul_u64(market.underlying_amount_per_contract)
-  );
-  rate.mul_u64(market.underlying_amount_per_contract).floor()
+  rate.mul_u64(underlying_amount_per_contract).floor()
 }

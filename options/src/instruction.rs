@@ -1,4 +1,8 @@
-use crate::fees::fee_owner_key;
+use crate::fees::{ 
+    fee_owner_key,
+    nft_fee_mint,
+    mint_fee,
+};
 use arrayref::array_ref;
 use solana_program::{
     clock::UnixTimestamp,
@@ -51,7 +55,7 @@ pub enum OptionsInstruction {
     ///   5. `[writeable]` Destination account for underlying asset pool
     ///   6. `[writeable]` `OptionMarket` data account
     ///   7. `[writeable]` Mint fee account (associated token address derived from the `fee_owner_key`)
-    ///   8. `[]` Underlying asset mint 
+    ///   8. `[]` Underlying asset mint
     ///   9. `[]` Fee owner key
     ///   10. `[]` SPL Associated Token Account
     ///   11. `[signer]` Authority account for underlying asset source
@@ -243,9 +247,16 @@ pub fn initialize_market(
     }
     .pack();
 
-    // TODO handle conditional where underlying amount per contract can't
-    //  handle lowest non zero fee rate
-    let mint_fee_key = get_associated_token_address(&fee_owner_key::ID, underlying_asset_mint);
+    // handle case where underlying amount per contract can't handle lowest non zero fee rate
+    let mint_fee_key = {
+        if mint_fee(underlying_amount_per_contract) > 0 {
+            get_associated_token_address(&fee_owner_key::ID, &underlying_asset_mint)
+        } else {
+            get_associated_token_address(&fee_owner_key::ID, &nft_fee_mint::ID)
+        }
+    };
+
+    print!("MINT_FEE_KEY = {:?}", mint_fee_key);
 
     let accounts = vec![
         AccountMeta::new_readonly(*underlying_asset_mint, false),
@@ -258,6 +269,7 @@ pub fn initialize_market(
         AccountMeta::new(*quote_asset_pool, false),
         AccountMeta::new(*funding_account, true),
         AccountMeta::new_readonly(fee_owner_key::ID, false),
+        AccountMeta::new_readonly(nft_fee_mint::ID, false),
         AccountMeta::new(mint_fee_key, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),

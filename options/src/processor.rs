@@ -5,6 +5,7 @@ use solana_program::{
     entrypoint::ProgramResult,
     msg,
     program::{invoke, invoke_signed},
+    program_error::ProgramError,
     program_pack::Pack,
     pubkey::Pubkey,
     sysvar::Sysvar,
@@ -32,6 +33,7 @@ impl Processor {
         let quote_asset_pool_acct = next_account_info(account_info_iter)?;
         let funding_account = next_account_info(account_info_iter)?;
         let fee_owner_acct = next_account_info(account_info_iter)?;
+        let nft_fee_mint_acct = next_account_info(account_info_iter)?;
         let mint_fee_account = next_account_info(account_info_iter)?;
         let sys_rent_acct = next_account_info(account_info_iter)?;
         let spl_token_program_acct = next_account_info(account_info_iter)?;
@@ -53,16 +55,43 @@ impl Processor {
             return Err(OptionsError::InvalidInitializationParameters.into());
         }
 
+        let option_market = OptionMarket {
+            option_mint: *option_mint_acct.key,
+            writer_token_mint: *writer_token_mint_acct.key,
+            underlying_asset_mint: *underlying_asset_mint_acct.key,
+            quote_asset_mint: *quote_asset_mint_acct.key,
+            underlying_amount_per_contract,
+            quote_amount_per_contract,
+            expiration_unix_timestamp,
+            underlying_asset_pool: *underlying_asset_pool_acct.key,
+            quote_asset_pool: *quote_asset_pool_acct.key,
+            mint_fee_account: *mint_fee_account.key,
+            bump_seed,
+        };
+
+        // validate the nft fee mint account sent was correct
+        if nft_fee_mint_acct.key != &fees::nft_fee_mint::ID {
+            return Err(ProgramError::InvalidAccountData);
+        }
+
         // Create the fee account if it doesn't exist already
+        let mint_fee_mint_acct = {
+            if fees::mint_fee(option_market.underlying_amount_per_contract) > 0 {
+                underlying_asset_mint_acct
+            } else {
+                nft_fee_mint_acct
+            }
+        };
         fees::validate_fee_account(
             funding_account, 
             spl_associated_token_acct,
             mint_fee_account,
             fee_owner_acct,
-            underlying_asset_mint_acct,
+            mint_fee_mint_acct,
             spl_token_program_acct,
             sys_program_acct,
-            sys_rent_acct
+            sys_rent_acct,
+            &option_market,
         )?;
         msg!("after fees::validate_fee_account");
 
@@ -139,19 +168,7 @@ impl Processor {
         msg!("before OptionMarket::pack");
         // Add all relevant data to the OptionMarket data account
         OptionMarket::pack(
-            OptionMarket {
-                option_mint: *option_mint_acct.key,
-                writer_token_mint: *writer_token_mint_acct.key,
-                underlying_asset_mint: *underlying_asset_mint_acct.key,
-                quote_asset_mint: *quote_asset_mint_acct.key,
-                underlying_amount_per_contract,
-                quote_amount_per_contract,
-                expiration_unix_timestamp,
-                underlying_asset_pool: *underlying_asset_pool_acct.key,
-                quote_asset_pool: *quote_asset_pool_acct.key,
-                mint_fee_account: *mint_fee_account.key,
-                bump_seed,
-            },
+            option_market,
             &mut option_market_acct.data.borrow_mut(),
         )?;
         msg!("after OptionMarket::pack");
@@ -211,22 +228,24 @@ impl Processor {
             ],
         )?;
 
-        // transfer the fee amount to the fee_recipient
-        let fee = fees::mint_fee(&option_market);
-        if fee > 0 {
-            // validate that the fee account owner is correct
-            {
-                let fee_acct_data = fee_recipient_acct.try_borrow_data()?;
-                let fee_spl_token_account = SPLTokenAccount::unpack_from_slice(&fee_acct_data)?;
-                if fee_spl_token_account.owner != fees::fee_owner_key::ID {
-                    return Err(OptionsError::BadFeeOwner.into());
-                }
+        if fee_recipient_acct.key != &option_market.mint_fee_account {
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        // Determine what fee is paid
+        let fee = {
+            if fees::mint_fee(option_market.underlying_amount_per_contract) > 0 {
+                fees::mint_fee(option_market.underlying_amount_per_contract)
+            } else {
+                fees::NFT_MINT_FEE
             }
+        };
+        if fee > 0 {
             // transfer the fee to the designated account
             let transfer_fee_ix = token_instruction::transfer(
                 &spl_program_acct.key,
                 &underyling_asset_src_acct.key,
-                &fee_recipient_acct.key,
+                &option_market.mint_fee_account,
                 &authority_acct.key,
                 &[],
                 fee,
