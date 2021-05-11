@@ -400,8 +400,10 @@ pub fn close_post_expiration(
 /// Creates a `ExerciseCoveredCall` instruction
 pub fn exercise_covered_call(
     program_id: &Pubkey,
+    funding_account: &Pubkey,
     option_mint: &Pubkey,
     options_market: &Pubkey,
+    quote_asset_mint: &Pubkey,
     exerciser_quote_asset: &Pubkey,
     exerciser_underlying_asset: &Pubkey,
     exerciser_authority: &Pubkey,
@@ -413,10 +415,10 @@ pub fn exercise_covered_call(
     let (options_spl_authority_pubkey, _bump_seed) =
         Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
     let data = OptionsInstruction::ExerciseCoveredCall {}.pack();
+    let exercise_fee_key = get_associated_token_address(&fee_owner_key::ID, quote_asset_mint);
 
     let mut accounts = Vec::with_capacity(12);
-    accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
-    accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
+    accounts.push(AccountMeta::new(*funding_account, false));
     accounts.push(AccountMeta::new_readonly(*options_market, false));
     accounts.push(AccountMeta::new(*exerciser_quote_asset, false));
     accounts.push(AccountMeta::new_readonly(*exerciser_authority, true));
@@ -430,6 +432,12 @@ pub fn exercise_covered_call(
     accounts.push(AccountMeta::new(*option_mint, false));
     accounts.push(AccountMeta::new(*option_token_key, false));
     accounts.push(AccountMeta::new_readonly(*option_token_authority, true));
+    accounts.push(AccountMeta::new_readonly(*quote_asset_mint, false));
+    accounts.push(AccountMeta::new(exercise_fee_key, false));
+    accounts.push(AccountMeta::new(fee_owner_key::ID, false));
+    accounts.push(AccountMeta::new_readonly(system_program::id(), false));
+    accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
+    accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
 
     Ok(Instruction {
         program_id: *program_id,

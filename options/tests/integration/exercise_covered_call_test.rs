@@ -111,8 +111,10 @@ pub fn test_sucessful_exercise_covered_call() {
   // generate the exercise_covered_call instruction
   let exercise_covered_call_ix = solana_options::instruction::exercise_covered_call(
     &options_program_id,
+    &exerciser_authority_keys.pubkey(),
     &option_mint_keys.pubkey(),
     &option_market_key,
+    &quote_asset_mint_keys.pubkey(),
     &exerciser_quote_asset_keys.pubkey(),
     &exerciser_underlying_asset_keys.pubkey(),
     &exerciser_authority_keys.pubkey(),
@@ -292,8 +294,10 @@ pub fn test_panic_when_expiration_has_passed() {
   // generate the exercise_covered_call instruction
   let exercise_covered_call_ix = solana_options::instruction::exercise_covered_call(
     &options_program_id,
+    &exerciser_authority_keys.pubkey(),
     &option_mint_keys.pubkey(),
     &option_market_key,
+    &quote_asset_mint_keys.pubkey(),
     &exerciser_quote_asset.pubkey(),
     &exerciser_underlying_asset.pubkey(),
     &exerciser_authority_keys.pubkey(),
