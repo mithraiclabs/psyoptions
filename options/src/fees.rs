@@ -1,11 +1,8 @@
-use crate::market::OptionMarket;
 use solana_program::{
   account_info::AccountInfo,
-  msg,
   program::invoke,
   program_error::ProgramError,
-  program_pack::{IsInitialized, Pack},
-  pubkey::Pubkey,
+  program_pack::{Pack},
 };
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
 use spl_token::state::Account;
@@ -74,7 +71,6 @@ pub fn validate_fee_account<'a, 'b>(
     let account_data = fee_account.try_borrow_data()?;
     account_data.len() == Account::LEN
   };
-  msg!("before create_associated_token_account, {}", !has_token_account_data);
   if !has_token_account_data {
     let create_account_ix =
       create_associated_token_account(&funding_account.key, &fee_owner_key::ID, &underlying_mint_acct.key);
@@ -91,7 +87,6 @@ pub fn validate_fee_account<'a, 'b>(
         sys_rent_acct.clone(),
       ],
     )?;
-    msg!("after create_associated_token_account");
   }
   Ok(())
 }

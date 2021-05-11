@@ -246,8 +246,6 @@ pub fn initialize_market(
     }
     .pack();
 
-    // TODO handle conditional where underlying amount per contract can't
-    //  handle lowest non zero fee rate
     let mint_fee_key = get_associated_token_address(&fee_owner_key::ID, underlying_asset_mint);
 
     let accounts = vec![
@@ -550,7 +548,7 @@ mod tests {
         let check = OptionsInstruction::ExchangeWriterTokenForQuote {};
         let packed = check.pack();
         // add the tag to the expected buffer
-        let mut expect = Vec::from([5u8]);
+        let expect = Vec::from([5u8]);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
