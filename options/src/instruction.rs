@@ -247,6 +247,7 @@ pub fn initialize_market(
     .pack();
 
     let mint_fee_key = get_associated_token_address(&fee_owner_key::ID, underlying_asset_mint);
+    let exercise_fee_key = get_associated_token_address(&fee_owner_key::ID, quote_asset_mint);
 
     let accounts = vec![
         AccountMeta::new_readonly(*underlying_asset_mint, false),
@@ -260,6 +261,7 @@ pub fn initialize_market(
         AccountMeta::new(*funding_account, true),
         AccountMeta::new_readonly(fee_owner_key::ID, false),
         AccountMeta::new(mint_fee_key, false),
+        AccountMeta::new(exercise_fee_key, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
