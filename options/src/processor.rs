@@ -36,6 +36,7 @@ impl Processor {
         let funding_account = next_account_info(account_info_iter)?;
         let fee_owner_acct = next_account_info(account_info_iter)?;
         let mint_fee_account = next_account_info(account_info_iter)?;
+        let exercise_fee_account = next_account_info(account_info_iter)?;
         let sys_rent_acct = next_account_info(account_info_iter)?;
         let spl_token_program_acct = next_account_info(account_info_iter)?;
         let sys_program_acct = next_account_info(account_info_iter)?;
@@ -71,6 +72,8 @@ impl Processor {
             )?;
             msg!("after fees::validate_fee_account");   
         }
+
+        // TODO initialize exercise fee account if it doesn't exist
 
         // Initialize the Option Mint, the SPL token that will denote an options contract
         let init_option_mint_ix = token_instruction::initialize_mint(
@@ -156,6 +159,7 @@ impl Processor {
                 underlying_asset_pool: *underlying_asset_pool_acct.key,
                 quote_asset_pool: *quote_asset_pool_acct.key,
                 mint_fee_account: *mint_fee_account.key,
+                exercise_fee_account: *exercise_fee_account.key,
                 bump_seed,
             },
             &mut option_market_acct.data.borrow_mut(),
