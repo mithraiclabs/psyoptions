@@ -109,3 +109,13 @@ pub fn mint_fee(underlying_amount_per_contract: u64) -> u64 {
   let rate = fee_rate();
   rate.mul_u64(underlying_amount_per_contract).floor()
 }
+
+/// Calculates the fee for Exercising.
+///
+/// NOTE: SPL Tokens have an arbitrary amount of decimals. So an option market
+/// for an NFT could have a `quote_amount_per_contract` and should return a
+/// fee of 0. This is something to keep in mind.
+pub fn exercise_fee(quote_amount_per_contract: u64) -> u64 {
+  let rate = fee_rate();
+  rate.mul_u64(quote_amount_per_contract).floor()
+}

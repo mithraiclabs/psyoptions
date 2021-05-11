@@ -105,8 +105,10 @@ pub fn test_successful_exchange_writer_token_for_quote_test() {
   // generate the exercise_covered_call instruction
   let exercise_covered_call_ix = solana_options::instruction::exercise_covered_call(
     &options_program_id,
+    &exerciser_authority_keys.pubkey(),
     &option_mint_keys.pubkey(),
     &option_market_key,
+    &quote_asset_mint_keys.pubkey(),
     &exerciser_quote_asset_keys.pubkey(),
     &exerciser_underlying_asset_keys.pubkey(),
     &exerciser_authority_keys.pubkey(),
@@ -292,8 +294,10 @@ pub fn test_panic_when_non_quote_asset_pool_is_used() {
   // generate the exercise_covered_call instruction
   let exercise_covered_call_ix = solana_options::instruction::exercise_covered_call(
     &options_program_id,
+    &exerciser_authority_keys.pubkey(),
     &option_mint_keys.pubkey(),
     &option_market_key,
+    &quote_asset_mint_keys.pubkey(),
     &exerciser_quote_asset_keys.pubkey(),
     &exerciser_underlying_asset_keys.pubkey(),
     &exerciser_authority_keys.pubkey(),
@@ -447,8 +451,10 @@ pub fn test_panic_when_option_token_is_used() {
   // generate the exercise_covered_call instruction
   let exercise_covered_call_ix = solana_options::instruction::exercise_covered_call(
     &options_program_id,
+    &exerciser_authority_keys.pubkey(),
     &option_mint_keys.pubkey(),
     &option_market_key,
+    &quote_asset_mint_keys.pubkey(),
     &exerciser_quote_asset_keys.pubkey(),
     &exerciser_underlying_asset_keys.pubkey(),
     &exerciser_authority_keys.pubkey(),
