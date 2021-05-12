@@ -102,7 +102,7 @@ fn fee_bps(bps: u64) -> U64F64 {
 }
 
 fn fee_rate() -> U64F64 {
-  fee_bps(3)
+  fee_bps(5)
 }
 
 /// Calculates the fee for Minting.
