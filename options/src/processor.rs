@@ -4,14 +4,11 @@ use solana_program::{
     clock::{Clock, UnixTimestamp},
     entrypoint::ProgramResult,
     program::{invoke, invoke_signed},
-    program_error::ProgramError,
-    program_pack::{Pack, IsInitialized},
+    program_pack::Pack,
     pubkey::Pubkey,
     sysvar::Sysvar,
-    system_instruction,
-    system_program,
 };
-use spl_token::{instruction as token_instruction, state::Account as SPLTokenAccount};
+use spl_token::instruction as token_instruction;
 
 pub struct Processor {}
 impl Processor {
@@ -56,33 +53,33 @@ impl Processor {
             return Err(OptionsError::InvalidInitializationParameters.into());
         }
 
-        if fees::mint_fee(underlying_amount_per_contract) > 0 {
+        if fees::fee_amount(underlying_amount_per_contract) > 0 {
             // Create the fee account if it doesn't exist already.
             // If the fee is <= 0 then there will be a flat SOL fee
             fees::validate_fee_account(
-                funding_account, 
+                funding_account,
                 spl_associated_token_acct,
                 mint_fee_account,
                 fee_owner_acct,
                 underlying_asset_mint_acct,
                 spl_token_program_acct,
                 sys_program_acct,
-                sys_rent_acct
+                sys_rent_acct,
             )?;
         }
 
-        if fees::exercise_fee(quote_amount_per_contract) > 0 {
+        if fees::fee_amount(quote_amount_per_contract) > 0 {
             // initialize exercise fee account if it doesn't exist
             // If the fee is <= 0 then there will be a flat SOL fee
             fees::validate_fee_account(
-                funding_account, 
+                funding_account,
                 spl_associated_token_acct,
                 exercise_fee_account,
                 fee_owner_acct,
                 quote_asset_mint_acct,
                 spl_token_program_acct,
                 sys_program_acct,
-                sys_rent_acct
+                sys_rent_acct,
             )?;
         }
 
@@ -234,54 +231,16 @@ impl Processor {
         )?;
 
         // transfer the fee amount to the fee_recipient
-        let fee = fees::mint_fee(option_market.underlying_amount_per_contract);
-        if fee > 0 {
-            // validate that the fee account owner is correct
-            {
-                let fee_acct_data = fee_recipient_acct.try_borrow_data()?;
-                let fee_spl_token_account = SPLTokenAccount::unpack_from_slice(&fee_acct_data)?;
-                if !fee_spl_token_account.is_initialized() {
-                    return Err(ProgramError::InvalidAccountData)
-                }
-                if fee_spl_token_account.owner != fees::fee_owner_key::ID {
-                    return Err(OptionsError::BadFeeOwner.into());
-                }
-            }
-            // transfer the fee to the designated account
-            let transfer_fee_ix = token_instruction::transfer(
-                &spl_program_acct.key,
-                &underyling_asset_src_acct.key,
-                &fee_recipient_acct.key,
-                &authority_acct.key,
-                &[],
-                fee,
-            )?;
-            invoke(
-                &transfer_fee_ix,
-                &[
-                    underyling_asset_src_acct.clone(),
-                    fee_recipient_acct.clone(),
-                    authority_acct.clone(),
-                    spl_program_acct.clone(),
-                ],
-            )?;
-        } else {
-            if !system_program::check_id(system_program_acct.key) {
-                return Err(ProgramError::InvalidAccountData);
-            }
-            invoke(
-                &system_instruction::transfer(
-                    &funding_acct.key,
-                    fee_owner_acct.key,
-                    fees::NFT_MINT_LAMPORTS,
-                ),
-                &[
-                    funding_acct.clone(),
-                    fee_owner_acct.clone(),
-                    system_program_acct.clone(),
-                ],
-            )?;
-        }
+        fees::transfer_fee(
+            funding_acct,
+            system_program_acct,
+            spl_program_acct,
+            fee_recipient_acct,
+            underyling_asset_src_acct,
+            authority_acct,
+            fee_owner_acct,
+            option_market.underlying_amount_per_contract,
+        )?;
 
         // mint an option token to the user
         let mint_option_ix = token_instruction::mint_to(
@@ -364,54 +323,16 @@ impl Processor {
         }
 
         // transfer the fee amount to the fee_recipient
-        let fee = fees::exercise_fee(option_market.quote_amount_per_contract);
-        if fee > 0 {
-            // validate that the fee account owner is correct
-            {
-                let fee_acct_data = exercise_fee_acct.try_borrow_data()?;
-                let fee_spl_token_account = SPLTokenAccount::unpack_from_slice(&fee_acct_data)?;
-                if !fee_spl_token_account.is_initialized() {
-                    return Err(ProgramError::InvalidAccountData)
-                }
-                if fee_spl_token_account.owner != fees::fee_owner_key::ID {
-                    return Err(OptionsError::BadFeeOwner.into());
-                }
-            }
-            // transfer the fee to the designated account
-            let transfer_fee_ix = token_instruction::transfer(
-                &spl_program_acct.key,
-                &exerciser_quote_asset_acct.key,
-                &exercise_fee_acct.key,
-                &exerciser_authority_acct.key,
-                &[],
-                fee,
-            )?;
-            invoke(
-                &transfer_fee_ix,
-                &[
-                    exerciser_quote_asset_acct.clone(),
-                    exercise_fee_acct.clone(),
-                    exerciser_authority_acct.clone(),
-                    spl_program_acct.clone(),
-                ],
-            )?;
-        } else {
-            if !system_program::check_id(system_program_acct.key) {
-                return Err(ProgramError::InvalidAccountData);
-            }
-            invoke(
-                &system_instruction::transfer(
-                    &funding_acct.key,
-                    fee_owner_acct.key,
-                    fees::NFT_MINT_LAMPORTS,
-                ),
-                &[
-                    funding_acct.clone(),
-                    fee_owner_acct.clone(),
-                    system_program_acct.clone(),
-                ],
-            )?;
-        }
+        fees::transfer_fee(
+            funding_acct,
+            system_program_acct,
+            spl_program_acct,
+            exercise_fee_acct,
+            exerciser_quote_asset_acct,
+            exerciser_authority_acct,
+            fee_owner_acct,
+            option_market.quote_amount_per_contract,
+        )?;
 
         // Burn an option token that was in the account passed in
         let burn_option_ix = token_instruction::burn(
