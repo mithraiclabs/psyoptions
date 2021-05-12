@@ -172,6 +172,7 @@ pub fn init_option_market(
         &options_market_keys.pubkey(),
         &underlying_asset_pool_keys.pubkey(),
         &quote_asset_pool_keys.pubkey(),
+        &payer_keys.pubkey(),
         amount_per_contract,
         quote_amount_per_contract,
         expiry,
@@ -225,7 +226,7 @@ pub fn create_and_add_option_writer(
         &option_writer_underlying_asset_keys.pubkey(),
         &asset_authority_keys.pubkey(),
         vec![&asset_authority_keys],
-        amount_per_contract,
+        2 * amount_per_contract,
     )
     .unwrap();
 
@@ -258,6 +259,7 @@ pub fn create_and_add_option_writer(
     // send TX to mint a covered call
     let mint_covered_call_ix = solana_options::instruction::mint_covered_call(
         &options_program_id,
+        &option_writer_keys.pubkey(),
         &option_mint_keys.pubkey(),
         &option_writer_option_keys.pubkey(),
         &writer_token_mint_keys.pubkey(),
@@ -265,6 +267,7 @@ pub fn create_and_add_option_writer(
         &option_writer_underlying_asset_keys.pubkey(),
         &underlying_asset_pool_key,
         &option_market_key,
+        &underlying_asset_mint_keys.pubkey(),
         &option_writer_keys.pubkey(),
     )
     .unwrap();

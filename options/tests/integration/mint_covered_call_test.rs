@@ -21,8 +21,8 @@ fn test_mint_covered_call_integration() {
     CommitmentConfig::processed(),
   );
   let options_program_id = &PROGRAM_KEY;
-  let underlying_amount_per_contract = 100;
-  let quote_amount_per_contract = 500;
+  let underlying_amount_per_contract = 10_000_000_000;
+  let quote_amount_per_contract = 50_000_000_000;
   let expiry = 999_999_999_999_999_999;
   let (
     underlying_asset_mint_keys,
@@ -59,7 +59,7 @@ fn test_mint_covered_call_integration() {
     &option_writer_underlying_asset_keys.pubkey(),
     &asset_authority_keys.pubkey(),
     vec![&asset_authority_keys],
-    underlying_amount_per_contract,
+    2 * underlying_amount_per_contract,
   )
   .unwrap();
 
@@ -92,6 +92,7 @@ fn test_mint_covered_call_integration() {
   // send TX to mint a covered call
   let mint_covered_call_ix = solana_options::instruction::mint_covered_call(
     &options_program_id,
+    &option_writer_keys.pubkey(),
     &option_mint_keys.pubkey(),
     &option_writer_option_keys.pubkey(),
     &writer_token_mint_keys.pubkey(),
@@ -99,6 +100,7 @@ fn test_mint_covered_call_integration() {
     &option_writer_underlying_asset_keys.pubkey(),
     &underlying_asset_pool_key,
     &option_market_key,
+    &underlying_asset_mint_keys.pubkey(),
     &option_writer_keys.pubkey(),
   )
   .unwrap();
@@ -163,8 +165,8 @@ fn test_mint_covered_call_fail_post_expiry() {
     CommitmentConfig::processed(),
   );
   let options_program_id = &PROGRAM_KEY;
-  let amount_per_contract = 100;
-  let quote_amount_per_contract = 500; // strike price of 5
+  let amount_per_contract = 10_000_000_000;
+  let quote_amount_per_contract = 50_000_000_000; // strike price of 5
   let expiry = 10;
   let (
     underlying_asset_mint_keys,
@@ -201,7 +203,7 @@ fn test_mint_covered_call_fail_post_expiry() {
     &option_writer_underlying_asset_keys.pubkey(),
     &asset_authority_keys.pubkey(),
     vec![&asset_authority_keys],
-    amount_per_contract,
+    2 * amount_per_contract,
   )
   .unwrap();
 
@@ -234,6 +236,7 @@ fn test_mint_covered_call_fail_post_expiry() {
   // send TX to mint a covered call
   let mint_covered_call_ix = solana_options::instruction::mint_covered_call(
     &options_program_id,
+    &option_writer_keys.pubkey(),
     &option_mint_keys.pubkey(),
     &option_writer_option_keys.pubkey(),
     &writer_token_mint_keys.pubkey(),
@@ -241,6 +244,7 @@ fn test_mint_covered_call_fail_post_expiry() {
     &option_writer_underlying_asset_keys.pubkey(),
     &underlying_asset_pool_key,
     &option_market_key,
+    &underlying_asset_mint_keys.pubkey(),
     &option_writer_keys.pubkey(),
   )
   .unwrap();
@@ -264,8 +268,8 @@ fn test_mint_covered_call_fail_fake_market_account() {
     CommitmentConfig::processed(),
   );
   let options_program_id = &PROGRAM_KEY;
-  let underlying_amount_per_contract = 100;
-  let quote_amount_per_contract = 500;
+  let underlying_amount_per_contract = 10_000_000_000;
+  let quote_amount_per_contract = 50_000_000_000;
   let expiry = 999_999_999_999_999_999;
   let (
     underlying_asset_mint_keys,
@@ -322,7 +326,7 @@ fn test_mint_covered_call_fail_fake_market_account() {
     &option_writer_underlying_asset_keys.pubkey(),
     &asset_authority_keys.pubkey(),
     vec![&asset_authority_keys],
-    underlying_amount_per_contract,
+    2 * underlying_amount_per_contract,
   )
   .unwrap();
 
@@ -355,6 +359,7 @@ fn test_mint_covered_call_fail_fake_market_account() {
   // send TX to mint a covered call
   let mint_covered_call_ix = solana_options::instruction::mint_covered_call(
     &options_program_id,
+    &option_writer_keys.pubkey(),
     &option_mint_keys.pubkey(),
     &option_writer_option_keys.pubkey(),
     &writer_token_mint_keys.pubkey(),
@@ -362,6 +367,7 @@ fn test_mint_covered_call_fail_fake_market_account() {
     &option_writer_underlying_asset_keys.pubkey(),
     &underlying_asset_pool_key,
     &fake_option_market_key,
+    &underlying_asset_mint_keys.pubkey(),
     &option_writer_keys.pubkey(),
   )
   .unwrap();

@@ -1,13 +1,17 @@
+use crate::fees::fee_owner_key;
 use arrayref::array_ref;
 use solana_program::{
     clock::UnixTimestamp,
     instruction::{AccountMeta, Instruction},
     program_error::ProgramError,
     pubkey::Pubkey,
+    system_program,
     sysvar,
 };
+use spl_associated_token_account::get_associated_token_address;
 use spl_token;
 use std::mem::size_of;
+
 /// Instructions supported by the Options program
 #[repr(C)]
 #[derive(Debug, PartialEq)]
@@ -25,8 +29,12 @@ pub enum OptionsInstruction {
     ///   5. `[]` Option Mint Authority
     ///   6. `[writeable]` Underlying Asset Pool (uninitialized)
     ///   7. `[writeable]` Quote Asset Pool (uninitialized)
-    ///   8. `[]` Rent Sysvar
-    ///   9. `[]` Spl Token Program
+    ///   8. `[]` Fee Owner Account - should match declaration in fees.rs
+    ///   9. `[]` Mint Fee Key - An SPL Token account that recieves fees in the underlying asset
+    ///   10. `[]` Rent Sysvar
+    ///   11. `[]` SPL Token Program Account
+    ///   12. `[]` System Program
+    ///   13. `[]` SPL Associated Token Program Account
     InitializeMarket {
         /// The amount of the **underlying asset** that derives a single contract
         underlying_amount_per_contract: u64,
@@ -34,23 +42,27 @@ pub enum OptionsInstruction {
         quote_amount_per_contract: u64,
         /// The Unix timestamp at which the contracts in this market expire
         expiration_unix_timestamp: UnixTimestamp,
-        /// Bump Seed for the program derived address
+        /// Bump Seed for the [Program Derived Address](https://docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses)
         bump_seed: u8,
     },
     /// Mints an Options token to represent a Covered Call
     ///
     ///
-    ///   0. `[writeable]` Option Mint
-    ///   1. `[writeable]` Destination account for minted Option
-    ///   2. `[writeable]` Writer Token Mint
-    ///   3. `[writeable]` Destination account for minted Writer Token
-    ///   4. `[writeable]` Source account for `OptionWriter`'s underlying asset
-    ///   5. `[writeable]` Destination account for underlying asset pool
-    ///   6. `[writeable]` `OptionMarket` data account
-    ///   7. `[signer]` Authority account for underlying asset source
-    ///   8. `[]` SPL Token Program
-    ///   9. `[]` Program Derived Address for the authority over the Option Mint
-    ///   10. `[]` SysVar clock account
+    ///   0. `[writeable]` Funding Account
+    ///   1. `[writeable]` Option Mint
+    ///   2. `[writeable]` Destination account for minted Option
+    ///   3. `[writeable]` Writer Token Mint
+    ///   4. `[writeable]` Destination account for minted Writer Token
+    ///   5. `[writeable]` Source account for `OptionWriter`'s underlying asset
+    ///   6. `[writeable]` Destination account for underlying asset pool
+    ///   7. `[writeable]` `OptionMarket` data account
+    ///   8. `[writeable]` Mint fee account (associated token address derived from the `fee_owner_key`)
+    ///   9. `[]` Fee owner key
+    ///   10. `[signer]` Authority account for underlying asset source
+    ///   11. `[]` SPL Token Program
+    ///   12. `[]` Program Derived Address for the authority over the Option Mint
+    ///   13. `[]` SysVar clock account
+    ///   14. `[]` System Program account
     ///   
     MintCoveredCall {},
     /// Exercise an Options token representing a Covered Call
@@ -219,6 +231,7 @@ pub fn initialize_market(
     options_market: &Pubkey,
     underlying_asset_pool: &Pubkey,
     quote_asset_pool: &Pubkey,
+    funding_account: &Pubkey,
     underlying_amount_per_contract: u64,
     quote_amount_per_contract: u64,
     expiration_unix_timestamp: UnixTimestamp,
@@ -233,6 +246,8 @@ pub fn initialize_market(
     }
     .pack();
 
+    let mint_fee_key = get_associated_token_address(&fee_owner_key::ID, underlying_asset_mint);
+
     let accounts = vec![
         AccountMeta::new_readonly(*underlying_asset_mint, false),
         AccountMeta::new_readonly(*quote_asset_mint, false),
@@ -242,8 +257,13 @@ pub fn initialize_market(
         AccountMeta::new_readonly(market_authority, false),
         AccountMeta::new(*underlying_asset_pool, false),
         AccountMeta::new(*quote_asset_pool, false),
+        AccountMeta::new(*funding_account, true),
+        AccountMeta::new_readonly(fee_owner_key::ID, false),
+        AccountMeta::new(mint_fee_key, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+        AccountMeta::new_readonly(spl_associated_token_account::id(), false),
     ];
     Ok(Instruction {
         program_id: *program_id,
@@ -252,10 +272,10 @@ pub fn initialize_market(
     })
 }
 
-// TODO add support for Multisignature owner/delegate
 /// Creates a `MintCoveredCall` instruction
 pub fn mint_covered_call(
     program_id: &Pubkey,
+    funding_account: &Pubkey,
     option_mint: &Pubkey,
     minted_option_dest: &Pubkey,
     writer_token_mint: &Pubkey,
@@ -263,9 +283,13 @@ pub fn mint_covered_call(
     underyling_asset_src: &Pubkey,
     underlying_asset_pool: &Pubkey,
     option_market: &Pubkey,
+    underlying_asset_mint: &Pubkey,
     authority_pubkey: &Pubkey,
 ) -> Result<Instruction, ProgramError> {
-    let mut accounts = Vec::with_capacity(11);
+    let fee_key = get_associated_token_address(&fee_owner_key::ID, underlying_asset_mint);
+
+    let mut accounts = Vec::with_capacity(15);
+    accounts.push(AccountMeta::new(*funding_account, false));
     accounts.push(AccountMeta::new(*option_mint, false));
     accounts.push(AccountMeta::new(*minted_option_dest, false));
     accounts.push(AccountMeta::new(*writer_token_mint, false));
@@ -273,6 +297,8 @@ pub fn mint_covered_call(
     accounts.push(AccountMeta::new(*underyling_asset_src, false));
     accounts.push(AccountMeta::new(*underlying_asset_pool, false));
     accounts.push(AccountMeta::new_readonly(*option_market, false));
+    accounts.push(AccountMeta::new(fee_key, false));
+    accounts.push(AccountMeta::new(fee_owner_key::ID, false));
     accounts.push(AccountMeta::new_readonly(*authority_pubkey, true));
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
 
@@ -280,6 +306,7 @@ pub fn mint_covered_call(
         Pubkey::find_program_address(&[&option_market.to_bytes()[..32]], &program_id);
     accounts.push(AccountMeta::new_readonly(market_authority, false));
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
+    accounts.push(AccountMeta::new_readonly(system_program::id(), false));
 
     let data = OptionsInstruction::MintCoveredCall {}.pack();
     Ok(Instruction {
@@ -521,7 +548,7 @@ mod tests {
         let check = OptionsInstruction::ExchangeWriterTokenForQuote {};
         let packed = check.pack();
         // add the tag to the expected buffer
-        let mut expect = Vec::from([5u8]);
+        let expect = Vec::from([5u8]);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
