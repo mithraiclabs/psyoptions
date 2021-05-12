@@ -2,10 +2,10 @@ use solana_program::{
   account_info::AccountInfo,
   program::invoke,
   program_error::ProgramError,
-  program_pack::{Pack},
+  program_pack::{Pack, IsInitialized},
 };
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
-use spl_token::state::Account;
+use spl_token::state::Account as SPLTokenAccount;
 
 /// The fee_owner_key will own all of the associated accounts where token fees are paid to.
 /// In the future this should be a program derived address owned by a fully decntralized
@@ -67,11 +67,16 @@ pub fn validate_fee_account<'a, 'b>(
   if *spl_associated_token_program_acct.key != spl_associated_token_account::id() {
     return Err(ProgramError::InvalidAccountData);
   }
-  let has_token_account_data = {
+  let token_account_exists = {
     let account_data = fee_account.try_borrow_data()?;
-    account_data.len() == Account::LEN
+    if account_data.len() == SPLTokenAccount::LEN {
+      let account = SPLTokenAccount::unpack_from_slice(&account_data)?;
+      account.is_initialized()
+    } else {
+      false
+    } 
   };
-  if !has_token_account_data {
+  if !token_account_exists {
     let create_account_ix =
       create_associated_token_account(&funding_account.key, &fee_owner_key::ID, &underlying_mint_acct.key);
     invoke(

@@ -3,10 +3,9 @@ use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::{Clock, UnixTimestamp},
     entrypoint::ProgramResult,
-    msg,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
-    program_pack::Pack,
+    program_pack::{Pack, IsInitialized},
     pubkey::Pubkey,
     sysvar::Sysvar,
     system_instruction,
@@ -69,7 +68,6 @@ impl Processor {
                 sys_program_acct,
                 sys_rent_acct
             )?;
-            msg!("after fees::validate_fee_account");   
         }
 
         // Initialize the Option Mint, the SPL token that will denote an options contract
@@ -142,7 +140,6 @@ impl Processor {
             ],
         )?;
 
-        msg!("before OptionMarket::pack");
         // Add all relevant data to the OptionMarket data account
         OptionMarket::pack(
             OptionMarket {
@@ -160,7 +157,6 @@ impl Processor {
             },
             &mut option_market_acct.data.borrow_mut(),
         )?;
-        msg!("after OptionMarket::pack");
         Ok(())
     }
 
@@ -227,6 +223,9 @@ impl Processor {
             {
                 let fee_acct_data = fee_recipient_acct.try_borrow_data()?;
                 let fee_spl_token_account = SPLTokenAccount::unpack_from_slice(&fee_acct_data)?;
+                if !fee_spl_token_account.is_initialized() {
+                    return Err(ProgramError::InvalidAccountData)
+                }
                 if fee_spl_token_account.owner != fees::fee_owner_key::ID {
                     return Err(OptionsError::BadFeeOwner.into());
                 }
