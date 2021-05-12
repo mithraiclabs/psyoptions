@@ -370,6 +370,9 @@ impl Processor {
             {
                 let fee_acct_data = exercise_fee_acct.try_borrow_data()?;
                 let fee_spl_token_account = SPLTokenAccount::unpack_from_slice(&fee_acct_data)?;
+                if !fee_spl_token_account.is_initialized() {
+                    return Err(ProgramError::InvalidAccountData)
+                }
                 if fee_spl_token_account.owner != fees::fee_owner_key::ID {
                     return Err(OptionsError::BadFeeOwner.into());
                 }
