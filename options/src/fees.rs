@@ -2,13 +2,13 @@ use crate::error::OptionsError;
 use solana_program::{
   account_info::AccountInfo,
   program::invoke,
+  pubkey::Pubkey,
   program_error::ProgramError,
-  program_pack::{Pack, IsInitialized},
-  system_instruction,
-  system_program,
+  program_pack::{IsInitialized, Pack},
+  system_instruction, system_program,
 };
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
-use spl_token::{ instruction as token_instruction, state::Account as SPLTokenAccount };
+use spl_token::{check_id, instruction as token_instruction, state::Account as SPLTokenAccount};
 
 /// The fee_owner_key will own all of the associated accounts where token fees are paid to.
 /// In the future this should be a program derived address owned by a fully decntralized
@@ -19,7 +19,7 @@ pub mod fee_owner_key {
 }
 
 /// Markets with an NFT or not enough underlying assets per contract to warrent
-/// a 3bps fee will be charged 1/2 a SOL to MINT. This is arbitrarily made up 
+/// a 3bps fee will be charged 1/2 a SOL to MINT. This is arbitrarily made up
 /// and subject to change based on feedback and eventually governance.
 pub const NFT_MINT_LAMPORTS: u64 = 1_000_000_000 / 2;
 
@@ -77,11 +77,14 @@ pub fn validate_fee_account<'a, 'b>(
       account.is_initialized()
     } else {
       false
-    } 
+    }
   };
   if !token_account_exists {
-    let create_account_ix =
-      create_associated_token_account(&funding_account.key, &fee_owner_key::ID, &underlying_mint_acct.key);
+    let create_account_ix = create_associated_token_account(
+      &funding_account.key,
+      &fee_owner_key::ID,
+      &underlying_mint_acct.key,
+    );
     invoke(
       &create_account_ix,
       &[
@@ -127,55 +130,52 @@ pub fn transfer_fee<'a>(
   asset_authority: &AccountInfo<'a>,
   fee_owner_acct: &AccountInfo<'a>,
   asset_amount: u64,
+  asset_mint: Pubkey,
 ) -> Result<(), ProgramError> {
   let fee = fee_amount(asset_amount);
   if fee > 0 {
-      // validate that the fee account owner is correct
-      {
-          let fee_acct_data = fee_recipient_acct.try_borrow_data()?;
-          let fee_spl_token_account = SPLTokenAccount::unpack_from_slice(&fee_acct_data)?;
-          if !fee_spl_token_account.is_initialized() {
-              return Err(ProgramError::InvalidAccountData)
-          }
-          if fee_spl_token_account.owner != fee_owner_key::ID {
-              return Err(OptionsError::BadFeeOwner.into());
-          }
+    // validate that the fee account owner is correct
+    {
+      let fee_acct_data = fee_recipient_acct.try_borrow_data()?;
+      let fee_spl_token_account = SPLTokenAccount::unpack_from_slice(&fee_acct_data)?;
+      if !fee_spl_token_account.is_initialized() {
+        return Err(ProgramError::InvalidAccountData);
       }
-      // transfer the fee to the designated account
-      let transfer_fee_ix = token_instruction::transfer(
-          &spl_program_acct.key,
-          &asset_src.key,
-          &fee_recipient_acct.key,
-          &asset_authority.key,
-          &[],
-          fee,
-      )?;
+      if fee_spl_token_account.owner != fee_owner_key::ID || fee_spl_token_account.mint != asset_mint {
+        return Err(OptionsError::BadFeeOwner.into());
+      }
+    }
+    // transfer the fee to the designated account
+    let transfer_fee_ix = token_instruction::transfer(
+      &spl_program_acct.key,
+      &asset_src.key,
+      &fee_recipient_acct.key,
+      &asset_authority.key,
+      &[],
+      fee,
+    )?;
 
-      invoke(
-          &transfer_fee_ix,
-          &[
-            asset_src.clone(),
-            fee_recipient_acct.clone(),
-            asset_authority.clone(),
-            spl_program_acct.clone(),
-          ],
-      )?;
+    invoke(
+      &transfer_fee_ix,
+      &[
+        asset_src.clone(),
+        fee_recipient_acct.clone(),
+        asset_authority.clone(),
+        spl_program_acct.clone(),
+      ],
+    )?;
   } else {
-      if !system_program::check_id(system_program_acct.key) {
-          return Err(ProgramError::InvalidAccountData);
-      }
-      invoke(
-          &system_instruction::transfer(
-            &funding_acct.key,
-            fee_owner_acct.key,
-            NFT_MINT_LAMPORTS,
-          ),
-          &[
-            funding_acct.clone(),
-            fee_owner_acct.clone(),
-            system_program_acct.clone(),
-          ],
-      )?;
+    if !system_program::check_id(system_program_acct.key) {
+      return Err(ProgramError::InvalidAccountData);
+    }
+    invoke(
+      &system_instruction::transfer(&funding_acct.key, fee_owner_acct.key, NFT_MINT_LAMPORTS),
+      &[
+        funding_acct.clone(),
+        fee_owner_acct.clone(),
+        system_program_acct.clone(),
+      ],
+    )?;
   }
   Ok(())
 }

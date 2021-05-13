@@ -4,11 +4,21 @@ use solana_program::{
     clock::{Clock, UnixTimestamp},
     entrypoint::ProgramResult,
     program::{invoke, invoke_signed},
+    program_error::ProgramError,
     program_pack::Pack,
     pubkey::Pubkey,
     sysvar::Sysvar,
 };
-use spl_token::instruction as token_instruction;
+use spl_token::{check_id as check_spl_token_owner, instruction as token_instruction};
+
+pub fn validate_spl_token_accounts(accounts: Vec<&AccountInfo>) -> bool {
+    for account in &accounts {
+        if !check_spl_token_owner(account.owner) {
+            return false;
+        }
+    }
+    return true;
+}
 
 pub struct Processor {}
 impl Processor {
@@ -195,6 +205,18 @@ impl Processor {
         let clock_sysvar_info = next_account_info(account_info_iter)?;
         let system_program_acct = next_account_info(account_info_iter)?;
 
+        if validate_spl_token_accounts(vec![
+            option_mint_acct,
+            minted_option_dest_acct,
+            writer_token_mint_acct,
+            writer_token_dest_acct,
+            underyling_asset_src_acct,
+            underlying_asset_pool_acct,
+            fee_recipient_acct,
+        ]) {
+            return Err(ProgramError::InvalidAccountData);
+        }
+
         let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 
         // Validate that the option mint and writer token mint are the same as the market
@@ -240,6 +262,7 @@ impl Processor {
             authority_acct,
             fee_owner_acct,
             option_market.underlying_amount_per_contract,
+            option_market.underlying_asset_mint,
         )?;
 
         // mint an option token to the user
@@ -314,6 +337,19 @@ impl Processor {
         let clock_sysvar_info = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
 
+        if validate_spl_token_accounts(vec![
+            exerciser_quote_asset_acct,
+            exerciser_underlying_asset_acct,
+            underlying_asset_pool_acct,
+            quote_asset_pool_acct,
+            option_mint_acct,
+            option_token_acct,
+            quote_asset_mint_acct,
+            exercise_fee_acct,
+        ]) {
+            return Err(ProgramError::InvalidAccountData);
+        }
+
         let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 
         let clock = Clock::from_account_info(&clock_sysvar_info)?;
@@ -332,6 +368,7 @@ impl Processor {
             exerciser_authority_acct,
             fee_owner_acct,
             option_market.quote_amount_per_contract,
+            option_market.quote_asset_mint,
         )?;
 
         // Burn an option token that was in the account passed in
