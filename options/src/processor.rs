@@ -66,7 +66,7 @@ impl Processor {
         if fees::fee_amount(underlying_amount_per_contract) > 0 {
             // Create the fee account if it doesn't exist already.
             // If the fee is <= 0 then there will be a flat SOL fee
-            fees::validate_fee_account(
+            fees::check_or_create_fee_account(
                 funding_account,
                 spl_associated_token_acct,
                 mint_fee_account,
@@ -81,7 +81,7 @@ impl Processor {
         if fees::fee_amount(quote_amount_per_contract) > 0 {
             // initialize exercise fee account if it doesn't exist
             // If the fee is <= 0 then there will be a flat SOL fee
-            fees::validate_fee_account(
+            fees::check_or_create_fee_account(
                 funding_account,
                 spl_associated_token_acct,
                 exercise_fee_account,
@@ -204,18 +204,6 @@ impl Processor {
         let market_authority_acct = next_account_info(account_info_iter)?;
         let clock_sysvar_info = next_account_info(account_info_iter)?;
         let system_program_acct = next_account_info(account_info_iter)?;
-
-        if validate_spl_token_accounts(vec![
-            option_mint_acct,
-            minted_option_dest_acct,
-            writer_token_mint_acct,
-            writer_token_dest_acct,
-            underyling_asset_src_acct,
-            underlying_asset_pool_acct,
-            fee_recipient_acct,
-        ]) {
-            return Err(ProgramError::InvalidAccountData);
-        }
 
         let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 

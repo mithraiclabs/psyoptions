@@ -8,7 +8,7 @@ use solana_program::{
   system_instruction, system_program,
 };
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
-use spl_token::{check_id, instruction as token_instruction, state::Account as SPLTokenAccount};
+use spl_token::{instruction as token_instruction, state::Account as SPLTokenAccount};
 
 /// The fee_owner_key will own all of the associated accounts where token fees are paid to.
 /// In the future this should be a program derived address owned by a fully decntralized
@@ -51,17 +51,17 @@ impl U64F64 {
 /// 3. Check if the token address is initialized
 /// 4. If not initialized, call cross program invocation to `create_associated_token_account` to
 /// initialize
-pub fn validate_fee_account<'a, 'b>(
+pub fn check_or_create_fee_account<'a, 'b>(
   funding_account: &AccountInfo<'a>,
   spl_associated_token_program_acct: &AccountInfo<'a>,
   fee_account: &AccountInfo<'a>,
   fee_owner_acct: &AccountInfo<'a>,
-  underlying_mint_acct: &AccountInfo<'a>,
+  asset_mint_acct: &AccountInfo<'a>,
   spl_token_program_acct: &AccountInfo<'a>,
   sys_program_acct: &AccountInfo<'a>,
   sys_rent_acct: &AccountInfo<'a>,
 ) -> Result<(), ProgramError> {
-  let account_address = get_associated_token_address(&fee_owner_key::ID, &underlying_mint_acct.key);
+  let account_address = get_associated_token_address(&fee_owner_key::ID, &asset_mint_acct.key);
   // Validate the fee recipient account is correct
   if account_address != *fee_account.key {
     return Err(ProgramError::InvalidAccountData);
@@ -83,7 +83,7 @@ pub fn validate_fee_account<'a, 'b>(
     let create_account_ix = create_associated_token_account(
       &funding_account.key,
       &fee_owner_key::ID,
-      &underlying_mint_acct.key,
+      &asset_mint_acct.key,
     );
     invoke(
       &create_account_ix,
@@ -92,7 +92,7 @@ pub fn validate_fee_account<'a, 'b>(
         funding_account.clone(),
         fee_account.clone(),
         fee_owner_acct.clone(),
-        underlying_mint_acct.clone(),
+        asset_mint_acct.clone(),
         spl_token_program_acct.clone(),
         sys_program_acct.clone(),
         sys_rent_acct.clone(),
