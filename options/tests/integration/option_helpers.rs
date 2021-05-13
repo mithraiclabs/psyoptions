@@ -8,7 +8,7 @@ use crate::{
 use solana_client::{client_error::ClientError, rpc_client::RpcClient};
 use solana_options::market::OptionMarket;
 use solana_program::{
-    clock::UnixTimestamp, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
+    clock::UnixTimestamp, program_pack::Pack, pubkey::Pubkey,
     system_instruction,
 };
 use solana_sdk::{

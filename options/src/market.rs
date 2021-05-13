@@ -1,4 +1,3 @@
-use crate::error::OptionsError;
 use arrayref::{array_mut_ref, array_ref, array_refs, mut_array_refs};
 use solana_program::{
     account_info::AccountInfo,
@@ -37,6 +36,9 @@ pub struct OptionMarket {
     /// The SPL Token account (from the Associated Token Program) that collects
     /// fees on mint.
     pub mint_fee_account: Pubkey,
+    /// The SPL Token account (from the Associated Token Program) that collects
+    /// fees on exercise.
+    pub exercise_fee_account: Pubkey,
     /// Bump seed for program derived addresses
     pub bump_seed: u8,
 }
@@ -71,6 +73,7 @@ impl Pack for OptionMarket {
         + PUBLIC_KEY_LEN
         + PUBLIC_KEY_LEN
         + PUBLIC_KEY_LEN
+        + PUBLIC_KEY_LEN
         + 1;
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         let src = array_ref![src, 0, OptionMarket::LEN];
@@ -85,6 +88,7 @@ impl Pack for OptionMarket {
             underlying_asset_pool,
             quote_asset_pool,
             mint_fee_account,
+            exercise_fee_account,
             bump_seed,
         ) = array_refs![
             src,
@@ -95,6 +99,7 @@ impl Pack for OptionMarket {
             8,
             8,
             8,
+            PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
@@ -112,6 +117,7 @@ impl Pack for OptionMarket {
             quote_asset_pool: Pubkey::new(quote_asset_pool),
             bump_seed: u8::from_le_bytes(*bump_seed),
             mint_fee_account: Pubkey::new(mint_fee_account),
+            exercise_fee_account: Pubkey::new(exercise_fee_account),
         })
     }
     fn pack_into_slice(&self, dst: &mut [u8]) {
@@ -127,6 +133,7 @@ impl Pack for OptionMarket {
             underlying_asset_pool_ref,
             quote_asset_pool_ref,
             mint_fee_account_ref,
+            exercise_fee_account_ref,
             bump_seed_ref,
         ) = mut_array_refs![
             dest,
@@ -137,6 +144,7 @@ impl Pack for OptionMarket {
             8,
             8,
             8,
+            PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
@@ -155,6 +163,7 @@ impl Pack for OptionMarket {
         underlying_asset_pool_ref.copy_from_slice(&self.underlying_asset_pool.to_bytes());
         quote_asset_pool_ref.copy_from_slice(&self.quote_asset_pool.to_bytes());
         mint_fee_account_ref.copy_from_slice(&self.mint_fee_account.to_bytes());
+        exercise_fee_account_ref.copy_from_slice(&self.exercise_fee_account.to_bytes());
         bump_seed_ref.copy_from_slice(&self.bump_seed.to_le_bytes());
     }
 }
@@ -176,6 +185,7 @@ mod tests {
         let underlying_asset_pool = Pubkey::new_unique();
         let quote_asset_pool = Pubkey::new_unique();
         let mint_fee_account = Pubkey::new_unique();
+        let exercise_fee_account = Pubkey::new_unique();
 
         let option_market = OptionMarket {
             option_mint,
@@ -188,6 +198,7 @@ mod tests {
             underlying_asset_pool,
             quote_asset_pool,
             mint_fee_account,
+            exercise_fee_account,
             bump_seed,
         };
         let cloned_option_market = option_market.clone();
@@ -206,6 +217,7 @@ mod tests {
             underlying_asset_pool_ref,
             quote_asset_pool_ref,
             mint_fee_account_ref,
+            exercise_fee_account_ref,
             bump_seed_ref,
         ) = array_refs![
             serialized_ref,
@@ -219,6 +231,7 @@ mod tests {
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
+            PUBLIC_KEY_LEN,
             1
         ];
         assert_eq!(option_mint_ref, &option_mint.to_bytes());
@@ -226,6 +239,7 @@ mod tests {
         assert_eq!(underlying_asset_mint_ref, &underlying_asset_mint.to_bytes());
         assert_eq!(quote_asset_mint_ref, &quote_asset_mint.to_bytes());
         assert_eq!(mint_fee_account_ref, &mint_fee_account.to_bytes());
+        assert_eq!(exercise_fee_account_ref, &exercise_fee_account.to_bytes());
         assert_eq!(
             underlying_amount_per_contract_ref,
             &underlying_amount_per_contract.to_le_bytes()

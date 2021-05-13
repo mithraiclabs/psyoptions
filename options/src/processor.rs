@@ -5,13 +5,20 @@ use solana_program::{
     entrypoint::ProgramResult,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
-    program_pack::{Pack, IsInitialized},
+    program_pack::Pack,
     pubkey::Pubkey,
     sysvar::Sysvar,
-    system_instruction,
-    system_program,
 };
-use spl_token::{instruction as token_instruction, state::Account as SPLTokenAccount};
+use spl_token::{check_id as check_spl_token_owner, instruction as token_instruction};
+
+pub fn validate_spl_token_accounts(accounts: Vec<&AccountInfo>) -> bool {
+    for account in &accounts {
+        if !check_spl_token_owner(account.owner) {
+            return false;
+        }
+    }
+    return true;
+}
 
 pub struct Processor {}
 impl Processor {
@@ -35,6 +42,7 @@ impl Processor {
         let funding_account = next_account_info(account_info_iter)?;
         let fee_owner_acct = next_account_info(account_info_iter)?;
         let mint_fee_account = next_account_info(account_info_iter)?;
+        let exercise_fee_account = next_account_info(account_info_iter)?;
         let sys_rent_acct = next_account_info(account_info_iter)?;
         let spl_token_program_acct = next_account_info(account_info_iter)?;
         let sys_program_acct = next_account_info(account_info_iter)?;
@@ -55,18 +63,33 @@ impl Processor {
             return Err(OptionsError::InvalidInitializationParameters.into());
         }
 
-        if fees::mint_fee(underlying_amount_per_contract) > 0 {
+        if fees::fee_amount(underlying_amount_per_contract) > 0 {
             // Create the fee account if it doesn't exist already.
             // If the fee is <= 0 then there will be a flat SOL fee
-            fees::validate_fee_account(
-                funding_account, 
+            fees::check_or_create_fee_account(
+                funding_account,
                 spl_associated_token_acct,
                 mint_fee_account,
                 fee_owner_acct,
                 underlying_asset_mint_acct,
                 spl_token_program_acct,
                 sys_program_acct,
-                sys_rent_acct
+                sys_rent_acct,
+            )?;
+        }
+
+        if fees::fee_amount(quote_amount_per_contract) > 0 {
+            // initialize exercise fee account if it doesn't exist
+            // If the fee is <= 0 then there will be a flat SOL fee
+            fees::check_or_create_fee_account(
+                funding_account,
+                spl_associated_token_acct,
+                exercise_fee_account,
+                fee_owner_acct,
+                quote_asset_mint_acct,
+                spl_token_program_acct,
+                sys_program_acct,
+                sys_rent_acct,
             )?;
         }
 
@@ -153,6 +176,7 @@ impl Processor {
                 underlying_asset_pool: *underlying_asset_pool_acct.key,
                 quote_asset_pool: *quote_asset_pool_acct.key,
                 mint_fee_account: *mint_fee_account.key,
+                exercise_fee_account: *exercise_fee_account.key,
                 bump_seed,
             },
             &mut option_market_acct.data.borrow_mut(),
@@ -217,54 +241,17 @@ impl Processor {
         )?;
 
         // transfer the fee amount to the fee_recipient
-        let fee = fees::mint_fee(option_market.underlying_amount_per_contract);
-        if fee > 0 {
-            // validate that the fee account owner is correct
-            {
-                let fee_acct_data = fee_recipient_acct.try_borrow_data()?;
-                let fee_spl_token_account = SPLTokenAccount::unpack_from_slice(&fee_acct_data)?;
-                if !fee_spl_token_account.is_initialized() {
-                    return Err(ProgramError::InvalidAccountData)
-                }
-                if fee_spl_token_account.owner != fees::fee_owner_key::ID {
-                    return Err(OptionsError::BadFeeOwner.into());
-                }
-            }
-            // transfer the fee to the designated account
-            let transfer_fee_ix = token_instruction::transfer(
-                &spl_program_acct.key,
-                &underyling_asset_src_acct.key,
-                &fee_recipient_acct.key,
-                &authority_acct.key,
-                &[],
-                fee,
-            )?;
-            invoke(
-                &transfer_fee_ix,
-                &[
-                    underyling_asset_src_acct.clone(),
-                    fee_recipient_acct.clone(),
-                    authority_acct.clone(),
-                    spl_program_acct.clone(),
-                ],
-            )?;
-        } else {
-            if !system_program::check_id(system_program_acct.key) {
-                return Err(ProgramError::InvalidAccountData);
-            }
-            invoke(
-                &system_instruction::transfer(
-                    &funding_acct.key,
-                    fee_owner_acct.key,
-                    fees::NFT_MINT_LAMPORTS,
-                ),
-                &[
-                    funding_acct.clone(),
-                    fee_owner_acct.clone(),
-                    system_program_acct.clone(),
-                ],
-            )?;
-        }
+        fees::transfer_fee(
+            funding_acct,
+            system_program_acct,
+            spl_program_acct,
+            fee_recipient_acct,
+            underyling_asset_src_acct,
+            authority_acct,
+            fee_owner_acct,
+            option_market.underlying_amount_per_contract,
+            option_market.underlying_asset_mint,
+        )?;
 
         // mint an option token to the user
         let mint_option_ix = token_instruction::mint_to(
@@ -320,8 +307,7 @@ impl Processor {
         accounts: &[AccountInfo],
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
-        let clock_sysvar_info = next_account_info(account_info_iter)?;
-        let spl_program_acct = next_account_info(account_info_iter)?;
+        let funding_acct = next_account_info(account_info_iter)?;
         let option_market_acct = next_account_info(account_info_iter)?;
         let exerciser_quote_asset_acct = next_account_info(account_info_iter)?;
         let exerciser_authority_acct = next_account_info(account_info_iter)?;
@@ -332,6 +318,25 @@ impl Processor {
         let option_mint_acct = next_account_info(account_info_iter)?;
         let option_token_acct = next_account_info(account_info_iter)?;
         let option_token_authority_acct = next_account_info(account_info_iter)?;
+        let quote_asset_mint_acct = next_account_info(account_info_iter)?;
+        let exercise_fee_acct = next_account_info(account_info_iter)?;
+        let fee_owner_acct = next_account_info(account_info_iter)?;
+        let system_program_acct = next_account_info(account_info_iter)?;
+        let clock_sysvar_info = next_account_info(account_info_iter)?;
+        let spl_program_acct = next_account_info(account_info_iter)?;
+
+        if validate_spl_token_accounts(vec![
+            exerciser_quote_asset_acct,
+            exerciser_underlying_asset_acct,
+            underlying_asset_pool_acct,
+            quote_asset_pool_acct,
+            option_mint_acct,
+            option_token_acct,
+            quote_asset_mint_acct,
+            exercise_fee_acct,
+        ]) {
+            return Err(ProgramError::InvalidAccountData);
+        }
 
         let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 
@@ -340,6 +345,19 @@ impl Processor {
         if clock.unix_timestamp > option_market.expiration_unix_timestamp {
             return Err(OptionsError::OptionMarketHasExpired.into());
         }
+
+        // transfer the fee amount to the fee_recipient
+        fees::transfer_fee(
+            funding_acct,
+            system_program_acct,
+            spl_program_acct,
+            exercise_fee_acct,
+            exerciser_quote_asset_acct,
+            exerciser_authority_acct,
+            fee_owner_acct,
+            option_market.quote_amount_per_contract,
+            option_market.quote_asset_mint,
+        )?;
 
         // Burn an option token that was in the account passed in
         let burn_option_ix = token_instruction::burn(
