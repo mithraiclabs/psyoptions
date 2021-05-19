@@ -3,7 +3,6 @@ use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::{Clock, UnixTimestamp},
     entrypoint::ProgramResult,
-    msg,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
     program_pack::Pack,
@@ -15,12 +14,6 @@ use spl_token::instruction as token_instruction;
 pub fn validate_spl_token_accounts(accounts: Vec<&AccountInfo>, spl_account_key: &Pubkey) -> bool {
     for (i, account) in accounts.iter().enumerate() {
         if account.owner != spl_account_key {
-            msg!(
-                "TAYLORRR WRONG KEY at index {:?} key {:?} id {:?}",
-                i,
-                account.owner,
-                spl_account_key
-            );
             return false;
         }
     }
@@ -461,12 +454,6 @@ impl Processor {
         let writer_token_source_authority_acct = next_account_info(account_info_iter)?;
         let underlying_asset_dest_acct = next_account_info(account_info_iter)?;
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
-
-        msg!(
-            "TAYLORRRR {:?} {:?}",
-            option_mint_acct.owner,
-            spl_program_acct.key
-        );
 
         if !validate_spl_token_accounts(
             vec![
