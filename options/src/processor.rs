@@ -220,7 +220,6 @@ impl Processor {
                 writer_token_dest_acct,
                 underyling_asset_src_acct,
                 underlying_asset_pool_acct,
-                fee_recipient_acct,
             ],
             spl_program_acct.key,
         ) {
@@ -355,7 +354,6 @@ impl Processor {
                 option_mint_acct,
                 option_token_acct,
                 quote_asset_mint_acct,
-                exercise_fee_acct,
             ],
             spl_program_acct.key,
         ) {
@@ -470,7 +468,7 @@ impl Processor {
             spl_program_acct.key
         );
 
-        if validate_spl_token_accounts(
+        if !validate_spl_token_accounts(
             vec![
                 option_mint_acct,
                 option_token_src_acct,
@@ -581,7 +579,7 @@ impl Processor {
         let spl_program_acct = next_account_info(account_info_iter)?;
         let clock_sysvar_info = next_account_info(account_info_iter)?;
 
-        if validate_spl_token_accounts(
+        if !validate_spl_token_accounts(
             vec![
                 writer_token_mint_acct,
                 writer_token_source_acct,
@@ -666,7 +664,7 @@ impl Processor {
         let quote_asset_pool_acct = next_account_info(account_info_iter)?;
         let spl_token_program_acct = next_account_info(account_info_iter)?;
 
-        if validate_spl_token_accounts(
+        if !validate_spl_token_accounts(
             vec![
                 writer_token_mint_acct,
                 writer_token_source_acct,
