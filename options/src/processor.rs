@@ -346,8 +346,6 @@ impl Processor {
         let clock_sysvar_info = next_account_info(account_info_iter)?;
         let spl_program_acct = next_account_info(account_info_iter)?;
 
-        msg!("TAYLORRR ownneerr {:?} keyy {:?}", quote_asset_mint_acct.owner, quote_asset_mint_acct.key);
-
         if !validate_spl_token_accounts(
             vec![
                 exerciser_quote_asset_acct,

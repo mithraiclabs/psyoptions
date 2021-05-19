@@ -332,7 +332,8 @@ pub fn create_exerciser(
         &exerciser_quote_asset_keys.pubkey(),
         &asset_authority_keys.pubkey(),
         vec![&asset_authority_keys],
-        option_market.quote_amount_per_contract,
+        // mint 2x the amount needed to account for fees
+        2 * option_market.quote_amount_per_contract,
     )
     .unwrap();
 

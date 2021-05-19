@@ -1,3 +1,4 @@
+use solana_options::fees::fee_amount;
 use crate::{
   option_helpers::{
     create_and_add_option_writer, create_exerciser, init_option_market,
@@ -14,9 +15,7 @@ use solana_program::{
   sysvar::{clock, Sysvar},
 };
 use solana_sdk::{
-  account_info::AccountInfo,
-  commitment_config::CommitmentConfig,
-  signature::Signer,
+  account_info::AccountInfo, commitment_config::CommitmentConfig, signature::Signer,
 };
 use spl_token::state::{Account, Mint};
 use std::{thread, time::Duration};
@@ -30,8 +29,8 @@ pub fn test_sucessful_exercise_covered_call() {
     CommitmentConfig::processed(),
   );
   let options_program_id = &PROGRAM_KEY;
-  let amount_per_contract = 100;
-  let quote_amount_per_contract = 500;
+  let amount_per_contract = 1_000_000;
+  let quote_amount_per_contract = 5_000_000;
   let expiry = 999_999_999_999_999_999;
   // Create the option market
   let (
@@ -185,7 +184,9 @@ pub fn test_sucessful_exercise_covered_call() {
     Account::unpack(&exerciser_quote_asset_acct_data[..]).unwrap();
   assert_eq!(
     updated_exerciser_quote_asset_acct.amount,
-    exerciser_quote_asset_acct.amount - option_market.quote_amount_per_contract
+    exerciser_quote_asset_acct.amount
+      - option_market.quote_amount_per_contract
+      - fee_amount(option_market.quote_amount_per_contract)
   );
 
   // assert that the quote asset pool recieved the Exercisor's assets
@@ -205,11 +206,11 @@ pub fn test_panic_when_expiration_has_passed() {
     CommitmentConfig::processed(),
   );
   let options_program_id = &PROGRAM_KEY;
-  let amount_per_contract = 100;
-  let quote_amount_per_contract = 500; // strike price of 5
-  // Get the current network clock time to use as the basis for the expiration
+  let amount_per_contract = 1_000_000;
+  let quote_amount_per_contract = 5_000_000; // strike price of 5
+                                       // Get the current network clock time to use as the basis for the expiration
   let sysvar_clock_acct = client.get_account(&clock::id()).unwrap();
-  let clock_info_tuple = & mut (clock::id(), sysvar_clock_acct);
+  let clock_info_tuple = &mut (clock::id(), sysvar_clock_acct);
   let sysvar_clock_acct_info = AccountInfo::from(clock_info_tuple);
   let clock = Clock::from_account_info(&sysvar_clock_acct_info).unwrap();
   let expiry = clock.unix_timestamp + 30;
