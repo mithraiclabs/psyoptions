@@ -23,7 +23,7 @@ pub fn validate_spl_token_accounts(accounts: Vec<&AccountInfo>, spl_account_key:
 pub struct Processor {}
 impl Processor {
     pub fn process_init_market(
-        program_id: &Pubkey,
+        _program_id: &Pubkey,
         accounts: &[AccountInfo],
         underlying_amount_per_contract: u64,
         quote_amount_per_contract: u64,
@@ -48,9 +48,10 @@ impl Processor {
         let sys_program_acct = next_account_info(account_info_iter)?;
         let spl_associated_token_acct = next_account_info(account_info_iter)?;
 
-        let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
+        // let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 
-        if option_market.underlying_amount_per_contract > 0 {
+        let option_market_already_initialized = false;
+        if option_market_already_initialized {
             // if the underlying amount is non zero, then we know the market has been initialized
             return Err(OptionsError::MarketAlreadyInitialized.into());
         }
@@ -58,7 +59,7 @@ impl Processor {
             return Err(OptionsError::QuoteAndUnderlyingAssetMustDiffer.into());
         }
 
-        if underlying_amount_per_contract == 0 || quote_amount_per_contract == 0 {
+        if underlying_amount_per_contract <= 0 || quote_amount_per_contract <= 0 {
             // don't let options with underlying amount 0 be created
             return Err(OptionsError::InvalidInitializationParameters.into());
         }
