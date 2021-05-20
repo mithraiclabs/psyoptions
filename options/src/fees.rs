@@ -138,7 +138,7 @@ pub fn transfer_fee<'a>(
     {
       let fee_acct_data = fee_recipient_acct.try_borrow_data()?;
       let fee_spl_token_account = SPLTokenAccount::unpack_from_slice(&fee_acct_data)?;
-      if !fee_spl_token_account.is_initialized() {
+      if fee_recipient_acct.owner != spl_program_acct.key ||  !fee_spl_token_account.is_initialized() {
         return Err(ProgramError::InvalidAccountData);
       }
       if fee_spl_token_account.owner != fee_owner_key::ID || fee_spl_token_account.mint != asset_mint {

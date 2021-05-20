@@ -256,6 +256,8 @@ pub fn create_and_add_option_writer(
         &option_writer_keys,
     );
 
+    // failing to mint here because fee recipient is bad
+
     // send TX to mint a covered call
     let mint_covered_call_ix = solana_options::instruction::mint_covered_call(
         &options_program_id,
@@ -330,7 +332,8 @@ pub fn create_exerciser(
         &exerciser_quote_asset_keys.pubkey(),
         &asset_authority_keys.pubkey(),
         vec![&asset_authority_keys],
-        option_market.quote_amount_per_contract,
+        // mint 2x the amount needed to account for fees
+        2 * option_market.quote_amount_per_contract,
     )
     .unwrap();
 

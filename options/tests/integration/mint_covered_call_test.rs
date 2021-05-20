@@ -227,7 +227,7 @@ fn test_mint_covered_call_fail_post_expiry() {
   let option_writer_writer_token_keys = Keypair::new();
   let _option_writer_writer_token_acct = create_spl_account(
     &client,
-    &option_writer_option_keys,
+    &option_writer_writer_token_keys,
     &option_writer_keys.pubkey(),
     &option_mint_keys.pubkey(),
     &option_writer_keys,
