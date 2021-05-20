@@ -118,6 +118,13 @@ export const initializeMarketInstruction = async ({
     FEE_OWNER_KEY,
   );
 
+  const exerciseFeeKey = await Token.getAssociatedTokenAddress(
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+    TOKEN_PROGRAM_ID,
+    quoteAssetMintKey,
+    FEE_OWNER_KEY,
+  )
+
   // Create a u8 buffer that conforms to the InitializeMarket structure
   const initializeMarketBuffer = Buffer.alloc(INITIALIZE_MARKET_LAYOUT.span);
   INITIALIZE_MARKET_LAYOUT.encode(
@@ -157,12 +164,13 @@ export const initializeMarketInstruction = async ({
       {
         pubkey: underlyingAssetPoolKey,
         isSigner: false,
-        isWritable: false,
+        isWritable: true,
       },
-      { pubkey: quoteAssetPoolKey, isSigner: false, isWritable: false },
-      { pubkey: fundingAccountKey, isSigner: false, isWritable: true },
+      { pubkey: quoteAssetPoolKey, isSigner: false, isWritable: true },
+      { pubkey: fundingAccountKey, isSigner: true, isWritable: true },
       { pubkey: FEE_OWNER_KEY, isSigner: false, isWritable: false },
       { pubkey: mintFeeKey, isSigner: false, isWritable: true },
+      { pubkey: exerciseFeeKey, isSigner: false, isWritable: true },
       { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
       { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
@@ -263,8 +271,17 @@ export const initializeAccountsForMarket = async ({
     }),
   );
 
+  const signers = [
+    optionMintAccount,
+    writerTokenMintAccount,
+    optionMarketDataAccount,
+    underlyingAssetPoolAccount,
+    quoteAssetPoolAccount
+  ];
+
   return {
     transaction,
+    signers,
     optionMarketKey: optionMarketDataAccount.publicKey,
     optionMintKey: optionMintAccount.publicKey,
     writerTokenMintKey: writerTokenMintAccount.publicKey,
