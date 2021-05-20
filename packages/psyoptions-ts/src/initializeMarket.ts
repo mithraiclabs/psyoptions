@@ -166,11 +166,111 @@ export const initializeMarketInstruction = async ({
       { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
       { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-      { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      {
+        pubkey: ASSOCIATED_TOKEN_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
     ],
     data,
     programId,
   });
+};
+
+/**
+ * Generate and initialize the Accounts to be used for the new option market.
+ *
+ * @param connection
+ * @param payer Account to pay for the creation of these new accounts
+ * @param programId the public key for the PsyOptions program
+ */
+export const initializeAccountsForMarket = async ({
+  connection,
+  payer,
+  programId,
+}: {
+  connection: Connection;
+  payer: Account;
+  programId: string | PublicKey;
+}) => {
+  const programPubkey =
+    programId instanceof PublicKey ? programId : new PublicKey(programId);
+  const optionMintAccount = new Account();
+  const writerTokenMintAccount = new Account();
+  const optionMarketDataAccount = new Account();
+  const underlyingAssetPoolAccount = new Account();
+  const quoteAssetPoolAccount = new Account();
+
+  const transaction = new Transaction();
+
+  // Create the Option Mint Account with rent exemption
+  // Allocate memory for the account
+  const mintRentBalance = await connection.getMinimumBalanceForRentExemption(
+    MintLayout.span,
+  );
+  transaction.add(
+    SystemProgram.createAccount({
+      fromPubkey: payer.publicKey,
+      newAccountPubkey: optionMintAccount.publicKey,
+      lamports: mintRentBalance,
+      space: MintLayout.span,
+      programId: TOKEN_PROGRAM_ID,
+    }),
+  );
+  // Create the Option Mint Account with rent exemption
+  transaction.add(
+    SystemProgram.createAccount({
+      fromPubkey: payer.publicKey,
+      newAccountPubkey: writerTokenMintAccount.publicKey,
+      lamports: mintRentBalance,
+      space: MintLayout.span,
+      programId: TOKEN_PROGRAM_ID,
+    }),
+  );
+
+  const optionMarketDataRentBalance = await connection.getMinimumBalanceForRentExemption(
+    OPTION_MARKET_LAYOUT.span,
+  );
+  transaction.add(
+    SystemProgram.createAccount({
+      fromPubkey: payer.publicKey,
+      newAccountPubkey: optionMarketDataAccount.publicKey,
+      lamports: optionMarketDataRentBalance,
+      space: OPTION_MARKET_LAYOUT.span,
+      programId: programPubkey,
+    }),
+  );
+
+  const assetPoolRentBalance = await connection.getMinimumBalanceForRentExemption(
+    AccountLayout.span,
+  );
+  transaction.add(
+    SystemProgram.createAccount({
+      fromPubkey: payer.publicKey,
+      newAccountPubkey: underlyingAssetPoolAccount.publicKey,
+      lamports: assetPoolRentBalance,
+      space: AccountLayout.span,
+      programId: TOKEN_PROGRAM_ID,
+    }),
+  );
+  transaction.add(
+    SystemProgram.createAccount({
+      fromPubkey: payer.publicKey,
+      newAccountPubkey: quoteAssetPoolAccount.publicKey,
+      lamports: assetPoolRentBalance,
+      space: AccountLayout.span,
+      programId: TOKEN_PROGRAM_ID,
+    }),
+  );
+
+  return {
+    transaction,
+    optionMarketKey: optionMarketDataAccount.publicKey,
+    optionMintKey: optionMintAccount.publicKey,
+    writerTokenMintKey: writerTokenMintAccount.publicKey,
+    quoteAssetPoolKey: quoteAssetPoolAccount.publicKey,
+    underlyingAssetPoolKey: underlyingAssetPoolAccount.publicKey,
+  };
 };
 
 export const initializeMarket = async ({
