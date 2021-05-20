@@ -36,14 +36,14 @@ Exploring architectures for options trading on Serum
 # Deploying the program
 
 ## Dev Net
-The program used for Devnet Bet is currently deployed @ `{"programId":"4DvkJJBUiXMZVYXFGgYQvGceTuM7F5Be4HqWAiR7t2vM"}`
+The program used for Devnet Bet is currently deployed @ `{"programId":"6RX6shL4vRaTXWvwDFrh3rkXQGMfkZTY1zzoxE5ZTZ5p"}`
 
-The old program address for Devnet testing is deployed @ `{"programId":"7UkUQY1gqYyumhyoDy73D5JoThqGY9SJw21k6QveesfP"}`
+The old program address for Devnet testing is deployed @ `{"programId":"4DvkJJBUiXMZVYXFGgYQvGceTuM7F5Be4HqWAiR7t2vM"}`
 
-1. Make sure you're on solana CLI >= 1.5.6 `solana-install init v1.5.6`
+1. Make sure you're on solana CLI >= 1.6.7 `solana-install init v1.6.7`
 2. Build the program `cargo build-bpf --manifest-path options/Cargo.toml`
 3. Set the target network `solana config set --url https://devnet.solana.com`
-4. Deploy the program `solana program deploy --program-id $PWD/options/deployed_programs/solana_options-devnet-beta-2-keypair.json $PWD/options/target/deploy/solana_options.so`
+4. Deploy the program `solana program deploy --program-id $PWD/options/deployed_programs/solana_options-devnet-beta-3-keypair.json $PWD/options/target/deploy/solana_options.so`
 
 # Deploying the bindings to NPM
 1. Sign into mithraics npm account via cli
