@@ -1,13 +1,16 @@
+import { ASSOCIATED_TOKEN_PROGRAM_ID, Token } from '@solana/spl-token';
 import {
   Account,
   AccountMeta,
   Connection,
   PublicKey,
+  SystemProgram,
   SYSVAR_CLOCK_PUBKEY,
   Transaction,
   TransactionInstruction,
 } from '@solana/web3.js';
 import { struct, u8 } from 'buffer-layout';
+import { FEE_OWNER_KEY } from './fees';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { TOKEN_PROGRAM_ID } from './utils';
 import { getOptionMarketData } from './utils/getOptionMarketData';
@@ -38,6 +41,7 @@ export const EXERCISE_COVERED_CALL_LAYOUT = struct([]);
  * for the market, where the asset will be transfered to
  * @param optionTokenKey public key of the account where the Option Token will be burned from
  * @param optionTokenAuthorityKey onwer of the optionTokenKey, likely the wallet
+ * 
  * making the transaction
  * @returns
  */
@@ -52,8 +56,12 @@ export const exerciseCoveredCallInstruction = async ({
   quoteAssetPoolKey,
   optionTokenKey,
   optionTokenAuthorityKey,
+  fundingAccountKey,
+  quoteAssetMintKey,
 }: {
   programId: PublicKey;
+  // The payer account that is funding the SOL for the TX
+  fundingAccountKey: PublicKey;
   optionMintKey: PublicKey;
   optionMarketKey: PublicKey;
   exerciserQuoteAssetKey: PublicKey;
@@ -63,6 +71,7 @@ export const exerciseCoveredCallInstruction = async ({
   quoteAssetPoolKey: PublicKey;
   optionTokenKey: PublicKey;
   optionTokenAuthorityKey: PublicKey;
+  quoteAssetMintKey: PublicKey;
 }) => {
   // Generate the program derived address needed
   const [marketAuthorityKey] = await PublicKey.findProgramAddress(
@@ -77,9 +86,16 @@ export const exerciseCoveredCallInstruction = async ({
   const tagBuffer = Buffer.alloc(INTRUCTION_TAG_LAYOUT.span);
   INTRUCTION_TAG_LAYOUT.encode(2, tagBuffer, 0);
 
+  // Get the associated fee address
+  const feeRecipientKey = await Token.getAssociatedTokenAddress(
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+    TOKEN_PROGRAM_ID,
+    quoteAssetMintKey,
+    FEE_OWNER_KEY,
+  )
+
   const keys: AccountMeta[] = [
-    { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
-    { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    { pubkey: fundingAccountKey, isSigner: false, isWritable: true },
     { pubkey: optionMarketKey, isSigner: false, isWritable: false },
     { pubkey: exerciserQuoteAssetKey, isSigner: false, isWritable: true },
     {
@@ -98,6 +114,12 @@ export const exerciseCoveredCallInstruction = async ({
       isSigner: true,
       isWritable: false,
     },
+    { pubkey: quoteAssetMintKey, isSigner: false, isWritable: false },
+    { pubkey: feeRecipientKey, isSigner: false, isWritable: true },
+    { pubkey: FEE_OWNER_KEY, isSigner: false, isWritable: true },
+    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
+    { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
   ];
 
   return new TransactionInstruction({
