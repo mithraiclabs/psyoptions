@@ -12,7 +12,7 @@ use solana_program::{
 use spl_token::instruction as token_instruction;
 
 pub fn validate_spl_token_accounts(accounts: Vec<&AccountInfo>, spl_account_key: &Pubkey) -> bool {
-    for (i, account) in accounts.iter().enumerate() {
+    for account in accounts.iter() {
         if account.owner != spl_account_key {
             return false;
         }
