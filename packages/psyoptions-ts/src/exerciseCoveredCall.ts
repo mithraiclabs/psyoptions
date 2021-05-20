@@ -142,6 +142,7 @@ export const exerciseCoveredCall = async ({
   quoteAssetPoolKey,
   optionTokenKey,
   optionTokenAuthorityAccount,
+  quoteAssetMintKey,
 }: {
   connection: Connection;
   payer: Account;
@@ -155,6 +156,7 @@ export const exerciseCoveredCall = async ({
   quoteAssetPoolKey: PublicKey;
   optionTokenKey: PublicKey;
   optionTokenAuthorityAccount: Account;
+  quoteAssetMintKey: PublicKey;
 }) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
@@ -172,6 +174,8 @@ export const exerciseCoveredCall = async ({
     quoteAssetPoolKey,
     optionTokenKey,
     optionTokenAuthorityKey: optionTokenAuthorityAccount.publicKey,
+    fundingAccountKey: payer.publicKey,
+    quoteAssetMintKey, 
   });
   transaction.add(exerciseInstruction);
 
@@ -241,5 +245,6 @@ export const exerciseCoveredCallWithMarketKey = async ({
     quoteAssetPoolKey: optionMarketData.quoteAssetPoolKey,
     optionTokenKey,
     optionTokenAuthorityAccount,
+    quoteAssetMintKey: optionMarketData.quoteAssetMintKey
   });
 };
