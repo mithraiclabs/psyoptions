@@ -309,7 +309,8 @@ export const initializeMarket = async ({
   return {
     transaction,
     signers,
-    optionMarketDataAddress: optionMarketDataAccount.publicKey,
-    optionMintAddress: optionMintAccount.publicKey,
+    optionMarketDataKey: optionMarketDataAccount.publicKey,
+    optionMintKey: optionMintAccount.publicKey,
+    writerTokenMintKey: writerTokenMintAccount.publicKey
   };
 };
