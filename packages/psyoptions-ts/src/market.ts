@@ -16,6 +16,7 @@ export type OptionMarket = {
   mintFeeKey: PublicKey;
   exerciseFeeKey: PublicKey;
   bumpSeed: number;
+  initialized: boolean;
 };
 
 export const OPTION_MARKET_LAYOUT = BufferLayout.struct([
@@ -31,6 +32,7 @@ export const OPTION_MARKET_LAYOUT = BufferLayout.struct([
   Layout.publicKey('mintFeeKey'),
   Layout.publicKey('exerciseFeeKey'),
   BufferLayout.u8('bumpSeed'),
+  BufferLayout.u8('initialized'),
 ]);
 
 export class Market {
