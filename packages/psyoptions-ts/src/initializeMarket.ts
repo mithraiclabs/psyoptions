@@ -123,7 +123,7 @@ export const initializeMarketInstruction = async ({
     TOKEN_PROGRAM_ID,
     quoteAssetMintKey,
     FEE_OWNER_KEY,
-  )
+  );
 
   // Create a u8 buffer that conforms to the InitializeMarket structure
   const initializeMarketBuffer = Buffer.alloc(INITIALIZE_MARKET_LAYOUT.span);
@@ -276,7 +276,7 @@ export const initializeAccountsForMarket = async ({
     writerTokenMintAccount,
     optionMarketDataAccount,
     underlyingAssetPoolAccount,
-    quoteAssetPoolAccount
+    quoteAssetPoolAccount,
   ];
 
   return {
@@ -428,6 +428,6 @@ export const initializeMarket = async ({
     signers,
     optionMarketDataKey: optionMarketDataAccount.publicKey,
     optionMintKey: optionMintAccount.publicKey,
-    writerTokenMintKey: writerTokenMintAccount.publicKey
+    writerTokenMintKey: writerTokenMintAccount.publicKey,
   };
 };
