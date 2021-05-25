@@ -48,10 +48,9 @@ impl Processor {
         let sys_program_acct = next_account_info(account_info_iter)?;
         let spl_associated_token_acct = next_account_info(account_info_iter)?;
 
-        // let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
+        let mut option_market = OptionMarket::unpack_unchecked(&option_market_acct.data.borrow())?;
 
-        let option_market_already_initialized = false;
-        if option_market_already_initialized {
+        if option_market.initialized {
             // if the underlying amount is non zero, then we know the market has been initialized
             return Err(OptionsError::MarketAlreadyInitialized.into());
         }
@@ -165,23 +164,20 @@ impl Processor {
         )?;
 
         // Add all relevant data to the OptionMarket data account
-        OptionMarket::pack(
-            OptionMarket {
-                option_mint: *option_mint_acct.key,
-                writer_token_mint: *writer_token_mint_acct.key,
-                underlying_asset_mint: *underlying_asset_mint_acct.key,
-                quote_asset_mint: *quote_asset_mint_acct.key,
-                underlying_amount_per_contract,
-                quote_amount_per_contract,
-                expiration_unix_timestamp,
-                underlying_asset_pool: *underlying_asset_pool_acct.key,
-                quote_asset_pool: *quote_asset_pool_acct.key,
-                mint_fee_account: *mint_fee_account.key,
-                exercise_fee_account: *exercise_fee_account.key,
-                bump_seed,
-            },
-            &mut option_market_acct.data.borrow_mut(),
-        )?;
+        option_market.option_mint = *option_mint_acct.key;
+        option_market.writer_token_mint = *writer_token_mint_acct.key;
+        option_market.underlying_asset_mint = *underlying_asset_mint_acct.key;
+        option_market.quote_asset_mint = *quote_asset_mint_acct.key;
+        option_market.underlying_amount_per_contract = underlying_amount_per_contract;
+        option_market.quote_amount_per_contract = quote_amount_per_contract;
+        option_market.expiration_unix_timestamp = expiration_unix_timestamp;
+        option_market.underlying_asset_pool = *underlying_asset_pool_acct.key;
+        option_market.quote_asset_pool = *quote_asset_pool_acct.key;
+        option_market.mint_fee_account = *mint_fee_account.key;
+        option_market.exercise_fee_account = *exercise_fee_account.key;
+        option_market.bump_seed = bump_seed;
+        option_market.initialized = true;
+        OptionMarket::pack(option_market, &mut option_market_acct.data.borrow_mut())?;
         Ok(())
     }
 
