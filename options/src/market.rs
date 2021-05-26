@@ -41,6 +41,8 @@ pub struct OptionMarket {
     pub exercise_fee_account: Pubkey,
     /// Bump seed for program derived addresses
     pub bump_seed: u8,
+    /// whether the OptionMarket has been initialized or not
+    pub initialized: bool,
 }
 
 impl OptionMarket {
@@ -58,7 +60,7 @@ impl OptionMarket {
 
 impl IsInitialized for OptionMarket {
     fn is_initialized(&self) -> bool {
-        true
+        self.initialized
     }
 }
 impl Sealed for OptionMarket {}
@@ -74,6 +76,7 @@ impl Pack for OptionMarket {
         + PUBLIC_KEY_LEN
         + PUBLIC_KEY_LEN
         + PUBLIC_KEY_LEN
+        + 1
         + 1;
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         let src = array_ref![src, 0, OptionMarket::LEN];
@@ -90,6 +93,7 @@ impl Pack for OptionMarket {
             mint_fee_account,
             exercise_fee_account,
             bump_seed,
+            initialized,
         ) = array_refs![
             src,
             PUBLIC_KEY_LEN,
@@ -103,8 +107,14 @@ impl Pack for OptionMarket {
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
+            1,
             1
         ];
+        let initialized = match initialized {
+            [0] => false,
+            [1] => true,
+            _ => return Err(ProgramError::InvalidAccountData),
+        };
         Ok(OptionMarket {
             option_mint: Pubkey::new(option_mint),
             writer_token_mint: Pubkey::new(writer_token_mint),
@@ -118,6 +128,7 @@ impl Pack for OptionMarket {
             bump_seed: u8::from_le_bytes(*bump_seed),
             mint_fee_account: Pubkey::new(mint_fee_account),
             exercise_fee_account: Pubkey::new(exercise_fee_account),
+            initialized,
         })
     }
     fn pack_into_slice(&self, dst: &mut [u8]) {
@@ -135,6 +146,7 @@ impl Pack for OptionMarket {
             mint_fee_account_ref,
             exercise_fee_account_ref,
             bump_seed_ref,
+            initialized_ref,
         ) = mut_array_refs![
             dest,
             PUBLIC_KEY_LEN,
@@ -148,6 +160,7 @@ impl Pack for OptionMarket {
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
+            1,
             1
         ];
         option_mint_ref.copy_from_slice(&self.option_mint.to_bytes());
@@ -165,6 +178,7 @@ impl Pack for OptionMarket {
         mint_fee_account_ref.copy_from_slice(&self.mint_fee_account.to_bytes());
         exercise_fee_account_ref.copy_from_slice(&self.exercise_fee_account.to_bytes());
         bump_seed_ref.copy_from_slice(&self.bump_seed.to_le_bytes());
+        initialized_ref[0] = self.initialized as u8
     }
 }
 
@@ -200,6 +214,7 @@ mod tests {
             mint_fee_account,
             exercise_fee_account,
             bump_seed,
+            initialized: true,
         };
         let cloned_option_market = option_market.clone();
 
@@ -219,6 +234,7 @@ mod tests {
             mint_fee_account_ref,
             exercise_fee_account_ref,
             bump_seed_ref,
+            initialized_ref
         ) = array_refs![
             serialized_ref,
             PUBLIC_KEY_LEN,
@@ -232,6 +248,7 @@ mod tests {
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
             PUBLIC_KEY_LEN,
+            1,
             1
         ];
         assert_eq!(option_mint_ref, &option_mint.to_bytes());
@@ -260,5 +277,6 @@ mod tests {
 
         assert_eq!(deserialized_options_market, cloned_option_market);
         assert_eq!(bump_seed_ref, &bump_seed.to_le_bytes());
+        assert_eq!(initialized_ref, &[1 as u8]);
     }
 }
