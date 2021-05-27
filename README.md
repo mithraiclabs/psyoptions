@@ -36,7 +36,7 @@ Exploring architectures for options trading on Serum
 # Deploying the program
 
 ## Dev Net
-The program used for Devnet Bet is currently deployed @ `{"programId":"CUmVnHnQZGjeCmiYcF6ZfKrJKJ8uEW79QCWuxNdjLUBn"}`
+The program used for Devnet Bet is currently deployed @ `{"programId":"GDvqQy3FkDB2wyNwgZGp5YkmRMUmWbhNNWDMYKbLSZ5N"}`
 
 The old program address for Devnet testing is deployed @ `{"programId":"4DvkJJBUiXMZVYXFGgYQvGceTuM7F5Be4HqWAiR7t2vM"}`
 
