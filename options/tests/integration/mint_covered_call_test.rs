@@ -90,7 +90,7 @@ fn test_mint_covered_call_integration() {
   );
 
   // send TX to mint a covered call
-  let mint_covered_call_ix = solana_options::instruction::mint_covered_call(
+  let mint_covered_call_ix = psyoptions::instruction::mint_covered_call(
     &options_program_id,
     &option_writer_keys.pubkey(),
     &option_mint_keys.pubkey(),
@@ -234,7 +234,7 @@ fn test_mint_covered_call_fail_post_expiry() {
   );
 
   // send TX to mint a covered call
-  let mint_covered_call_ix = solana_options::instruction::mint_covered_call(
+  let mint_covered_call_ix = psyoptions::instruction::mint_covered_call(
     &options_program_id,
     &option_writer_keys.pubkey(),
     &option_mint_keys.pubkey(),
@@ -357,7 +357,7 @@ fn test_mint_covered_call_fail_fake_market_account() {
   );
 
   // send TX to mint a covered call
-  let mint_covered_call_ix = solana_options::instruction::mint_covered_call(
+  let mint_covered_call_ix = psyoptions::instruction::mint_covered_call(
     &options_program_id,
     &option_writer_keys.pubkey(),
     &option_mint_keys.pubkey(),

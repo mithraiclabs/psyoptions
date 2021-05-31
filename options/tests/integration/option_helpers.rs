@@ -6,7 +6,7 @@ use crate::{
     },
 };
 use solana_client::{client_error::ClientError, rpc_client::RpcClient};
-use solana_options::market::OptionMarket;
+use psyoptions::market::OptionMarket;
 use solana_program::{
     clock::UnixTimestamp, program_pack::Pack, pubkey::Pubkey,
     system_instruction,
@@ -163,7 +163,7 @@ pub fn init_option_market(
         &payer_keys,
     )?;
 
-    let init_market_ix = solana_options::instruction::initialize_market(
+    let init_market_ix = psyoptions::instruction::initialize_market(
         &program_id,
         &underlying_asset_mint_keys.pubkey(),
         &quote_asset_mint_keys.pubkey(),
@@ -259,7 +259,7 @@ pub fn create_and_add_option_writer(
     // failing to mint here because fee recipient is bad
 
     // send TX to mint a covered call
-    let mint_covered_call_ix = solana_options::instruction::mint_covered_call(
+    let mint_covered_call_ix = psyoptions::instruction::mint_covered_call(
         &options_program_id,
         &option_writer_keys.pubkey(),
         &option_mint_keys.pubkey(),

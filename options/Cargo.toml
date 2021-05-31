@@ -1,7 +1,7 @@
 [package]
-name = "program"
+name = "psyoptions"
 version = "0.0.1"
-authors = ["mithraiclabs", "tomjohn1028", "Taylor123"]
+authors = ["mithraiclabs"]
 edition = "2018"
 
 [features]
@@ -27,5 +27,5 @@ serial_test = "0.5.1"
 lazy_static = "1.4.0"
 
 [lib]
-name = "solana_options"
+name = "psyoptions"
 crate-type = ["cdylib", "lib"]

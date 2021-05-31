@@ -4,7 +4,7 @@ use crate::{
 };
 use serial_test::serial;
 use solana_client::rpc_client::RpcClient;
-use solana_options::{instruction::OptionsInstruction, market::OptionMarket};
+use psyoptions::{instruction::OptionsInstruction, market::OptionMarket};
 use solana_program::{
   clock::Clock,
   instruction::{AccountMeta, Instruction},
@@ -93,7 +93,7 @@ pub fn test_sucessful_close_post_expiration() {
   let option_market_data = client.get_account_data(&option_market_key).unwrap();
   let option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
   // generate the exercise_post_expiration instruction
-  let close_post_exirpation_ix = solana_options::instruction::close_post_expiration(
+  let close_post_exirpation_ix = psyoptions::instruction::close_post_expiration(
     &options_program_id,
     &option_market_key,
     &option_market.underlying_asset_pool,
@@ -254,7 +254,7 @@ pub fn test_panic_when_expiration_has_not_passed_close_post_exp() {
   let option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
 
   // generate the exercise_post_expiration instruction
-  let close_post_exirpation_ix = solana_options::instruction::close_post_expiration(
+  let close_post_exirpation_ix = psyoptions::instruction::close_post_expiration(
     &options_program_id,
     &option_market_key,
     &option_market.underlying_asset_pool,
