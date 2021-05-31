@@ -3,6 +3,10 @@ name = "psyoptions"
 version = "0.0.1"
 authors = ["mithraiclabs"]
 edition = "2018"
+description = "Bindings for interacting with the PsyOptions protocol on the Solana blockchain"
+repository = "https://github.com/mithraiclabs/psyoptions"
+documentation = "https://docs.psyoptions.io"
+keywords = ["psyoptions", "solana", "solana_program", "web3"]
 
 [features]
 no-entrypoint = []
