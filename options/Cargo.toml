@@ -30,6 +30,9 @@ solana-faucet = "1.6.8"
 serial_test = "0.5.1"
 lazy_static = "1.4.0"
 
+[profile.release]
+lto = true
+
 [lib]
 name = "psyoptions"
 crate-type = ["cdylib", "lib"]
