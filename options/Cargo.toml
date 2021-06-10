@@ -9,7 +9,8 @@ documentation = "https://docs.psyoptions.io"
 keywords = ["psyoptions", "solana", "solana_program", "web3"]
 license = "Apache-2.0"
 exclude = [
-  "tests/**/*"
+  "tests/**/*",
+  "src/processor.rs"
 ]
 
 [features]
