@@ -8,6 +8,9 @@ repository = "https://github.com/mithraiclabs/psyoptions"
 documentation = "https://docs.psyoptions.io"
 keywords = ["psyoptions", "solana", "solana_program", "web3"]
 license = "Apache-2.0"
+exclude = [
+  "tests/**/*"
+]
 
 [features]
 no-entrypoint = []
