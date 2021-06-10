@@ -26,6 +26,6 @@ lazy_static! {
       "http://localhost:8899".to_string(),
       CommitmentConfig::processed(),
     );
-    solana_helpers::load_bpf_program(&client, "solana_options")
+    solana_helpers::load_bpf_program(&client, "psyoptions")
   };
 }

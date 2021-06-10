@@ -55,7 +55,7 @@ fn test_initialize_market() {
     let underlying_amount_per_contract = 10_000_000_000;
     let quote_amount_per_contract = 50_000_000_000; // strike price of 5
     let expiry = 0;
-    let init_market_ix = solana_options::instruction::initialize_market(
+    let init_market_ix = psyoptions::instruction::initialize_market(
         &options_program_id,
         &underlying_mint_keys.pubkey(),
         &quote_mint_keys.pubkey(),
@@ -129,8 +129,7 @@ fn test_initialize_market() {
     let option_market_data = client
         .get_account_data(&options_market_keys.pubkey())
         .unwrap();
-    let option_market =
-        solana_options::market::OptionMarket::unpack(&option_market_data[..]).unwrap();
+    let option_market = psyoptions::market::OptionMarket::unpack(&option_market_data[..]).unwrap();
     assert_eq!(option_market.option_mint, option_mint_keys.pubkey());
     assert_eq!(
         option_market.writer_token_mint,
@@ -196,7 +195,7 @@ fn should_fail_with_same_quote_underlying_assets() {
     let amount_per_contract = 100;
     let quote_amount_per_contract = 500; // strike price of 5
     let expiry = 0;
-    let init_market_ix = solana_options::instruction::initialize_market(
+    let init_market_ix = psyoptions::instruction::initialize_market(
         &options_program_id,
         &underlying_mint_keys.pubkey(),
         &underlying_mint_keys.pubkey(),
@@ -263,7 +262,7 @@ fn should_fail_to_reinitialize_market() {
     let underlying_amount_per_contract = 100;
     let quote_amount_per_contract = 500; // strike price of 5
     let expiry = 0;
-    let init_market_ix = solana_options::instruction::initialize_market(
+    let init_market_ix = psyoptions::instruction::initialize_market(
         &options_program_id,
         &underlying_mint_keys.pubkey(),
         &quote_mint_keys.pubkey(),
@@ -309,7 +308,7 @@ fn should_fail_to_reinitialize_market() {
     let underlying_amount_per_contract = 10;
     let quote_amount_per_contract = 500; // strike price of 5
     let expiry = 0;
-    let init_market_ix = solana_options::instruction::initialize_market(
+    let init_market_ix = psyoptions::instruction::initialize_market(
         &options_program_id,
         &underlying_mint_keys.pubkey(),
         &quote_mint_keys.pubkey(),

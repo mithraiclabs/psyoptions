@@ -7,7 +7,7 @@ use crate::{
 };
 use serial_test::serial;
 use solana_client::rpc_client::RpcClient;
-use solana_options::{instruction::OptionsInstruction, market::OptionMarket};
+use psyoptions::{instruction::OptionsInstruction, market::OptionMarket};
 use solana_program::{
   instruction::{AccountMeta, Instruction},
   program_pack::Pack,
@@ -103,7 +103,7 @@ pub fn test_successful_exchange_writer_token_for_quote_test() {
   )
   .unwrap();
   // generate the exercise_covered_call instruction
-  let exercise_covered_call_ix = solana_options::instruction::exercise_covered_call(
+  let exercise_covered_call_ix = psyoptions::instruction::exercise_covered_call(
     &options_program_id,
     &exerciser_authority_keys.pubkey(),
     &option_mint_keys.pubkey(),
@@ -145,7 +145,7 @@ pub fn test_successful_exchange_writer_token_for_quote_test() {
   let initial_writer_token_mint_act = Mint::unpack(&initial_writer_token_mint_data[..]).unwrap();
 
   let exchange_writer_token_quote_ix =
-    solana_options::instruction::exchange_writer_token_for_quote(
+    psyoptions::instruction::exchange_writer_token_for_quote(
       &options_program_id,
       &option_market_key,
       &writer_token_mint_keys.pubkey(),
@@ -292,7 +292,7 @@ pub fn test_panic_when_non_quote_asset_pool_is_used() {
   )
   .unwrap();
   // generate the exercise_covered_call instruction
-  let exercise_covered_call_ix = solana_options::instruction::exercise_covered_call(
+  let exercise_covered_call_ix = psyoptions::instruction::exercise_covered_call(
     &options_program_id,
     &exerciser_authority_keys.pubkey(),
     &option_mint_keys.pubkey(),
@@ -448,7 +448,7 @@ pub fn test_panic_when_option_token_is_used() {
   )
   .unwrap();
   // generate the exercise_covered_call instruction
-  let exercise_covered_call_ix = solana_options::instruction::exercise_covered_call(
+  let exercise_covered_call_ix = psyoptions::instruction::exercise_covered_call(
     &options_program_id,
     &exerciser_authority_keys.pubkey(),
     &option_mint_keys.pubkey(),

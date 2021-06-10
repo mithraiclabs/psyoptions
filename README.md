@@ -24,7 +24,7 @@ Exploring architectures for options trading on Serum
 ## Deploying and creating a market locally
 1. Run local Solana cluster `yarn localnet:up`
 2. Build program `cargo build-bpf --manifest-path options/Cargo.toml`
-3. Deploy program `solana program deploy --program-id $PWD/options/deployed_programs/solana_options-local-keypair.json $PWD/options/target/deploy/solana_options.so`
+3. Deploy program `solana program deploy --program-id $PWD/options/deployed_programs/psyoptions-local-keypair.json $PWD/options/target/deploy/psyoptions.so`
     * NOTE: To use the above you must set your Solana config file (usually located at _~/.config/solana/cli/config.yml_) to point to the local cluster AND use an appropriate localnet keypair that has some SOL. Follow the docs to [generate keypair](https://docs.solana.com/wallet-guide/file-system-wallet#generate-a-file-system-wallet-keypair) and [airdrop some tokens](https://docs.solana.com/cli/transfer-tokens#airdrop-some-tokens-to-get-started)
 4. Run the script to build an options market `npx babel-node scripts/buildAndInitMarket.js YOUR_PROGRAM_ADDRESS`
 
@@ -43,9 +43,14 @@ The old program address for Devnet testing is deployed @ `{"programId":"4DvkJJBU
 1. Make sure you're on solana CLI >= 1.6.7 `solana-install init v1.6.7`
 2. Build the program `cargo build-bpf --manifest-path options/Cargo.toml`
 3. Set the target network `solana config set --url https://devnet.solana.com`
-4. Deploy the program `solana program deploy --program-id $PWD/options/deployed_programs/solana_options-devnet-beta-3-keypair.json $PWD/options/target/deploy/solana_options.so`
+4. Deploy the program `solana program deploy --program-id $PWD/options/deployed_programs/psyoptions-devnet-beta-3-keypair.json $PWD/options/target/deploy/psyoptions.so`
 
 # Deploying the bindings to NPM
 1. Sign into mithraics npm account via cli
 2. build the new package `cd packages/psyoptions-ts` `yarn build:package`
 3. publish to npm `npm publish --access public`
+
+# Publishing the crate
+
+`cd options && cargo publish --features "no-entrypoint"`
+

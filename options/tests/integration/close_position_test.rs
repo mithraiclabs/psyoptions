@@ -4,7 +4,7 @@ use crate::{
 };
 use serial_test::serial;
 use solana_client::rpc_client::RpcClient;
-use solana_options::{instruction::OptionsInstruction, market::OptionMarket};
+use psyoptions::{instruction::OptionsInstruction, market::OptionMarket};
 use solana_program::{
   instruction::{AccountMeta, Instruction},
   program_pack::Pack,
@@ -81,7 +81,7 @@ pub fn test_sucessful_close_position() {
   let option_market_data = client.get_account_data(&option_market_key).unwrap();
   let option_market = OptionMarket::unpack(&option_market_data[..]).unwrap();
   // generate the close_position instruction
-  let close_position_ix = solana_options::instruction::close_position(
+  let close_position_ix = psyoptions::instruction::close_position(
     &options_program_id,
     &option_market_key,
     &option_market.underlying_asset_pool,

@@ -1,4 +1,4 @@
-use solana_options::fees::fee_amount;
+use psyoptions::fees::fee_amount;
 use crate::{
   option_helpers::{
     create_and_add_option_writer, create_exerciser, init_option_market,
@@ -8,7 +8,7 @@ use crate::{
 };
 use serial_test::serial;
 use solana_client::rpc_client::RpcClient;
-use solana_options::market::OptionMarket;
+use psyoptions::market::OptionMarket;
 use solana_program::{
   clock::Clock,
   program_pack::Pack,
@@ -108,7 +108,7 @@ pub fn test_sucessful_exercise_covered_call() {
   )
   .unwrap();
   // generate the exercise_covered_call instruction
-  let exercise_covered_call_ix = solana_options::instruction::exercise_covered_call(
+  let exercise_covered_call_ix = psyoptions::instruction::exercise_covered_call(
     &options_program_id,
     &exerciser_authority_keys.pubkey(),
     &option_mint_keys.pubkey(),
@@ -293,7 +293,7 @@ pub fn test_panic_when_expiration_has_passed() {
   thread::sleep(Duration::from_secs(20));
 
   // generate the exercise_covered_call instruction
-  let exercise_covered_call_ix = solana_options::instruction::exercise_covered_call(
+  let exercise_covered_call_ix = psyoptions::instruction::exercise_covered_call(
     &options_program_id,
     &exerciser_authority_keys.pubkey(),
     &option_mint_keys.pubkey(),
