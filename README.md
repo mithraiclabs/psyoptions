@@ -49,3 +49,8 @@ The old program address for Devnet testing is deployed @ `{"programId":"4DvkJJBU
 1. Sign into mithraics npm account via cli
 2. build the new package `cd packages/psyoptions-ts` `yarn build:package`
 3. publish to npm `npm publish --access public`
+
+# Publishing the crate
+
+`cd options && cargo publish --features "no-entrypoint"`
+
