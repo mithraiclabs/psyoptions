@@ -7,6 +7,7 @@ description = "Bindings for interacting with the PsyOptions protocol on the Sola
 repository = "https://github.com/mithraiclabs/psyoptions"
 documentation = "https://docs.psyoptions.io"
 keywords = ["psyoptions", "solana", "solana_program", "web3"]
+license = "Apache-2.0"
 
 [features]
 no-entrypoint = []
