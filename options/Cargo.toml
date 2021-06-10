@@ -10,7 +10,8 @@ keywords = ["psyoptions", "solana", "solana_program", "web3"]
 license = "Apache-2.0"
 exclude = [
   "tests/**/*",
-  "src/processor.rs"
+  "src/processor.rs",
+  "src/entrypoint.rs"
 ]
 
 [features]
