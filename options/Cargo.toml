@@ -1,11 +1,10 @@
 [package]
 name = "psyoptions"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["mithraiclabs"]
 edition = "2018"
 description = "Bindings for interacting with the PsyOptions protocol on the Solana blockchain"
 repository = "https://github.com/mithraiclabs/psyoptions"
-documentation = "https://docs.psyoptions.io"
 keywords = ["psyoptions", "solana", "solana_program", "web3"]
 license = "Apache-2.0"
 exclude = [
@@ -13,6 +12,10 @@ exclude = [
   "src/processor.rs",
   "src/entrypoint.rs"
 ]
+
+[package.metadata.docs.rs]
+# Features to pass to Cargo (default: [])
+features = ["no-entrypoint"]
 
 [features]
 no-entrypoint = []
