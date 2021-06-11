@@ -3,20 +3,24 @@ import BN from 'bn.js';
 import * as BufferLayout from 'buffer-layout';
 import * as Layout from './layout';
 
-export type OptionMarket = {
+type OptionMarketBufferData = {
   optionMintKey: PublicKey;
   writerTokenMintKey: PublicKey;
   underlyingAssetMintKey: PublicKey;
   quoteAssetMintKey: PublicKey;
   amountPerContract: BN;
   quoteAmountPerContract: BN;
-  expirationUnixTimestamp: number;
+  expiration: number;
   underlyingAssetPoolKey: PublicKey;
   quoteAssetPoolKey: PublicKey;
   mintFeeKey: PublicKey;
   exerciseFeeKey: PublicKey;
   bumpSeed: number;
   initialized: boolean;
+};
+
+export type OptionMarket = OptionMarketBufferData & {
+  optionMarketKey: PublicKey;
 };
 
 export const OPTION_MARKET_LAYOUT = BufferLayout.struct([
@@ -26,7 +30,7 @@ export const OPTION_MARKET_LAYOUT = BufferLayout.struct([
   Layout.publicKey('quoteAssetMintKey'),
   Layout.uint64('amountPerContract'),
   Layout.uint64('quoteAmountPerContract'),
-  BufferLayout.ns64('expirationUnixTimestamp'),
+  BufferLayout.ns64('expiration'),
   Layout.publicKey('underlyingAssetPoolKey'),
   Layout.publicKey('quoteAssetPoolKey'),
   Layout.publicKey('mintFeeKey'),
@@ -46,7 +50,14 @@ export class Market {
     this.programId = programId;
     this.pubkey = pubkey;
 
-    this.marketData = OPTION_MARKET_LAYOUT.decode(accountData) as OptionMarket;
+    const bufferData = OPTION_MARKET_LAYOUT.decode(
+      accountData,
+    ) as OptionMarketBufferData;
+
+    this.marketData = {
+      ...bufferData,
+      optionMarketKey: pubkey,
+    };
   }
 
   /**
