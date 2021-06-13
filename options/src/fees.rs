@@ -1,4 +1,4 @@
-use crate::error::OptionsError;
+use crate::error::PsyOptionsError;
 use solana_program::{
   account_info::AccountInfo,
   program::invoke,
@@ -142,7 +142,7 @@ pub fn transfer_fee<'a>(
         return Err(ProgramError::InvalidAccountData);
       }
       if fee_spl_token_account.owner != fee_owner_key::ID || fee_spl_token_account.mint != asset_mint {
-        return Err(OptionsError::BadFeeOwner.into());
+        return Err(PsyOptionsError::BadFeeOwner.into());
       }
     }
     // transfer the fee to the designated account
