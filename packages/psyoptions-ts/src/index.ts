@@ -7,5 +7,6 @@ export * from './closePosition';
 export * from './initializeMarket';
 export * from './mintCoveredCall';
 export * from './market';
+export * from './error';
 
 export { utils };
