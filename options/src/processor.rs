@@ -202,8 +202,6 @@ impl Processor {
         let clock_sysvar_info = next_account_info(account_info_iter)?;
         let system_program_acct = next_account_info(account_info_iter)?;
 
-        return Err(PsyOptionsError::IncorrectMarketTokens.into());
-
         if !validate_spl_token_accounts(
             vec![
                 option_mint_acct,
