@@ -1,7 +1,7 @@
 import {
-  Account,
   AccountMeta,
   Connection,
+  Keypair,
   PublicKey,
   Transaction,
   TransactionInstruction,
@@ -87,7 +87,7 @@ export const exchangeWriterTokenForQuoteInstruction = async ({
 
 export const exchangeWriterTokenForQuote = async ({
   connection,
-  payer,
+  payerKey,
   programId,
   optionMarketKey,
   writerTokenMintKey,
@@ -97,7 +97,7 @@ export const exchangeWriterTokenForQuote = async ({
   quoteAssetPoolKey,
 }: {
   connection: Connection;
-  payer: Account;
+  payerKey: PublicKey;
   programId: PublicKey | string;
   optionMarketKey: PublicKey;
   writerTokenMintKey: PublicKey;
@@ -120,8 +120,8 @@ export const exchangeWriterTokenForQuote = async ({
     quoteAssetPoolKey,
   });
   transaction.add(closePositionIx);
-  const signers = [payer];
-  transaction.feePayer = payer.publicKey;
+  const signers: Keypair[] = [];
+  transaction.feePayer = payerKey;
   const { blockhash } = await connection.getRecentBlockhash();
   transaction.recentBlockhash = blockhash;
 
