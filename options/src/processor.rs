@@ -1,4 +1,4 @@
-use crate::{error::OptionsError, fees, instruction::OptionsInstruction, market::OptionMarket};
+use crate::{error::PsyOptionsError, fees, instruction::OptionsInstruction, market::OptionMarket};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::{Clock, UnixTimestamp},
@@ -52,15 +52,15 @@ impl Processor {
 
         if option_market.initialized {
             // if the underlying amount is non zero, then we know the market has been initialized
-            return Err(OptionsError::MarketAlreadyInitialized.into());
+            return Err(PsyOptionsError::MarketAlreadyInitialized.into());
         }
         if quote_asset_mint_acct.key == underlying_asset_mint_acct.key {
-            return Err(OptionsError::QuoteAndUnderlyingAssetMustDiffer.into());
+            return Err(PsyOptionsError::QuoteAndUnderlyingAssetMustDiffer.into());
         }
 
         if underlying_amount_per_contract <= 0 || quote_amount_per_contract <= 0 {
             // don't let options with underlying amount 0 be created
-            return Err(OptionsError::InvalidInitializationParameters.into());
+            return Err(PsyOptionsError::InvalidInitializationParameters.into());
         }
 
         if fees::fee_amount(underlying_amount_per_contract) > 0 {
@@ -221,14 +221,14 @@ impl Processor {
         if option_market.option_mint != *option_mint_acct.key
             || option_market.writer_token_mint != *writer_token_mint_acct.key
         {
-            return Err(OptionsError::IncorrectMarketTokens.into());
+            return Err(PsyOptionsError::IncorrectMarketTokens.into());
         }
 
         // Deserialize the account into a clock struct
         let clock = Clock::from_account_info(&clock_sysvar_info)?;
         // Verify that the expiration date for the options market has not passed
         if clock.unix_timestamp > option_market.expiration_unix_timestamp {
-            return Err(OptionsError::CantMintExpired.into());
+            return Err(PsyOptionsError::CantMintExpired.into());
         }
 
         // transfer the amount per contract of underlying asset from the src to the pool
@@ -354,7 +354,7 @@ impl Processor {
         let clock = Clock::from_account_info(&clock_sysvar_info)?;
         // Verify that the OptionMarket has not expired
         if clock.unix_timestamp > option_market.expiration_unix_timestamp {
-            return Err(OptionsError::OptionMarketHasExpired.into());
+            return Err(PsyOptionsError::OptionMarketHasExpired.into());
         }
 
         // transfer the fee amount to the fee_recipient
@@ -471,10 +471,10 @@ impl Processor {
         if option_market.option_mint != *option_mint_acct.key
             || option_market.writer_token_mint != *writer_token_mint_acct.key
         {
-            return Err(OptionsError::IncorrectMarketTokens.into());
+            return Err(PsyOptionsError::IncorrectMarketTokens.into());
         }
         if *underlying_asset_pool_acct.key != option_market.underlying_asset_pool {
-            return Err(OptionsError::IncorrectPool.into());
+            return Err(PsyOptionsError::IncorrectPool.into());
         }
         // Burn Writer Token
         let burn_writer_token_ix = token_instruction::burn(
@@ -579,10 +579,10 @@ impl Processor {
         let clock = Clock::from_account_info(&clock_sysvar_info)?;
         // Verify that the OptionMarket has already expired
         if clock.unix_timestamp <= option_market.expiration_unix_timestamp {
-            return Err(OptionsError::OptionMarketNotExpired.into());
+            return Err(PsyOptionsError::OptionMarketNotExpired.into());
         }
         if *underlying_asset_pool_acct.key != option_market.underlying_asset_pool {
-            return Err(OptionsError::IncorrectPool.into());
+            return Err(PsyOptionsError::IncorrectPool.into());
         }
 
         // Burn Writer Token
@@ -663,10 +663,10 @@ impl Processor {
         let option_market = OptionMarket::from_account_info(option_market_acct, program_id)?;
 
         if *quote_asset_pool_acct.key != option_market.quote_asset_pool {
-            return Err(OptionsError::IncorrectPool.into());
+            return Err(PsyOptionsError::IncorrectPool.into());
         }
         if *writer_token_mint_acct.key != option_market.writer_token_mint {
-            return Err(OptionsError::IncorrectMarketTokens.into());
+            return Err(PsyOptionsError::IncorrectMarketTokens.into());
         }
 
         // Burn Writer Token
