@@ -25,7 +25,7 @@ fn test_initialize_market() {
     );
     let options_program_id = &PROGRAM_KEY;
 
-    let payer_keys = solana_helpers::create_account_with_lamports(&client, 10000000000);
+    let payer_keys = solana_helpers::create_account_with_lamports(&client, 10_000_000_000);
     let option_mint_keys = Keypair::new();
     let writer_token_mint_keys = Keypair::new();
     let options_market_keys = Keypair::new();
@@ -168,7 +168,7 @@ fn should_fail_with_same_quote_underlying_assets() {
     );
     let options_program_id = &PROGRAM_KEY;
 
-    let payer_keys = solana_helpers::create_account_with_lamports(&client, 10000000000);
+    let payer_keys = solana_helpers::create_account_with_lamports(&client, 10_000_000_000);
     let option_mint_keys = Keypair::new();
     let writer_token_mint_keys = Keypair::new();
     let options_market_keys = Keypair::new();
@@ -230,7 +230,7 @@ fn should_fail_to_reinitialize_market() {
     );
     let options_program_id = &PROGRAM_KEY;
 
-    let payer_keys = solana_helpers::create_account_with_lamports(&client, 10000000000);
+    let payer_keys = solana_helpers::create_account_with_lamports(&client, 10_000_000_000);
     let option_mint_keys = Keypair::new();
     let writer_token_mint_keys = Keypair::new();
     let options_market_keys = Keypair::new();

@@ -257,7 +257,7 @@ pub fn load_bpf_program(client: &RpcClient, name: &str) -> Pubkey {
     let elf = read_bpf_program(name);
     let data_len = elf.len() * 2;
 
-    let payer_keys = create_account_with_lamports(client, 69000000000);
+    let payer_keys = create_account_with_lamports(client, 69_000_000_000);
 
     // Account that will hold the program
     let account_to_init = Keypair::new();

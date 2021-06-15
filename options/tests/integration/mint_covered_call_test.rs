@@ -42,7 +42,7 @@ fn test_mint_covered_call_integration() {
   )
   .unwrap();
   let option_writer_keys =
-    solana_helpers::create_account_with_lamports(&client, 1_000_000_000_000_000);
+    solana_helpers::create_account_with_lamports(&client, 10_000_000_000);
   let option_writer_underlying_asset_keys = Keypair::new();
   let _option_writer_underlying_asset_acct = create_spl_account(
     &client,
@@ -186,7 +186,7 @@ fn test_mint_covered_call_fail_post_expiry() {
   )
   .unwrap();
   let option_writer_keys =
-    solana_helpers::create_account_with_lamports(&client, 1_000_000_000_000_000);
+    solana_helpers::create_account_with_lamports(&client, 10_000_000_000);
   let option_writer_underlying_asset_keys = Keypair::new();
   let _option_writer_underlying_asset_acct = create_spl_account(
     &client,
@@ -309,7 +309,7 @@ fn test_mint_covered_call_fail_fake_market_account() {
   )
   .unwrap();
   let option_writer_keys =
-    solana_helpers::create_account_with_lamports(&client, 1_000_000_000_000_000);
+    solana_helpers::create_account_with_lamports(&client, 10_000_000_000);
   let option_writer_underlying_asset_keys = Keypair::new();
   let _option_writer_underlying_asset_acct = create_spl_account(
     &client,

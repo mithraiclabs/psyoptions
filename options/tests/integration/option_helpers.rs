@@ -138,7 +138,7 @@ pub fn init_option_market(
     ),
     ClientError,
 > {
-    let payer_keys = create_account_with_lamports(&client, 10000000000);
+    let payer_keys = create_account_with_lamports(&client, 10_000_000_000);
     let option_mint_keys = Keypair::new();
     let writer_token_mint_keys = Keypair::new();
     let options_market_keys = Keypair::new();
@@ -209,7 +209,7 @@ pub fn create_and_add_option_writer(
     option_market_key: &Pubkey,
     amount_per_contract: u64,
 ) -> Result<(Keypair, Keypair, Keypair, Keypair, Keypair), ClientError> {
-    let option_writer_keys = create_account_with_lamports(&client, 1_000_000_000_000_000);
+    let option_writer_keys = create_account_with_lamports(&client, 10_000_000_000);
     let option_writer_underlying_asset_keys = Keypair::new();
     let _option_writer_underlying_asset_acct = create_spl_account(
         &client,
@@ -305,7 +305,7 @@ pub fn create_exerciser(
     option_market: &OptionMarket,
 ) -> Result<(Keypair, Keypair, Keypair), ClientError> {
     // create the Authority account
-    let exerciser_authority_keys = create_account_with_lamports(&client, 1_000_000_000_000_000);
+    let exerciser_authority_keys = create_account_with_lamports(&client, 10_000_000_000);
     // create an account to receive the underlying asset
     let exerciser_underlying_asset_keys = Keypair::new();
     let _exerciser_underlying_asset_acct = create_spl_account(
