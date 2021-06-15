@@ -1,7 +1,7 @@
 import {
-  Account,
   AccountMeta,
   Connection,
+  Keypair,
   PublicKey,
   Transaction,
   TransactionInstruction,
@@ -98,7 +98,7 @@ export const closePositionInstruction = async ({
 
 export const closePosition = async ({
   connection,
-  payer,
+  payerKey,
   programId,
   optionMarketKey,
   underlyingAssetPoolKey,
@@ -111,7 +111,7 @@ export const closePosition = async ({
   underlyingAssetDestKey,
 }: {
   connection: Connection;
-  payer: Account;
+  payerKey: PublicKey;
   programId: PublicKey | string;
   optionMarketKey: PublicKey;
   underlyingAssetPoolKey: PublicKey;
@@ -140,8 +140,8 @@ export const closePosition = async ({
     underlyingAssetDestKey,
   });
   transaction.add(closePositionIx);
-  const signers = [payer];
-  transaction.feePayer = payer.publicKey;
+  const signers: Keypair[] = [];
+  transaction.feePayer = payerKey;
   const { blockhash } = await connection.getRecentBlockhash();
   transaction.recentBlockhash = blockhash;
 

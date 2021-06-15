@@ -1,13 +1,12 @@
-import BigNumber from 'bignumber.js';
 import { struct, u8, nu64, ns64 } from 'buffer-layout';
 import {
   PublicKey,
   TransactionInstruction,
   SYSVAR_RENT_PUBKEY,
-  Account,
   Transaction,
   SystemProgram,
   Connection,
+  Keypair,
 } from '@solana/web3.js';
 import {
   AccountLayout,
@@ -189,25 +188,25 @@ export const initializeMarketInstruction = async ({
  * Generate and initialize the Accounts to be used for the new option market.
  *
  * @param connection
- * @param payer Account to pay for the creation of these new accounts
+ * @param payerKey PublicKey to pay for the creation of these new accounts
  * @param programId the public key for the PsyOptions program
  */
 export const initializeAccountsForMarket = async ({
   connection,
-  payer,
+  payerKey,
   programId,
 }: {
   connection: Connection;
-  payer: Account;
+  payerKey: PublicKey;
   programId: string | PublicKey;
 }) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
-  const optionMintAccount = new Account();
-  const writerTokenMintAccount = new Account();
-  const optionMarketDataAccount = new Account();
-  const underlyingAssetPoolAccount = new Account();
-  const quoteAssetPoolAccount = new Account();
+  const optionMintAccount = new Keypair();
+  const writerTokenMintAccount = new Keypair();
+  const optionMarketDataAccount = new Keypair();
+  const underlyingAssetPoolAccount = new Keypair();
+  const quoteAssetPoolAccount = new Keypair();
 
   const transaction = new Transaction();
 
@@ -218,7 +217,7 @@ export const initializeAccountsForMarket = async ({
   );
   transaction.add(
     SystemProgram.createAccount({
-      fromPubkey: payer.publicKey,
+      fromPubkey: payerKey,
       newAccountPubkey: optionMintAccount.publicKey,
       lamports: mintRentBalance,
       space: MintLayout.span,
@@ -228,7 +227,7 @@ export const initializeAccountsForMarket = async ({
   // Create the Option Mint Account with rent exemption
   transaction.add(
     SystemProgram.createAccount({
-      fromPubkey: payer.publicKey,
+      fromPubkey: payerKey,
       newAccountPubkey: writerTokenMintAccount.publicKey,
       lamports: mintRentBalance,
       space: MintLayout.span,
@@ -241,7 +240,7 @@ export const initializeAccountsForMarket = async ({
   );
   transaction.add(
     SystemProgram.createAccount({
-      fromPubkey: payer.publicKey,
+      fromPubkey: payerKey,
       newAccountPubkey: optionMarketDataAccount.publicKey,
       lamports: optionMarketDataRentBalance,
       space: OPTION_MARKET_LAYOUT.span,
@@ -254,7 +253,7 @@ export const initializeAccountsForMarket = async ({
   );
   transaction.add(
     SystemProgram.createAccount({
-      fromPubkey: payer.publicKey,
+      fromPubkey: payerKey,
       newAccountPubkey: underlyingAssetPoolAccount.publicKey,
       lamports: assetPoolRentBalance,
       space: AccountLayout.span,
@@ -263,7 +262,7 @@ export const initializeAccountsForMarket = async ({
   );
   transaction.add(
     SystemProgram.createAccount({
-      fromPubkey: payer.publicKey,
+      fromPubkey: payerKey,
       newAccountPubkey: quoteAssetPoolAccount.publicKey,
       lamports: assetPoolRentBalance,
       space: AccountLayout.span,
@@ -287,147 +286,5 @@ export const initializeAccountsForMarket = async ({
     writerTokenMintKey: writerTokenMintAccount.publicKey,
     quoteAssetPoolKey: quoteAssetPoolAccount.publicKey,
     underlyingAssetPoolKey: underlyingAssetPoolAccount.publicKey,
-  };
-};
-
-export const initializeMarket = async ({
-  connection,
-  payer,
-  programId,
-  underlyingAssetMintKey,
-  quoteAssetMintKey,
-  underlyingAssetDecimals,
-  quoteAssetDecimals,
-  underlyingAmountPerContract,
-  quoteAmountPerContract,
-  expirationUnixTimestamp,
-}: {
-  connection: Connection;
-  payer: Account;
-  programId: PublicKey | string; // the deployed program account
-  // The public key of the SPL Token Mint for the underlying asset
-  underlyingAssetMintKey: PublicKey;
-  // The public key of the SPL Token Mint for the quote asset
-  quoteAssetMintKey: PublicKey;
-  underlyingAssetDecimals: number;
-  quoteAssetDecimals: number;
-  underlyingAmountPerContract: BigNumber;
-  quoteAmountPerContract: BigNumber;
-  expirationUnixTimestamp: number;
-}) => {
-  const programPubkey =
-    programId instanceof PublicKey ? programId : new PublicKey(programId);
-
-  const optionMintAccount = new Account();
-  const writerTokenMintAccount = new Account();
-  const optionMarketDataAccount = new Account();
-  const underlyingAssetPoolAccount = new Account();
-  const quoteAssetPoolAccount = new Account();
-
-  const transaction = new Transaction();
-
-  // Create the Option Mint Account with rent exemption
-  // Allocate memory for the account
-  const mintRentBalance = await connection.getMinimumBalanceForRentExemption(
-    MintLayout.span,
-  );
-  transaction.add(
-    SystemProgram.createAccount({
-      fromPubkey: payer.publicKey,
-      newAccountPubkey: optionMintAccount.publicKey,
-      lamports: mintRentBalance,
-      space: MintLayout.span,
-      programId: TOKEN_PROGRAM_ID,
-    }),
-  );
-  // Create the Option Mint Account with rent exemption
-  transaction.add(
-    SystemProgram.createAccount({
-      fromPubkey: payer.publicKey,
-      newAccountPubkey: writerTokenMintAccount.publicKey,
-      lamports: mintRentBalance,
-      space: MintLayout.span,
-      programId: TOKEN_PROGRAM_ID,
-    }),
-  );
-
-  const optionMarketDataRentBalance = await connection.getMinimumBalanceForRentExemption(
-    OPTION_MARKET_LAYOUT.span,
-  );
-  transaction.add(
-    SystemProgram.createAccount({
-      fromPubkey: payer.publicKey,
-      newAccountPubkey: optionMarketDataAccount.publicKey,
-      lamports: optionMarketDataRentBalance,
-      space: OPTION_MARKET_LAYOUT.span,
-      programId: programPubkey,
-    }),
-  );
-
-  const assetPoolRentBalance = await connection.getMinimumBalanceForRentExemption(
-    AccountLayout.span,
-  );
-  transaction.add(
-    SystemProgram.createAccount({
-      fromPubkey: payer.publicKey,
-      newAccountPubkey: underlyingAssetPoolAccount.publicKey,
-      lamports: assetPoolRentBalance,
-      space: AccountLayout.span,
-      programId: TOKEN_PROGRAM_ID,
-    }),
-  );
-  transaction.add(
-    SystemProgram.createAccount({
-      fromPubkey: payer.publicKey,
-      newAccountPubkey: quoteAssetPoolAccount.publicKey,
-      lamports: assetPoolRentBalance,
-      space: AccountLayout.span,
-      programId: TOKEN_PROGRAM_ID,
-    }),
-  );
-
-  // TODO -- can we encode these to the buffer without converting back to the built-in number type?
-  const amountPerContractU64 = underlyingAmountPerContract
-    .multipliedBy(new BigNumber(10).pow(underlyingAssetDecimals))
-    .toNumber();
-  const quoteAmountPerContractU64 = quoteAmountPerContract
-    .multipliedBy(new BigNumber(10).pow(quoteAssetDecimals))
-    .toNumber();
-
-  const initMarketInstruction = await initializeMarketInstruction({
-    programId: programPubkey,
-    fundingAccountKey: payer.publicKey,
-    underlyingAssetMintKey,
-    quoteAssetMintKey,
-    optionMintKey: optionMintAccount.publicKey,
-    writerTokenMintKey: writerTokenMintAccount.publicKey,
-    optionMarketKey: optionMarketDataAccount.publicKey,
-    underlyingAssetPoolKey: underlyingAssetPoolAccount.publicKey,
-    quoteAssetPoolKey: quoteAssetPoolAccount.publicKey,
-    underlyingAmountPerContract: amountPerContractU64,
-    quoteAmountPerContract: quoteAmountPerContractU64,
-    expirationUnixTimestamp,
-  });
-
-  transaction.add(initMarketInstruction);
-  const signers = [
-    payer,
-    optionMintAccount,
-    writerTokenMintAccount,
-    underlyingAssetPoolAccount,
-    optionMarketDataAccount,
-    quoteAssetPoolAccount,
-  ];
-  transaction.feePayer = payer.publicKey;
-  const { blockhash } = await connection.getRecentBlockhash();
-  transaction.recentBlockhash = blockhash;
-  transaction.partialSign(...signers.slice(1));
-
-  return {
-    transaction,
-    signers,
-    optionMarketDataKey: optionMarketDataAccount.publicKey,
-    optionMintKey: optionMintAccount.publicKey,
-    writerTokenMintKey: writerTokenMintAccount.publicKey,
   };
 };

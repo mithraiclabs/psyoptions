@@ -1,15 +1,15 @@
 import { ASSOCIATED_TOKEN_PROGRAM_ID, Token } from '@solana/spl-token';
 import {
-  Account,
   AccountMeta,
   Connection,
+  Keypair,
   PublicKey,
   SystemProgram,
   SYSVAR_CLOCK_PUBKEY,
   Transaction,
   TransactionInstruction,
 } from '@solana/web3.js';
-import { struct, u8 } from 'buffer-layout';
+import { struct } from 'buffer-layout';
 import { FEE_OWNER_KEY } from './fees';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { TOKEN_PROGRAM_ID } from './utils';
@@ -131,31 +131,31 @@ export const exerciseCoveredCallInstruction = async ({
 
 export const exerciseCoveredCall = async ({
   connection,
-  payer,
+  payerKey,
   programId,
   optionMintKey,
   optionMarketKey,
   exerciserQuoteAssetKey,
   exerciserUnderlyingAssetKey,
-  exerciserQuoteAssetAuthorityAccount,
+  exerciserQuoteAssetAuthorityKey,
   underlyingAssetPoolKey,
   quoteAssetPoolKey,
   optionTokenKey,
-  optionTokenAuthorityAccount,
+  optionTokenAuthorityKey,
   quoteAssetMintKey,
 }: {
   connection: Connection;
-  payer: Account;
+  payerKey: PublicKey;
   programId: PublicKey | string;
   optionMintKey: PublicKey;
   optionMarketKey: PublicKey;
   exerciserQuoteAssetKey: PublicKey;
   exerciserUnderlyingAssetKey: PublicKey;
-  exerciserQuoteAssetAuthorityAccount: Account;
+  exerciserQuoteAssetAuthorityKey: PublicKey;
   underlyingAssetPoolKey: PublicKey;
   quoteAssetPoolKey: PublicKey;
   optionTokenKey: PublicKey;
-  optionTokenAuthorityAccount: Account;
+  optionTokenAuthorityKey: PublicKey;
   quoteAssetMintKey: PublicKey;
 }) => {
   const programPubkey =
@@ -169,22 +169,18 @@ export const exerciseCoveredCall = async ({
     exerciserQuoteAssetKey,
     exerciserUnderlyingAssetKey,
     exerciserQuoteAssetAuthorityKey:
-      exerciserQuoteAssetAuthorityAccount.publicKey,
+      exerciserQuoteAssetAuthorityKey,
     underlyingAssetPoolKey,
     quoteAssetPoolKey,
     optionTokenKey,
-    optionTokenAuthorityKey: optionTokenAuthorityAccount.publicKey,
-    fundingAccountKey: payer.publicKey,
+    optionTokenAuthorityKey: optionTokenAuthorityKey,
+    fundingAccountKey: payerKey,
     quoteAssetMintKey, 
   });
   transaction.add(exerciseInstruction);
 
-  const signers = [
-    payer,
-    exerciserQuoteAssetAuthorityAccount,
-    optionTokenAuthorityAccount,
-  ];
-  transaction.feePayer = payer.publicKey;
+  const signers: Keypair[] = [];
+  transaction.feePayer = payerKey;
   const { blockhash } = await connection.getRecentBlockhash();
   transaction.recentBlockhash = blockhash;
 
@@ -208,24 +204,24 @@ export const exerciseCoveredCall = async ({
  */
 export const exerciseCoveredCallWithMarketKey = async ({
   connection,
-  payer,
+  payerKey,
   programId,
   optionMarketKey,
   exerciserQuoteAssetKey,
   exerciserUnderlyingAssetKey,
-  exerciserQuoteAssetAuthorityAccount,
+  exerciserQuoteAssetAuthorityKey,
   optionTokenKey,
-  optionTokenAuthorityAccount,
+  optionTokenAuthorityKey,
 }: {
   connection: Connection;
-  payer: Account;
+  payerKey: PublicKey;
   programId: PublicKey | string;
   optionMarketKey: PublicKey;
   exerciserQuoteAssetKey: PublicKey;
   exerciserUnderlyingAssetKey: PublicKey;
-  exerciserQuoteAssetAuthorityAccount: Account;
+  exerciserQuoteAssetAuthorityKey: PublicKey;
   optionTokenKey: PublicKey;
-  optionTokenAuthorityAccount: Account;
+  optionTokenAuthorityKey: PublicKey;
 }) => {
   const optionMarketData = await getOptionMarketData({
     connection,
@@ -234,17 +230,17 @@ export const exerciseCoveredCallWithMarketKey = async ({
 
   return exerciseCoveredCall({
     connection,
-    payer,
+    payerKey,
     programId,
     optionMintKey: optionMarketData.optionMintKey,
     optionMarketKey,
     exerciserQuoteAssetKey,
     exerciserUnderlyingAssetKey,
-    exerciserQuoteAssetAuthorityAccount,
+    exerciserQuoteAssetAuthorityKey,
     underlyingAssetPoolKey: optionMarketData.underlyingAssetPoolKey,
     quoteAssetPoolKey: optionMarketData.quoteAssetPoolKey,
     optionTokenKey,
-    optionTokenAuthorityAccount,
+    optionTokenAuthorityKey,
     quoteAssetMintKey: optionMarketData.quoteAssetMintKey
   });
 };

@@ -1,13 +1,13 @@
 import {
-  Account,
   AccountMeta,
   Connection,
+  Keypair,
   PublicKey,
   SYSVAR_CLOCK_PUBKEY,
   Transaction,
   TransactionInstruction,
 } from '@solana/web3.js';
-import { struct, u8 } from 'buffer-layout';
+import { struct } from 'buffer-layout';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { TOKEN_PROGRAM_ID } from './utils';
 import { getOptionMarketData } from './utils/getOptionMarketData';
@@ -89,7 +89,7 @@ export const closePostExpirationCoveredCallInstruction = async ({
 
 export const closePostExpirationCoveredCall = async ({
   connection,
-  payer,
+  payerKey,
   programId,
   optionMarketKey,
   underlyingAssetPoolKey,
@@ -99,7 +99,7 @@ export const closePostExpirationCoveredCall = async ({
   writerTokenSourceKey,
 }: {
   connection: Connection;
-  payer: Account;
+  payerKey: PublicKey;
   programId: PublicKey | string;
   optionMintKey: PublicKey;
   optionMarketKey: PublicKey;
@@ -123,8 +123,8 @@ export const closePostExpirationCoveredCall = async ({
     writerTokenSourceKey,
   });
   transaction.add(closePostExpiration);
-  const signers = [payer];
-  transaction.feePayer = payer.publicKey;
+  const signers: Keypair[] = [];
+  transaction.feePayer = payerKey;
   const { blockhash } = await connection.getRecentBlockhash();
   transaction.recentBlockhash = blockhash;
 
@@ -134,13 +134,13 @@ export const closePostExpirationCoveredCall = async ({
 /**
  * Fetches the underlying asset pool address from on chain for convenience
  * @param connection
- * @param payer
+ * @param payerKey
  * @param programId
  * @param optionMarketKey
  */
 export const closePostExpirationOption = async ({
   connection,
-  payer,
+  payerKey,
   programId,
   optionMarketKey,
   underlyingAssetDestKey,
@@ -148,7 +148,7 @@ export const closePostExpirationOption = async ({
   writerTokenSourceKey,
 }: {
   connection: Connection;
-  payer: Account;
+  payerKey: PublicKey;
   programId: PublicKey | string;
   optionMarketKey: PublicKey;
   underlyingAssetDestKey: PublicKey;
@@ -173,8 +173,8 @@ export const closePostExpirationOption = async ({
     writerTokenSourceKey,
   });
   transaction.add(closePostExpiration);
-  const signers = [payer];
-  transaction.feePayer = payer.publicKey;
+  const signers: Keypair[] = [];
+  transaction.feePayer = payerKey;
   const { blockhash } = await connection.getRecentBlockhash();
   transaction.recentBlockhash = blockhash;
 

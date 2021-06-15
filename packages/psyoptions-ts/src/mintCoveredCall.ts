@@ -1,14 +1,13 @@
-import { struct, u8 } from 'buffer-layout';
+import { struct } from 'buffer-layout';
 import {
-  Account,
   AccountMeta,
   Connection,
   PublicKey,
   SYSVAR_CLOCK_PUBKEY,
-  SYSVAR_RENT_PUBKEY,
   SystemProgram,
   Transaction,
   TransactionInstruction,
+  Keypair,
 } from '@solana/web3.js';
 import { ASSOCIATED_TOKEN_PROGRAM_ID, Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { FEE_OWNER_KEY } from './fees';
@@ -111,9 +110,9 @@ export const mintCoveredCallInstruction = async ({
 };
 
 export const mintCoveredCall = async ({
-  authorityAccount,
+  authorityKey,
   connection,
-  payer,
+  payerKey,
   programId,
   mintedOptionDestKey,
   underlyingMintKey,
@@ -125,13 +124,13 @@ export const mintCoveredCall = async ({
   writerTokenDestKey,
 }: {
   connection: Connection;
-  payer: Account;
+  payerKey: PublicKey;
   programId: PublicKey | string;
   mintedOptionDestKey: PublicKey;
   underlyingAssetSrcKey: PublicKey;
   optionMarketKey: PublicKey;
   // The OptionWriter's account that has authority over their underlying asset account
-  authorityAccount: Account;
+  authorityKey: PublicKey;
   // The following arguments should be read from the OptionMarket data account
   optionMintKey: PublicKey;
   underlyingMintKey: PublicKey;
@@ -145,7 +144,7 @@ export const mintCoveredCall = async ({
   const transaction = new Transaction();
   const mintInstruction = await mintCoveredCallInstruction({
     programId: programPubkey,
-    fundingAccountKey: payer.publicKey,
+    fundingAccountKey: payerKey,
     optionMintKey,
     mintedOptionDestKey,
     writerTokenMintKey,
@@ -154,18 +153,14 @@ export const mintCoveredCall = async ({
     underlyingAssetSrcKey,
     underlyingAssetPoolKey,
     optionMarketKey,
-    authorityPubkey: authorityAccount.publicKey,
+    authorityPubkey: authorityKey,
   });
   transaction.add(mintInstruction);
 
-  const signers = [payer];
-  transaction.feePayer = payer.publicKey;
+  const signers: Keypair[] = [];
+  transaction.feePayer = payerKey;
   const { blockhash } = await connection.getRecentBlockhash();
   transaction.recentBlockhash = blockhash;
-  if (payer.publicKey !== authorityAccount.publicKey) {
-    signers.push(authorityAccount);
-    transaction.partialSign(...signers.slice(1));
-  }
 
   return { transaction, signers };
 };
@@ -176,23 +171,23 @@ export const mintCoveredCall = async ({
  */
 export const readMarketAndMintCoveredCall = async ({
   connection,
-  payer,
+  payerKey,
   programId,
   mintedOptionDestKey,
   writerTokenDestKey,
-  underlyingAssetAuthorityAccount,
+  underlyingAssetAuthorityKey,
   underlyingAssetSrcKey,
   optionMarketKey,
 }: {
   connection: Connection;
-  payer: Account;
+  payerKey: PublicKey;
   programId: PublicKey | string;
   mintedOptionDestKey: PublicKey;
   writerTokenDestKey: PublicKey;
   underlyingAssetSrcKey: PublicKey;
   optionMarketKey: PublicKey;
   // The OptionWriter's account that has authority over their underlying asset account
-  underlyingAssetAuthorityAccount: Account;
+  underlyingAssetAuthorityKey: PublicKey;
 }) => {
   const optionMarketData = await getOptionMarketData({
     connection,
@@ -201,12 +196,12 @@ export const readMarketAndMintCoveredCall = async ({
 
   return mintCoveredCall({
     connection,
-    payer,
+    payerKey,
     programId,
     mintedOptionDestKey,
     underlyingAssetSrcKey,
     optionMarketKey,
-    authorityAccount: underlyingAssetAuthorityAccount,
+    authorityKey: underlyingAssetAuthorityKey,
     optionMintKey: optionMarketData.optionMintKey,
     underlyingMintKey: optionMarketData.underlyingAssetMintKey,
     underlyingAssetPoolKey: optionMarketData.underlyingAssetPoolKey,
