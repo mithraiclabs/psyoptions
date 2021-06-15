@@ -7,7 +7,7 @@ mod spl_helpers;
 mod close_position_test;
 mod close_post_expiration_test;
 mod exercise_covered_call_test;
-mod initialize_mint_test;
+mod initialize_market_test;
 mod mint_covered_call_test;
 mod exchange_writer_token_for_quote_test;
 
