@@ -43,12 +43,15 @@ impl Processor {
         let fee_owner_acct = next_account_info(account_info_iter)?;
         let mint_fee_account = next_account_info(account_info_iter)?;
         let exercise_fee_account = next_account_info(account_info_iter)?;
+        let no_duplication_acct = next_account_info(account_info_iter)?;
         let sys_rent_acct = next_account_info(account_info_iter)?;
         let spl_token_program_acct = next_account_info(account_info_iter)?;
         let sys_program_acct = next_account_info(account_info_iter)?;
         let spl_associated_token_acct = next_account_info(account_info_iter)?;
 
         let mut option_market = OptionMarket::unpack_unchecked(&option_market_acct.data.borrow())?;
+        // TODO check if the no_duplication_acct has already been initialized. 
+        // If not create the account with the initialized byte
 
         if option_market.initialized {
             // if the underlying amount is non zero, then we know the market has been initialized

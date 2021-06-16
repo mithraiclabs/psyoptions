@@ -11,6 +11,49 @@ const PUBLIC_KEY_LEN: usize = 32;
 
 #[repr(C)]
 #[derive(Clone, Debug, PartialEq)]
+/// Data structure for a basic initialized account
+pub struct InitializedAccount {
+    /// whether the derived account has been initialized or not
+    pub initialized: bool,
+}
+impl InitializedAccount {
+    pub fn from_account_info(
+        account_info: &AccountInfo,
+        program_id: &Pubkey,
+    ) -> Result<Self, ProgramError> {
+        if account_info.owner != program_id {
+            return Err(ProgramError::InvalidArgument);
+        }
+        let initialized_account_data = account_info.try_borrow_data()?;
+        InitializedAccount::unpack(&initialized_account_data)
+    }
+}
+impl IsInitialized for InitializedAccount {
+    fn is_initialized(&self) -> bool {
+        self.initialized
+    }
+}
+impl Sealed for InitializedAccount {}
+impl Pack for InitializedAccount {
+    const LEN: usize = 1;
+    fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
+        let src = array_ref![src, 0, InitializedAccount::LEN];
+        let initialized = match src {
+            [0] => false,
+            [1] => true,
+            _ => return Err(ProgramError::InvalidAccountData),
+        };
+        Ok(InitializedAccount {initialized})
+    }
+    fn pack_into_slice(&self, dst: &mut [u8]) {
+        let dest = array_mut_ref![dst, 0, InitializedAccount::LEN];
+        dest[0] = self.initialized as u8
+    }
+}
+
+
+#[repr(C)]
+#[derive(Clone, Debug, PartialEq)]
 /// Data structure that contains all the information needed to maintain an open
 /// option market.
 pub struct OptionMarket {
@@ -185,6 +228,22 @@ impl Pack for OptionMarket {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_pack_unpack_init_account() {
+        let initialized = true;
+        let acct = InitializedAccount {
+            initialized
+        };
+
+        let mut serialized_init_account = [0 as u8; InitializedAccount::LEN];
+        InitializedAccount::pack(acct, &mut serialized_init_account).unwrap();
+        let serialized_ref = array_ref![serialized_init_account, 0, InitializedAccount::LEN];
+        assert_eq!(serialized_ref[0], true as u8);
+
+        let deserialized_init_acct: InitializedAccount = InitializedAccount::unpack(&serialized_init_account).unwrap();
+        assert_eq!(deserialized_init_acct.initialized, true);
+    }
 
     #[test]
     fn test_pack_unpck_option_market() {
