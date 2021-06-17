@@ -50,8 +50,8 @@ pub enum PsyOptionsError {
     #[error("PsyOptionsError::InvalidTokenProgram Invalid token program id")]
     InvalidTokenProgram,
     /// Duplicate markets not allowed
-    #[error("PsyOptionsError::MarketExists Duplicate markets not allowed")]
-    MarketExists,
+    #[error("PsyOptionsError::DuplicateMarketExists Duplicate markets not allowed")]
+    DuplicateMarketExists,
     /// Wrong seeds used for the duplication account
     #[error("PsyOptionsError::WrongDuplicationAccount Wrong seeds used for the duplication account")]
     WrongDuplicationAccount,

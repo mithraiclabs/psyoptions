@@ -32,7 +32,7 @@ impl InitializedAccount {
 
     pub fn check_account_exists(input: &[u8]) -> Result<(), ProgramError> {
         if input.len() > 0 {
-            return Err(PsyOptionsError::MarketExists.into());
+            return Err(PsyOptionsError::DuplicateMarketExists.into());
         }
         Ok(())
     }
