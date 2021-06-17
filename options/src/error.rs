@@ -49,6 +49,12 @@ pub enum PsyOptionsError {
     /// Incorrect token program ID
     #[error("PsyOptionsError::InvalidTokenProgram Invalid token program id")]
     InvalidTokenProgram,
+    /// Duplicate markets not allowed
+    #[error("PsyOptionsError::DuplicateMarketExists Duplicate markets not allowed")]
+    DuplicateMarketExists,
+    /// Wrong seeds used for the duplication account
+    #[error("PsyOptionsError::WrongDuplicationAccount Wrong seeds used for the duplication account")]
+    WrongDuplicationAccount,
 }
 impl From<PsyOptionsError> for ProgramError {
     fn from(e: PsyOptionsError) -> Self {

@@ -332,3 +332,230 @@ fn should_fail_to_reinitialize_market() {
     )
     .unwrap();
 }
+
+
+#[test]
+#[should_panic(expected = "Error processing Instruction 0: custom program error: 0xe")]
+
+fn test_no_duplicate_markets() {
+    let client = RpcClient::new_with_commitment(
+        "http://localhost:8899".to_string(),
+        CommitmentConfig::processed(),
+    );
+    let options_program_id = &PROGRAM_KEY;
+
+    let payer_keys = solana_helpers::create_account_with_lamports(&client, 10_000_000_000);
+    let option_mint_keys = Keypair::new();
+    let writer_token_mint_keys = Keypair::new();
+    let options_market_keys = Keypair::new();
+
+    let underlying_mint_keys = Keypair::new();
+    let quote_mint_keys = Keypair::new();
+    let underlying_asset_pool_keys = Keypair::new();
+    let quote_asset_pool_keys = Keypair::new();
+
+    // create the spl mints to be used in the options market
+    create_spl_mint_account(&client, &underlying_mint_keys, &payer_keys).unwrap();
+    create_spl_mint_account(&client, &quote_mint_keys, &payer_keys).unwrap();
+    create_spl_account_uninitialized(&client, &underlying_asset_pool_keys, &payer_keys).unwrap();
+    create_spl_account_uninitialized(&client, &quote_asset_pool_keys, &payer_keys).unwrap();
+
+    option_helpers::create_accounts_for_options_market(
+        &client,
+        &options_program_id,
+        &option_mint_keys,
+        &writer_token_mint_keys,
+        &options_market_keys,
+        &payer_keys,
+    )
+    .unwrap();
+
+    //create the IX to init the market
+    let underlying_amount_per_contract = 10_000_000_000;
+    let quote_amount_per_contract = 50_000_000_000; // strike price of 5
+    let expiry = 0;
+    let init_market_ix = psyoptions::instruction::initialize_market(
+        &options_program_id,
+        &underlying_mint_keys.pubkey(),
+        &quote_mint_keys.pubkey(),
+        &option_mint_keys.pubkey(),
+        &writer_token_mint_keys.pubkey(),
+        &options_market_keys.pubkey(),
+        &underlying_asset_pool_keys.pubkey(),
+        &quote_asset_pool_keys.pubkey(),
+        &payer_keys.pubkey(),
+        underlying_amount_per_contract,
+        quote_amount_per_contract,
+        expiry,
+    )
+    .unwrap();
+    // fire TX to do it
+    let signers = vec![&payer_keys];
+    solana_helpers::send_and_confirm_transaction(
+        &client,
+        init_market_ix,
+        &payer_keys.pubkey(),
+        signers,
+    )
+    .unwrap();
+    // Create new keys for the option market, spl tokens, etc, but keep the general Option params the same
+    let option_mint_keys = Keypair::new();
+    let writer_token_mint_keys = Keypair::new();
+    let options_market_keys = Keypair::new();
+
+    let underlying_asset_pool_keys = Keypair::new();
+    let quote_asset_pool_keys = Keypair::new();
+
+    // create the spl mints to be used in the options market
+    create_spl_account_uninitialized(&client, &underlying_asset_pool_keys, &payer_keys).unwrap();
+    create_spl_account_uninitialized(&client, &quote_asset_pool_keys, &payer_keys).unwrap();
+
+    option_helpers::create_accounts_for_options_market(
+        &client,
+        &options_program_id,
+        &option_mint_keys,
+        &writer_token_mint_keys,
+        &options_market_keys,
+        &payer_keys,
+    )
+    .unwrap();
+
+    //create the IX to init the market
+    let init_market_ix = psyoptions::instruction::initialize_market(
+        &options_program_id,
+        &underlying_mint_keys.pubkey(),
+        &quote_mint_keys.pubkey(),
+        &option_mint_keys.pubkey(),
+        &writer_token_mint_keys.pubkey(),
+        &options_market_keys.pubkey(),
+        &underlying_asset_pool_keys.pubkey(),
+        &quote_asset_pool_keys.pubkey(),
+        &payer_keys.pubkey(),
+        underlying_amount_per_contract,
+        quote_amount_per_contract,
+        expiry,
+    )
+    .unwrap();
+    // fire TX to do it
+    let signers = vec![&payer_keys];
+    solana_helpers::send_and_confirm_transaction(
+        &client,
+        init_market_ix,
+        &payer_keys.pubkey(),
+        signers,
+    )
+    .unwrap();
+}
+
+#[test]
+
+fn test_different_markets() {
+    let client = RpcClient::new_with_commitment(
+        "http://localhost:8899".to_string(),
+        CommitmentConfig::processed(),
+    );
+    let options_program_id = &PROGRAM_KEY;
+
+    let payer_keys = solana_helpers::create_account_with_lamports(&client, 10_000_000_000);
+    let option_mint_keys = Keypair::new();
+    let writer_token_mint_keys = Keypair::new();
+    let options_market_keys = Keypair::new();
+
+    let underlying_mint_keys = Keypair::new();
+    let quote_mint_keys = Keypair::new();
+    let underlying_asset_pool_keys = Keypair::new();
+    let quote_asset_pool_keys = Keypair::new();
+
+    // create the spl mints to be used in the options market
+    create_spl_mint_account(&client, &underlying_mint_keys, &payer_keys).unwrap();
+    create_spl_mint_account(&client, &quote_mint_keys, &payer_keys).unwrap();
+    create_spl_account_uninitialized(&client, &underlying_asset_pool_keys, &payer_keys).unwrap();
+    create_spl_account_uninitialized(&client, &quote_asset_pool_keys, &payer_keys).unwrap();
+
+    option_helpers::create_accounts_for_options_market(
+        &client,
+        &options_program_id,
+        &option_mint_keys,
+        &writer_token_mint_keys,
+        &options_market_keys,
+        &payer_keys,
+    )
+    .unwrap();
+
+    //create the IX to init the market
+    let underlying_amount_per_contract = 10_000_000_000;
+    let quote_amount_per_contract = 50_000_000_000; // strike price of 5
+    let expiry = 0;
+    let init_market_ix = psyoptions::instruction::initialize_market(
+        &options_program_id,
+        &underlying_mint_keys.pubkey(),
+        &quote_mint_keys.pubkey(),
+        &option_mint_keys.pubkey(),
+        &writer_token_mint_keys.pubkey(),
+        &options_market_keys.pubkey(),
+        &underlying_asset_pool_keys.pubkey(),
+        &quote_asset_pool_keys.pubkey(),
+        &payer_keys.pubkey(),
+        underlying_amount_per_contract,
+        quote_amount_per_contract,
+        expiry,
+    )
+    .unwrap();
+    // fire TX to do it
+    let signers = vec![&payer_keys];
+    solana_helpers::send_and_confirm_transaction(
+        &client,
+        init_market_ix,
+        &payer_keys.pubkey(),
+        signers,
+    )
+    .unwrap();
+    // Create new keys for the option market, spl tokens, etc, but keep the general Option params the same
+    let option_mint_keys = Keypair::new();
+    let writer_token_mint_keys = Keypair::new();
+    let options_market_keys = Keypair::new();
+
+    let underlying_asset_pool_keys = Keypair::new();
+    let quote_asset_pool_keys = Keypair::new();
+
+    // create the spl mints to be used in the options market
+    create_spl_account_uninitialized(&client, &underlying_asset_pool_keys, &payer_keys).unwrap();
+    create_spl_account_uninitialized(&client, &quote_asset_pool_keys, &payer_keys).unwrap();
+
+    option_helpers::create_accounts_for_options_market(
+        &client,
+        &options_program_id,
+        &option_mint_keys,
+        &writer_token_mint_keys,
+        &options_market_keys,
+        &payer_keys,
+    )
+    .unwrap();
+
+    //create the IX to init the market
+    let init_market_ix = psyoptions::instruction::initialize_market(
+        &options_program_id,
+        &underlying_mint_keys.pubkey(),
+        &quote_mint_keys.pubkey(),
+        &option_mint_keys.pubkey(),
+        &writer_token_mint_keys.pubkey(),
+        &options_market_keys.pubkey(),
+        &underlying_asset_pool_keys.pubkey(),
+        &quote_asset_pool_keys.pubkey(),
+        &payer_keys.pubkey(),
+        underlying_amount_per_contract,
+        2_000_000_000,
+        expiry,
+    )
+    .unwrap();
+    // fire TX to do it
+    let signers = vec![&payer_keys];
+    solana_helpers::send_and_confirm_transaction(
+        &client,
+        init_market_ix,
+        &payer_keys.pubkey(),
+        signers,
+    )
+    .unwrap();
+    assert_eq!(true, true);
+}

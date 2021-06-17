@@ -238,6 +238,15 @@ pub fn initialize_market(
 ) -> Result<Instruction, ProgramError> {
     let (market_authority, bump_seed) =
         Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
+    let (no_duplication_key, _no_duplication_bump) =
+        Pubkey::find_program_address(&[
+            &underlying_asset_mint.to_bytes(), 
+            &quote_asset_mint.to_bytes(),
+            &underlying_amount_per_contract.to_le_bytes(),
+            &quote_amount_per_contract.to_le_bytes(),
+            &expiration_unix_timestamp.to_le_bytes()
+        ], &program_id);
+
     let data = OptionsInstruction::InitializeMarket {
         underlying_amount_per_contract,
         quote_amount_per_contract,
@@ -262,6 +271,7 @@ pub fn initialize_market(
         AccountMeta::new_readonly(fee_owner_key::ID, false),
         AccountMeta::new(mint_fee_key, false),
         AccountMeta::new(exercise_fee_key, false),
+        AccountMeta::new(no_duplication_key, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),

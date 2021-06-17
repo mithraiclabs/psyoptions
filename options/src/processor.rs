@@ -1,4 +1,9 @@
-use crate::{error::PsyOptionsError, fees, instruction::OptionsInstruction, market::OptionMarket};
+use crate::{
+    error::PsyOptionsError,
+    fees,
+    instruction::OptionsInstruction,
+    market::{InitializedAccount, OptionMarket},
+};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::{Clock, UnixTimestamp},
@@ -7,6 +12,8 @@ use solana_program::{
     program_error::ProgramError,
     program_pack::Pack,
     pubkey::Pubkey,
+    rent::Rent,
+    system_instruction,
     sysvar::Sysvar,
 };
 use spl_token::instruction as token_instruction;
@@ -23,7 +30,7 @@ pub fn validate_spl_token_accounts(accounts: Vec<&AccountInfo>, spl_account_key:
 pub struct Processor {}
 impl Processor {
     pub fn process_init_market(
-        _program_id: &Pubkey,
+        program_id: &Pubkey,
         accounts: &[AccountInfo],
         underlying_amount_per_contract: u64,
         quote_amount_per_contract: u64,
@@ -43,12 +50,59 @@ impl Processor {
         let fee_owner_acct = next_account_info(account_info_iter)?;
         let mint_fee_account = next_account_info(account_info_iter)?;
         let exercise_fee_account = next_account_info(account_info_iter)?;
+        let no_duplication_acct = next_account_info(account_info_iter)?;
         let sys_rent_acct = next_account_info(account_info_iter)?;
         let spl_token_program_acct = next_account_info(account_info_iter)?;
         let sys_program_acct = next_account_info(account_info_iter)?;
         let spl_associated_token_acct = next_account_info(account_info_iter)?;
 
+        let rent = &Rent::from_account_info(sys_rent_acct)?;
+
         let mut option_market = OptionMarket::unpack_unchecked(&option_market_acct.data.borrow())?;
+        // check if the no_duplication_acct has already been initialized.;
+        let (no_duplication_key, no_duplication_bump) = Pubkey::find_program_address(
+            &[
+                &underlying_asset_mint_acct.key.to_bytes(),
+                &quote_asset_mint_acct.key.to_bytes(),
+                &underlying_amount_per_contract.to_le_bytes(),
+                &quote_amount_per_contract.to_le_bytes(),
+                &expiration_unix_timestamp.to_le_bytes(),
+            ],
+            &program_id,
+        );
+
+        if no_duplication_key != *no_duplication_acct.key {
+            return Err(PsyOptionsError::WrongDuplicationAccount.into());
+        }
+        InitializedAccount::check_account_exists(&no_duplication_acct.data.borrow())?;
+        // create the account with the initialized byte
+        invoke_signed(
+            &system_instruction::create_account(
+                funding_account.key,
+                no_duplication_acct.key,
+                1.max(rent.minimum_balance(InitializedAccount::get_packed_len())),
+                InitializedAccount::get_packed_len() as u64,
+                program_id,
+            ),
+            &[
+                funding_account.clone(),
+                no_duplication_acct.clone(),
+                sys_program_acct.clone(),
+            ],
+            &[&[
+                &underlying_asset_mint_acct.key.to_bytes(),
+                &quote_asset_mint_acct.key.to_bytes(),
+                &underlying_amount_per_contract.to_le_bytes(),
+                &quote_amount_per_contract.to_le_bytes(),
+                &expiration_unix_timestamp.to_le_bytes(),
+                &[no_duplication_bump]
+            ]],
+        )?;
+
+        InitializedAccount::pack(
+            InitializedAccount { initialized: true },
+            &mut no_duplication_acct.data.borrow_mut(),
+        )?;
 
         if option_market.initialized {
             // if the underlying amount is non zero, then we know the market has been initialized
