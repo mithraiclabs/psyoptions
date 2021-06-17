@@ -98,7 +98,7 @@ impl Processor {
                 &[no_duplication_bump]
             ]],
         )?;
-        // msg!("Packing account");
+
         InitializedAccount::pack(
             InitializedAccount { initialized: true },
             &mut no_duplication_acct.data.borrow_mut(),
