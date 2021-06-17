@@ -398,19 +398,15 @@ fn test_no_duplicate_markets() {
         signers,
     )
     .unwrap();
-// Create new keys for the option market, spl tokens, etc, but keep the general Option params the same
+    // Create new keys for the option market, spl tokens, etc, but keep the general Option params the same
     let option_mint_keys = Keypair::new();
     let writer_token_mint_keys = Keypair::new();
     let options_market_keys = Keypair::new();
 
-    let underlying_mint_keys = Keypair::new();
-    let quote_mint_keys = Keypair::new();
     let underlying_asset_pool_keys = Keypair::new();
     let quote_asset_pool_keys = Keypair::new();
 
     // create the spl mints to be used in the options market
-    create_spl_mint_account(&client, &underlying_mint_keys, &payer_keys).unwrap();
-    create_spl_mint_account(&client, &quote_mint_keys, &payer_keys).unwrap();
     create_spl_account_uninitialized(&client, &underlying_asset_pool_keys, &payer_keys).unwrap();
     create_spl_account_uninitialized(&client, &quote_asset_pool_keys, &payer_keys).unwrap();
 
@@ -425,9 +421,6 @@ fn test_no_duplicate_markets() {
     .unwrap();
 
     //create the IX to init the market
-    let underlying_amount_per_contract = 10_000_000_000;
-    let quote_amount_per_contract = 50_000_000_000; // strike price of 5
-    let expiry = 0;
     let init_market_ix = psyoptions::instruction::initialize_market(
         &options_program_id,
         &underlying_mint_keys.pubkey(),

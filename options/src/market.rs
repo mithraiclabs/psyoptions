@@ -7,6 +7,8 @@ use solana_program::{
     pubkey::Pubkey,
 };
 
+use crate::error::PsyOptionsError;
+
 const PUBLIC_KEY_LEN: usize = 32;
 
 #[repr(C)]
@@ -26,6 +28,13 @@ impl InitializedAccount {
         }
         let initialized_account_data = account_info.try_borrow_data()?;
         InitializedAccount::unpack(&initialized_account_data)
+    }
+
+    pub fn check_account_exists(input: &[u8]) -> Result<(), ProgramError> {
+        if input.len() > 0 {
+            return Err(PsyOptionsError::MarketExists.into());
+        }
+        Ok(())
     }
 }
 impl IsInitialized for InitializedAccount {

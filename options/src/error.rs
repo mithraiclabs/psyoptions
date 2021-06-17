@@ -52,6 +52,9 @@ pub enum PsyOptionsError {
     /// Duplicate markets not allowed
     #[error("PsyOptionsError::MarketExists Duplicate markets not allowed")]
     MarketExists,
+    /// Wrong seeds used for the duplication account
+    #[error("PsyOptionsError::WrongDuplicationAccount Wrong seeds used for the duplication account")]
+    WrongDuplicationAccount,
 }
 impl From<PsyOptionsError> for ProgramError {
     fn from(e: PsyOptionsError) -> Self {
