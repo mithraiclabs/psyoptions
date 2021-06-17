@@ -16,7 +16,7 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import { OPTION_MARKET_LAYOUT } from './market';
-import { INTRUCTION_TAG_LAYOUT } from './layout';
+import { publicKey, INTRUCTION_TAG_LAYOUT } from './layout';
 import { FEE_OWNER_KEY } from './fees';
 
 /**
@@ -109,6 +109,26 @@ export const initializeMarketInstruction = async ({
     [optionMarketKey.toBuffer()],
     programId,
   );
+  const NU64_LAYOUT = nu64('number');
+  const NS64_LAYOUT = ns64('number');
+  const underlyingAmountBuf = Buffer.alloc(NU64_LAYOUT.span);
+  NU64_LAYOUT.encode(underlyingAmountPerContract, underlyingAmountBuf);
+  const quoteAmountBuf = Buffer.alloc(NU64_LAYOUT.span);
+  NU64_LAYOUT.encode(quoteAmountPerContract, quoteAmountBuf);
+  const expirationBuf = Buffer.alloc(NS64_LAYOUT.span);
+  NS64_LAYOUT.encode(expirationUnixTimestamp, expirationBuf);
+
+  // Generate the unique constraint program derived address
+  const [noDuplicationKey, _bumpSeed] = await PublicKey.findProgramAddress(
+    [
+      underlyingAssetMintKey.toBuffer(),
+      quoteAssetMintKey.toBuffer(),
+      underlyingAmountBuf,
+      quoteAmountBuf,
+      expirationBuf,
+    ],
+    programId,
+  );
   // Get the associated fee address
   const mintFeeKey = await Token.getAssociatedTokenAddress(
     ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -170,6 +190,7 @@ export const initializeMarketInstruction = async ({
       { pubkey: FEE_OWNER_KEY, isSigner: false, isWritable: false },
       { pubkey: mintFeeKey, isSigner: false, isWritable: true },
       { pubkey: exerciseFeeKey, isSigner: false, isWritable: true },
+      { pubkey: noDuplicationKey, isSigner: false, isWritable: true },
       { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
       { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
@@ -235,9 +256,10 @@ export const initializeAccountsForMarket = async ({
     }),
   );
 
-  const optionMarketDataRentBalance = await connection.getMinimumBalanceForRentExemption(
-    OPTION_MARKET_LAYOUT.span,
-  );
+  const optionMarketDataRentBalance =
+    await connection.getMinimumBalanceForRentExemption(
+      OPTION_MARKET_LAYOUT.span,
+    );
   transaction.add(
     SystemProgram.createAccount({
       fromPubkey: payerKey,
@@ -248,9 +270,8 @@ export const initializeAccountsForMarket = async ({
     }),
   );
 
-  const assetPoolRentBalance = await connection.getMinimumBalanceForRentExemption(
-    AccountLayout.span,
-  );
+  const assetPoolRentBalance =
+    await connection.getMinimumBalanceForRentExemption(AccountLayout.span);
   transaction.add(
     SystemProgram.createAccount({
       fromPubkey: payerKey,

@@ -28,4 +28,8 @@ export enum PsyOptionError {
   BadFeeOwner,
   // Incorrect token program ID
   InvalidTokenProgram,
+  // Duplicate markets not allowed
+  DuplicateMarketExists,
+  // Wrong seeds used for the duplication account
+  WrongDuplicationAccount,
 }
