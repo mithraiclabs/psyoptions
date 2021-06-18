@@ -74,7 +74,7 @@ export class Market {
       programId,
       connection.commitment,
     );
-    return res.map(
+    return res.filter(({account}) => account.data.length === OPTION_MARKET_LAYOUT.span).map(
       // eslint-disable-next-line prettier/prettier
       ({ pubkey, account }) => new Market(programId, pubkey, account.data),
     );
