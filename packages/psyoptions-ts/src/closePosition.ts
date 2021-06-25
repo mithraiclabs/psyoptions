@@ -6,7 +6,7 @@ import {
   Transaction,
   TransactionInstruction,
 } from '@solana/web3.js';
-import { struct, u8 } from 'buffer-layout';
+import { struct } from 'buffer-layout';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { TOKEN_PROGRAM_ID } from './utils';
 

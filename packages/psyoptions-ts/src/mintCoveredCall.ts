@@ -9,7 +9,11 @@ import {
   TransactionInstruction,
   Keypair,
 } from '@solana/web3.js';
-import { ASSOCIATED_TOKEN_PROGRAM_ID, Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  Token,
+  TOKEN_PROGRAM_ID,
+} from '@solana/spl-token';
 import { FEE_OWNER_KEY } from './fees';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { getOptionMarketData } from './utils/getOptionMarketData';
@@ -34,6 +38,7 @@ export const MINT_COVERED_CALL_LAYOUT = struct([]);
  * @param underlyingAssetSrcKey account the underlying asset will be transfered from
  * @param authorityPubkey onwer of the underlyingAssetSrcKey, likely the wallet
  * making the transaction
+ * @param underlyingMintKey public key of the underlying asset mint
  * @returns
  */
 export const mintCoveredCallInstruction = async ({
@@ -75,7 +80,7 @@ export const mintCoveredCallInstruction = async ({
     TOKEN_PROGRAM_ID,
     underlyingMintKey,
     FEE_OWNER_KEY,
-  )
+  );
 
   /*
    * Generate the instruction tag. 1 is the tag that denotes the MintCoveredCall instructions
