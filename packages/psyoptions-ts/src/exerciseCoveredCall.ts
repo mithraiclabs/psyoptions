@@ -41,8 +41,9 @@ export const EXERCISE_COVERED_CALL_LAYOUT = struct([]);
  * for the market, where the asset will be transfered to
  * @param optionTokenKey public key of the account where the Option Token will be burned from
  * @param optionTokenAuthorityKey onwer of the optionTokenKey, likely the wallet
- * 
+ * @param fundingAccountKey The payer account that is funding the SOL for the TX
  * making the transaction
+ * @param quoteAssetMintKey public key for the quote asset mint
  * @returns
  */
 export const exerciseCoveredCallInstruction = async ({
@@ -92,7 +93,7 @@ export const exerciseCoveredCallInstruction = async ({
     TOKEN_PROGRAM_ID,
     quoteAssetMintKey,
     FEE_OWNER_KEY,
-  )
+  );
 
   const keys: AccountMeta[] = [
     { pubkey: fundingAccountKey, isSigner: false, isWritable: true },
@@ -168,14 +169,13 @@ export const exerciseCoveredCall = async ({
     optionMarketKey,
     exerciserQuoteAssetKey,
     exerciserUnderlyingAssetKey,
-    exerciserQuoteAssetAuthorityKey:
-      exerciserQuoteAssetAuthorityKey,
+    exerciserQuoteAssetAuthorityKey,
     underlyingAssetPoolKey,
     quoteAssetPoolKey,
     optionTokenKey,
-    optionTokenAuthorityKey: optionTokenAuthorityKey,
+    optionTokenAuthorityKey,
     fundingAccountKey: payerKey,
-    quoteAssetMintKey, 
+    quoteAssetMintKey,
   });
   transaction.add(exerciseInstruction);
 
@@ -241,6 +241,6 @@ export const exerciseCoveredCallWithMarketKey = async ({
     quoteAssetPoolKey: optionMarketData.quoteAssetPoolKey,
     optionTokenKey,
     optionTokenAuthorityKey,
-    quoteAssetMintKey: optionMarketData.quoteAssetMintKey
+    quoteAssetMintKey: optionMarketData.quoteAssetMintKey,
   });
 };
