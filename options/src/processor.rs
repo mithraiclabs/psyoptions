@@ -95,7 +95,7 @@ impl Processor {
                 &underlying_amount_per_contract.to_le_bytes(),
                 &quote_amount_per_contract.to_le_bytes(),
                 &expiration_unix_timestamp.to_le_bytes(),
-                &[no_duplication_bump]
+                &[no_duplication_bump],
             ]],
         )?;
 
@@ -287,7 +287,10 @@ impl Processor {
         }
 
         // transfer the amount per contract of underlying asset from the src to the pool
-        let total_underlying_amount = option_market.underlying_amount_per_contract * size;
+        let total_underlying_amount = option_market
+            .underlying_amount_per_contract
+            .checked_mul(size)
+            .ok_or(PsyOptionsError::MathError)?;
         let transfer_tokens_ix = token_instruction::transfer(
             &spl_program_acct.key,
             &underyling_asset_src_acct.key,

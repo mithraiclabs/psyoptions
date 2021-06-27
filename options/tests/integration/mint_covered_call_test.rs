@@ -41,8 +41,7 @@ fn test_mint_covered_call_integration() {
     expiry,
   )
   .unwrap();
-  let option_writer_keys =
-    solana_helpers::create_account_with_lamports(&client, 10_000_000_000);
+  let option_writer_keys = solana_helpers::create_account_with_lamports(&client, 10_000_000_000);
   let option_writer_underlying_asset_keys = Keypair::new();
   let _option_writer_underlying_asset_acct = create_spl_account(
     &client,
@@ -122,7 +121,10 @@ fn test_mint_covered_call_integration() {
     underlying_asset_pool_acct.mint,
     underlying_asset_mint_keys.pubkey()
   );
-  assert_eq!(underlying_asset_pool_acct.amount, underlying_amount_per_contract);
+  assert_eq!(
+    underlying_asset_pool_acct.amount,
+    underlying_amount_per_contract
+  );
 
   // assert that the total supply of options has incremented to 1
   let option_mint_data = client.get_account_data(&option_mint_keys.pubkey()).unwrap();
@@ -186,8 +188,7 @@ fn test_mint_covered_call_fail_post_expiry() {
     expiry,
   )
   .unwrap();
-  let option_writer_keys =
-    solana_helpers::create_account_with_lamports(&client, 10_000_000_000);
+  let option_writer_keys = solana_helpers::create_account_with_lamports(&client, 10_000_000_000);
   let option_writer_underlying_asset_keys = Keypair::new();
   let _option_writer_underlying_asset_acct = create_spl_account(
     &client,
@@ -260,7 +261,6 @@ fn test_mint_covered_call_fail_post_expiry() {
   .unwrap();
 }
 
-
 #[test]
 #[serial]
 #[should_panic(expected = "Error processing Instruction 0: custom program error: 0x7")]
@@ -301,7 +301,7 @@ fn test_mint_covered_call_fail_fake_market_account() {
     _fake_asset_authority_keys,
     _fake_underlying_asset_pool_key,
     _fake_quote_asset_pool_key,
-    fake_option_market_key,        
+    fake_option_market_key,
   ) = init_option_market(
     &client,
     &options_program_id,
@@ -310,8 +310,7 @@ fn test_mint_covered_call_fail_fake_market_account() {
     expiry,
   )
   .unwrap();
-  let option_writer_keys =
-    solana_helpers::create_account_with_lamports(&client, 10_000_000_000);
+  let option_writer_keys = solana_helpers::create_account_with_lamports(&client, 10_000_000_000);
   let option_writer_underlying_asset_keys = Keypair::new();
   let _option_writer_underlying_asset_acct = create_spl_account(
     &client,
@@ -371,7 +370,7 @@ fn test_mint_covered_call_fail_fake_market_account() {
     &fake_option_market_key,
     &underlying_asset_mint_keys.pubkey(),
     &option_writer_keys.pubkey(),
-    1
+    1,
   )
   .unwrap();
   let signers = vec![&option_writer_keys];
@@ -413,8 +412,7 @@ fn test_mint_multiple_covered_calls_integration() {
     expiry,
   )
   .unwrap();
-  let option_writer_keys =
-    solana_helpers::create_account_with_lamports(&client, 10_000_000_000);
+  let option_writer_keys = solana_helpers::create_account_with_lamports(&client, 10_000_000_000);
   let option_writer_underlying_asset_keys = Keypair::new();
   let _option_writer_underlying_asset_acct = create_spl_account(
     &client,
@@ -494,19 +492,22 @@ fn test_mint_multiple_covered_calls_integration() {
     underlying_asset_pool_acct.mint,
     underlying_asset_mint_keys.pubkey()
   );
-  assert_eq!(underlying_asset_pool_acct.amount, underlying_amount_per_contract * (number_of_options as u64));
+  assert_eq!(
+    underlying_asset_pool_acct.amount,
+    underlying_amount_per_contract * number_of_options
+  );
 
   // assert that the total supply of options has incremented to 5
   let option_mint_data = client.get_account_data(&option_mint_keys.pubkey()).unwrap();
   let option_mint = Mint::unpack(&option_mint_data[..]).unwrap();
-  assert_eq!(option_mint.supply, number_of_options as u64);
+  assert_eq!(option_mint.supply, number_of_options);
 
   // assert that the total supply of writer tokens has incremented to 5
   let writer_token_mint_data = client
     .get_account_data(&writer_token_mint_keys.pubkey())
     .unwrap();
   let writer_token_mint = Mint::unpack(&writer_token_mint_data[..]).unwrap();
-  assert_eq!(writer_token_mint.supply, number_of_options as u64);
+  assert_eq!(writer_token_mint.supply, number_of_options);
 
   // assert option writer's Option account has balance of 5
   let option_writer_option_acct_data = client
@@ -514,7 +515,7 @@ fn test_mint_multiple_covered_calls_integration() {
     .unwrap();
   let option_writer_option_acct = Account::unpack(&option_writer_option_acct_data[..]).unwrap();
   assert_eq!(option_writer_option_acct.mint, option_mint_keys.pubkey());
-  assert_eq!(option_writer_option_acct.amount, number_of_options as u64);
+  assert_eq!(option_writer_option_acct.amount, number_of_options);
 
   // assert option writer's Writer Token account has balance of 5
   let option_writer_writer_token_acct_data = client
@@ -526,5 +527,5 @@ fn test_mint_multiple_covered_calls_integration() {
     option_writer_writer_token_acct.mint,
     writer_token_mint_keys.pubkey()
   );
-  assert_eq!(option_writer_writer_token_acct.amount, number_of_options as u64);
+  assert_eq!(option_writer_writer_token_acct.amount, number_of_options);
 }
