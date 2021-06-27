@@ -11,7 +11,7 @@ Exploring architectures for options trading on Serum
 1. `cargo test --features program --lib --manifest-path options/Cargo.toml`
 
 ## Running Integration tests
-1. Make sure the local test net is running `yarn localnet:up`
+1. Make sure the local test net is running `solana-test-validator`
 2. Build and test the options program `cargo test-bpf --manifest-path options/Cargo.toml`
 
 ## Debugging with lldb
