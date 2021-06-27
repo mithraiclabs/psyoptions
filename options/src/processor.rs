@@ -342,7 +342,7 @@ impl Processor {
             ]],
         )?;
 
-        // mint a writer token to the user
+        // mint writer token(s) to the user
         let mint_writer_token_ix = token_instruction::mint_to(
             &spl_program_acct.key,
             &option_market.writer_token_mint,
