@@ -8,7 +8,7 @@
     "localnet:down": "solana-localnet down",
     "localnet:logs": "solana-localnet logs -f",
     "localnet:update": "solana-localnet update",
-    "localnet:up": "solana-localnet up",
+    "localnet:up": "solana-test-validator",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

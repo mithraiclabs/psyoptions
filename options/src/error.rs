@@ -55,6 +55,9 @@ pub enum PsyOptionsError {
     /// Wrong seeds used for the duplication account
     #[error("PsyOptionsError::WrongDuplicationAccount Wrong seeds used for the duplication account")]
     WrongDuplicationAccount,
+    /// Math overflow or underflow
+    #[error("PsyOptionsError::MahError Encountered a math overflow or underflow")]
+    MathError,
 }
 impl From<PsyOptionsError> for ProgramError {
     fn from(e: PsyOptionsError) -> Self {

@@ -271,6 +271,7 @@ pub fn create_and_add_option_writer(
         &option_market_key,
         &underlying_asset_mint_keys.pubkey(),
         &option_writer_keys.pubkey(),
+        1,
     )
     .unwrap();
     let signers = vec![&option_writer_keys];

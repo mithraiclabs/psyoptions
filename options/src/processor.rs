@@ -95,7 +95,7 @@ impl Processor {
                 &underlying_amount_per_contract.to_le_bytes(),
                 &quote_amount_per_contract.to_le_bytes(),
                 &expiration_unix_timestamp.to_le_bytes(),
-                &[no_duplication_bump]
+                &[no_duplication_bump],
             ]],
         )?;
 
@@ -238,6 +238,7 @@ impl Processor {
     pub fn process_mint_covered_call(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
+        size: u64,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let funding_acct = next_account_info(account_info_iter)?;
@@ -286,13 +287,17 @@ impl Processor {
         }
 
         // transfer the amount per contract of underlying asset from the src to the pool
+        let total_underlying_amount = option_market
+            .underlying_amount_per_contract
+            .checked_mul(size)
+            .ok_or(PsyOptionsError::MathError)?;
         let transfer_tokens_ix = token_instruction::transfer(
             &spl_program_acct.key,
             &underyling_asset_src_acct.key,
             &option_market.underlying_asset_pool,
             &authority_acct.key,
             &[],
-            option_market.underlying_amount_per_contract,
+            total_underlying_amount,
         )?;
         invoke(
             &transfer_tokens_ix,
@@ -313,18 +318,18 @@ impl Processor {
             underyling_asset_src_acct,
             authority_acct,
             fee_owner_acct,
-            option_market.underlying_amount_per_contract,
+            total_underlying_amount,
             option_market.underlying_asset_mint,
         )?;
 
-        // mint an option token to the user
+        // mint option token(s) to the user
         let mint_option_ix = token_instruction::mint_to(
             &spl_program_acct.key,
             &option_market.option_mint,
             &minted_option_dest_acct.key,
             &market_authority_acct.key,
             &[],
-            1,
+            size,
         )?;
         invoke_signed(
             &mint_option_ix,
@@ -340,14 +345,14 @@ impl Processor {
             ]],
         )?;
 
-        // mint a writer token to the user
+        // mint writer token(s) to the user
         let mint_writer_token_ix = token_instruction::mint_to(
             &spl_program_acct.key,
             &option_market.writer_token_mint,
             &writer_token_dest_acct.key,
             &market_authority_acct.key,
             &[],
-            1,
+            size,
         )?;
         invoke_signed(
             &mint_writer_token_ix,
@@ -789,8 +794,8 @@ impl Processor {
                 expiration_unix_timestamp,
                 bump_seed,
             ),
-            OptionsInstruction::MintCoveredCall {} => {
-                Self::process_mint_covered_call(program_id, accounts)
+            OptionsInstruction::MintCoveredCall { size } => {
+                Self::process_mint_covered_call(program_id, accounts, size)
             }
             OptionsInstruction::ExerciseCoveredCall {} => {
                 Self::process_exercise_covered_call(program_id, accounts)

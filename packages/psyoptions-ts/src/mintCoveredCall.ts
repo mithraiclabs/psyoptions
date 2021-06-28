@@ -15,10 +15,10 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import { FEE_OWNER_KEY } from './fees';
-import { INTRUCTION_TAG_LAYOUT } from './layout';
+import { INTRUCTION_TAG_LAYOUT, uint64 } from './layout';
 import { getOptionMarketData } from './utils/getOptionMarketData';
 
-export const MINT_COVERED_CALL_LAYOUT = struct([]);
+export const MINT_COVERED_CALL_LAYOUT = struct([uint64('size')]);
 
 /**
  * Generate the instruction for `MintCoveredCall`
@@ -39,6 +39,7 @@ export const MINT_COVERED_CALL_LAYOUT = struct([]);
  * @param authorityPubkey onwer of the underlyingAssetSrcKey, likely the wallet
  * making the transaction
  * @param underlyingMintKey public key of the underlying asset mint
+ * @param size number of option contracts to mint. Defaults to 1
  * @returns
  */
 export const mintCoveredCallInstruction = async ({
@@ -53,6 +54,7 @@ export const mintCoveredCallInstruction = async ({
   underlyingMintKey,
   underlyingAssetPoolKey,
   underlyingAssetSrcKey,
+  size = 1,
 }: {
   programId: PublicKey;
   // The payer account that is funding the SOL for the TX
@@ -67,12 +69,15 @@ export const mintCoveredCallInstruction = async ({
   underlyingAssetPoolKey: PublicKey;
   optionMarketKey: PublicKey;
   authorityPubkey: PublicKey;
+  size?: number;
 }) => {
+  const mintIXBuffer = Buffer.alloc(MINT_COVERED_CALL_LAYOUT.span);
   // Generate the program derived address needed
   const [marketAuthorityKey] = await PublicKey.findProgramAddress(
     [optionMarketKey.toBuffer()],
     programId,
   );
+  MINT_COVERED_CALL_LAYOUT.encode({ size }, mintIXBuffer, 0);
 
   // Get the associated fee address
   const feeRecipientKey = await Token.getAssociatedTokenAddress(
@@ -109,7 +114,7 @@ export const mintCoveredCallInstruction = async ({
 
   return new TransactionInstruction({
     keys,
-    data: tagBuffer,
+    data: Buffer.concat([tagBuffer, mintIXBuffer]),
     programId,
   });
 };
@@ -127,6 +132,7 @@ export const mintCoveredCall = async ({
   optionMarketKey,
   writerTokenMintKey,
   writerTokenDestKey,
+  size = 1,
 }: {
   connection: Connection;
   payerKey: PublicKey;
@@ -142,6 +148,7 @@ export const mintCoveredCall = async ({
   underlyingAssetPoolKey: PublicKey;
   writerTokenMintKey: PublicKey;
   writerTokenDestKey: PublicKey;
+  size?: number;
 }) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
@@ -159,6 +166,7 @@ export const mintCoveredCall = async ({
     underlyingAssetPoolKey,
     optionMarketKey,
     authorityPubkey: authorityKey,
+    size,
   });
   transaction.add(mintInstruction);
 
@@ -183,6 +191,7 @@ export const readMarketAndMintCoveredCall = async ({
   underlyingAssetAuthorityKey,
   underlyingAssetSrcKey,
   optionMarketKey,
+  size = 1,
 }: {
   connection: Connection;
   payerKey: PublicKey;
@@ -193,6 +202,7 @@ export const readMarketAndMintCoveredCall = async ({
   optionMarketKey: PublicKey;
   // The OptionWriter's account that has authority over their underlying asset account
   underlyingAssetAuthorityKey: PublicKey;
+  size?: number;
 }) => {
   const optionMarketData = await getOptionMarketData({
     connection,
@@ -212,5 +222,6 @@ export const readMarketAndMintCoveredCall = async ({
     underlyingAssetPoolKey: optionMarketData.underlyingAssetPoolKey,
     writerTokenMintKey: optionMarketData.writerTokenMintKey,
     writerTokenDestKey,
+    size,
   });
 };

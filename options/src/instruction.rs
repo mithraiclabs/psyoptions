@@ -64,7 +64,9 @@ pub enum OptionsInstruction {
     ///   13. `[]` SysVar clock account
     ///   14. `[]` System Program account
     ///   
-    MintCoveredCall {},
+    MintCoveredCall {
+        size: u64,
+    },
     /// Exercise an Options token representing a Covered Call
     ///
     ///   0. `[]` Sysvar clock
@@ -145,7 +147,12 @@ impl OptionsInstruction {
                     bump_seed,
                 }
             }
-            1 => Self::MintCoveredCall {},
+            1 => {
+                let (size, _) = Self::unpack_u64(rest)?;
+                Self::MintCoveredCall {
+                    size
+                }
+            },
             2 => Self::ExerciseCoveredCall {},
             3 => Self::ClosePostExpiration {},
             4 => Self::ClosePosition {},
@@ -170,8 +177,9 @@ impl OptionsInstruction {
                 buf.extend_from_slice(&expiration_unix_timestamp.to_le_bytes());
                 buf.extend_from_slice(&bump_seed.to_le_bytes());
             }
-            &Self::MintCoveredCall {} => {
+            &Self::MintCoveredCall { size } => {
                 buf.push(1);
+                buf.extend_from_slice(&size.to_le_bytes());
             }
             &Self::ExerciseCoveredCall {} => {
                 buf.push(2);
@@ -297,6 +305,7 @@ pub fn mint_covered_call(
     option_market: &Pubkey,
     underlying_asset_mint: &Pubkey,
     authority_pubkey: &Pubkey,
+    size: u64,
 ) -> Result<Instruction, ProgramError> {
     let fee_key = get_associated_token_address(&fee_owner_key::ID, underlying_asset_mint);
 
@@ -320,7 +329,7 @@ pub fn mint_covered_call(
     accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
     accounts.push(AccountMeta::new_readonly(system_program::id(), false));
 
-    let data = OptionsInstruction::MintCoveredCall {}.pack();
+    let data = OptionsInstruction::MintCoveredCall { size }.pack();
     Ok(Instruction {
         program_id: *program_id,
         data,
@@ -521,10 +530,11 @@ mod tests {
 
     #[test]
     fn test_pack_unpack_mint_covered_call() {
-        let check = OptionsInstruction::MintCoveredCall {};
+        let size = 2;
+        let check = OptionsInstruction::MintCoveredCall { size };
         let packed = check.pack();
         // add the tag to the expected buffer
-        let expect = Vec::from([1u8]);
+        let expect = Vec::from([1, 2, 0, 0, 0, 0, 0, 0, 0]);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
