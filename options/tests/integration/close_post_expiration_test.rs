@@ -38,6 +38,7 @@ pub fn test_sucessful_close_post_expiration() {
   let sysvar_clock_acct_info = AccountInfo::from(clock_info_tuple);
   let clock = Clock::from_account_info(&sysvar_clock_acct_info).unwrap();
   let expiry = clock.unix_timestamp + 30;
+  let size = 1;
   // Create the option market
   let (
     underlying_asset_mint_keys,
@@ -75,6 +76,7 @@ pub fn test_sucessful_close_post_expiration() {
     &underlying_asset_pool_key,
     &option_market_key,
     underlying_amount_per_contract,
+    size,
   )
   .unwrap();
   create_and_add_option_writer(
@@ -88,6 +90,7 @@ pub fn test_sucessful_close_post_expiration() {
     &underlying_asset_pool_key,
     &option_market_key,
     underlying_amount_per_contract,
+    size,
   )
   .unwrap();
   let option_market_data = client.get_account_data(&option_market_key).unwrap();
@@ -197,6 +200,7 @@ pub fn test_panic_when_expiration_has_not_passed_close_post_exp() {
   let amount_per_contract = 100;
   let quote_amount_per_contract = 500;
   let expiry = 999_999_999_999_999_999;
+  let size = 1;
   // Create the option market
   let (
     underlying_asset_mint_keys,
@@ -234,6 +238,7 @@ pub fn test_panic_when_expiration_has_not_passed_close_post_exp() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
+    size,
   )
   .unwrap();
   create_and_add_option_writer(
@@ -247,6 +252,7 @@ pub fn test_panic_when_expiration_has_not_passed_close_post_exp() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
+    size,
   )
   .unwrap();
 
@@ -292,6 +298,7 @@ pub fn test_panic_when_non_underlying_asset_pool_is_used_close_post_exp() {
   let sysvar_clock_acct_info = AccountInfo::from(clock_info_tuple);
   let clock = Clock::from_account_info(&sysvar_clock_acct_info).unwrap();
   let expiry = clock.unix_timestamp + 20;
+  let size = 1;
   // Create the option market
   let (
     underlying_asset_mint_keys,
@@ -329,6 +336,7 @@ pub fn test_panic_when_non_underlying_asset_pool_is_used_close_post_exp() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
+    size,
   )
   .unwrap();
   create_and_add_option_writer(
@@ -342,6 +350,7 @@ pub fn test_panic_when_non_underlying_asset_pool_is_used_close_post_exp() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
+    size,
   )
   .unwrap();
 

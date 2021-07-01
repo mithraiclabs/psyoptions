@@ -5,8 +5,7 @@ use solana_program::{
     instruction::{AccountMeta, Instruction},
     program_error::ProgramError,
     pubkey::Pubkey,
-    system_program,
-    sysvar,
+    system_program, sysvar,
 };
 use spl_associated_token_account::get_associated_token_address;
 use spl_token;
@@ -64,9 +63,7 @@ pub enum OptionsInstruction {
     ///   13. `[]` SysVar clock account
     ///   14. `[]` System Program account
     ///   
-    MintCoveredCall {
-        size: u64,
-    },
+    MintCoveredCall { size: u64 },
     /// Exercise an Options token representing a Covered Call
     ///
     ///   0. `[]` Sysvar clock
@@ -81,7 +78,7 @@ pub enum OptionsInstruction {
     ///   9. `[writeable]` Option Mint
     ///   10. `[writeable]` Option Token Account
     ///   11. `[signer]` Option Token Account Authority
-    ExerciseCoveredCall {},
+    ExerciseCoveredCall { size: u64 },
     /// Close a single option contract post expiration.
     /// Transfers the underlying asset back to the Option Writer
     ///
@@ -149,11 +146,12 @@ impl OptionsInstruction {
             }
             1 => {
                 let (size, _) = Self::unpack_u64(rest)?;
-                Self::MintCoveredCall {
-                    size
-                }
-            },
-            2 => Self::ExerciseCoveredCall {},
+                Self::MintCoveredCall { size }
+            }
+            2 => {
+                let (size, _) = Self::unpack_u64(rest)?;
+                Self::ExerciseCoveredCall { size }
+            }
             3 => Self::ClosePostExpiration {},
             4 => Self::ClosePosition {},
             5 => Self::ExchangeWriterTokenForQuote {},
@@ -181,8 +179,9 @@ impl OptionsInstruction {
                 buf.push(1);
                 buf.extend_from_slice(&size.to_le_bytes());
             }
-            &Self::ExerciseCoveredCall {} => {
+            &Self::ExerciseCoveredCall { size } => {
                 buf.push(2);
+                buf.extend_from_slice(&size.to_le_bytes());
             }
             &Self::ClosePostExpiration {} => {
                 buf.push(3);
@@ -246,14 +245,16 @@ pub fn initialize_market(
 ) -> Result<Instruction, ProgramError> {
     let (market_authority, bump_seed) =
         Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
-    let (no_duplication_key, _no_duplication_bump) =
-        Pubkey::find_program_address(&[
-            &underlying_asset_mint.to_bytes(), 
+    let (no_duplication_key, _no_duplication_bump) = Pubkey::find_program_address(
+        &[
+            &underlying_asset_mint.to_bytes(),
             &quote_asset_mint.to_bytes(),
             &underlying_amount_per_contract.to_le_bytes(),
             &quote_amount_per_contract.to_le_bytes(),
-            &expiration_unix_timestamp.to_le_bytes()
-        ], &program_id);
+            &expiration_unix_timestamp.to_le_bytes(),
+        ],
+        &program_id,
+    );
 
     let data = OptionsInstruction::InitializeMarket {
         underlying_amount_per_contract,
@@ -430,10 +431,11 @@ pub fn exercise_covered_call(
     quote_asset_pool: &Pubkey,
     option_token_key: &Pubkey,
     option_token_authority: &Pubkey,
+    size: u64,
 ) -> Result<Instruction, ProgramError> {
     let (options_spl_authority_pubkey, _bump_seed) =
         Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
-    let data = OptionsInstruction::ExerciseCoveredCall {}.pack();
+    let data = OptionsInstruction::ExerciseCoveredCall { size }.pack();
     let exercise_fee_key = get_associated_token_address(&fee_owner_key::ID, quote_asset_mint);
 
     let mut accounts = Vec::with_capacity(12);
@@ -542,10 +544,11 @@ mod tests {
 
     #[test]
     fn test_pack_unpack_exercise_covered_call() {
-        let check = OptionsInstruction::ExerciseCoveredCall {};
+        let size = 2;
+        let check = OptionsInstruction::ExerciseCoveredCall { size };
         let packed = check.pack();
         // add the tag to the expected buffer
-        let expect = Vec::from([2u8]);
+        let expect = Vec::from([2, 2, 0, 0, 0, 0, 0, 0, 0]);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
