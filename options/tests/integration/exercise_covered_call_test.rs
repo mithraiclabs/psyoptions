@@ -218,7 +218,7 @@ pub fn test_panic_when_expiration_has_passed() {
   let clock_info_tuple = &mut (clock::id(), sysvar_clock_acct);
   let sysvar_clock_acct_info = AccountInfo::from(clock_info_tuple);
   let clock = Clock::from_account_info(&sysvar_clock_acct_info).unwrap();
-  let expiry = clock.unix_timestamp + 30;
+  let expiry = clock.unix_timestamp + 50;
   let size = 1;
   // Create the option market
   let (

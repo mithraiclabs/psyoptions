@@ -37,7 +37,7 @@ pub fn test_sucessful_close_post_expiration() {
   let clock_info_tuple = & mut (clock::id(), sysvar_clock_acct);
   let sysvar_clock_acct_info = AccountInfo::from(clock_info_tuple);
   let clock = Clock::from_account_info(&sysvar_clock_acct_info).unwrap();
-  let expiry = clock.unix_timestamp + 30;
+  let expiry = clock.unix_timestamp + 50;
   let size = 1;
   // Create the option market
   let (
@@ -126,7 +126,7 @@ pub fn test_sucessful_close_post_expiration() {
     Account::unpack(&initial_option_writer_underlying_asset_acct_data[..]).unwrap();
 
   // Sleep 20 seconds so the market is expired
-  thread::sleep(Duration::from_secs(20));
+  thread::sleep(Duration::from_secs(30));
 
   // Send the transaction
   let signers = vec![&option_writer_keys];
@@ -297,7 +297,7 @@ pub fn test_panic_when_non_underlying_asset_pool_is_used_close_post_exp() {
   let clock_info_tuple = & mut (clock::id(), sysvar_clock_acct);
   let sysvar_clock_acct_info = AccountInfo::from(clock_info_tuple);
   let clock = Clock::from_account_info(&sysvar_clock_acct_info).unwrap();
-  let expiry = clock.unix_timestamp + 20;
+  let expiry = clock.unix_timestamp + 50;
   let size = 1;
   // Create the option market
   let (
