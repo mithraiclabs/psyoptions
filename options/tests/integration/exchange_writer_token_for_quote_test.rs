@@ -5,9 +5,9 @@ use crate::{
   },
   solana_helpers, PROGRAM_KEY,
 };
+use psyoptions::{instruction::OptionsInstruction, market::OptionMarket};
 use serial_test::serial;
 use solana_client::rpc_client::RpcClient;
-use psyoptions::{instruction::OptionsInstruction, market::OptionMarket};
 use solana_program::{
   instruction::{AccountMeta, Instruction},
   program_pack::Pack,
@@ -27,6 +27,7 @@ pub fn test_successful_exchange_writer_token_for_quote_test() {
   let amount_per_contract = 100;
   let quote_amount_per_contract = 500;
   let expiry = 999_999_999_999_999_999;
+  let size = 1;
   // Create the option market
   let (
     underlying_asset_mint_keys,
@@ -64,6 +65,7 @@ pub fn test_successful_exchange_writer_token_for_quote_test() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
+    size,
   )
   .unwrap();
   create_and_add_option_writer(
@@ -77,6 +79,7 @@ pub fn test_successful_exchange_writer_token_for_quote_test() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
+    size,
   )
   .unwrap();
 
@@ -90,6 +93,7 @@ pub fn test_successful_exchange_writer_token_for_quote_test() {
       &underlying_asset_mint_keys,
       &quote_asset_mint_keys,
       &option_market,
+      size,
     )
     .unwrap();
 
@@ -100,6 +104,7 @@ pub fn test_successful_exchange_writer_token_for_quote_test() {
     &option_writer_keys,
     &exerciser_authority_keys,
     &option_writer_keys,
+    size,
   )
   .unwrap();
   // generate the exercise_covered_call instruction
@@ -116,6 +121,7 @@ pub fn test_successful_exchange_writer_token_for_quote_test() {
     &option_market.quote_asset_pool,
     &exerciser_option_token_keys.pubkey(),
     &exerciser_authority_keys.pubkey(),
+    size,
   )
   .unwrap();
   // Send transaction to exercise in order to have assets in the quote pool
@@ -144,17 +150,16 @@ pub fn test_successful_exchange_writer_token_for_quote_test() {
     .unwrap();
   let initial_writer_token_mint_act = Mint::unpack(&initial_writer_token_mint_data[..]).unwrap();
 
-  let exchange_writer_token_quote_ix =
-    psyoptions::instruction::exchange_writer_token_for_quote(
-      &options_program_id,
-      &option_market_key,
-      &writer_token_mint_keys.pubkey(),
-      &option_writer_writer_token_keys.pubkey(),
-      &option_writer_keys.pubkey(),
-      &option_writer_quote_asset_keys.pubkey(),
-      &quote_asset_pool_key,
-    )
-    .unwrap();
+  let exchange_writer_token_quote_ix = psyoptions::instruction::exchange_writer_token_for_quote(
+    &options_program_id,
+    &option_market_key,
+    &writer_token_mint_keys.pubkey(),
+    &option_writer_writer_token_keys.pubkey(),
+    &option_writer_keys.pubkey(),
+    &option_writer_quote_asset_keys.pubkey(),
+    &quote_asset_pool_key,
+  )
+  .unwrap();
   let signers = vec![&option_writer_keys];
   solana_helpers::send_and_confirm_transaction(
     &client,
@@ -216,6 +221,7 @@ pub fn test_panic_when_non_quote_asset_pool_is_used() {
   let amount_per_contract = 100;
   let quote_amount_per_contract = 500;
   let expiry = 999_999_999_999_999_999;
+  let size = 1;
   // Create the option market
   let (
     underlying_asset_mint_keys,
@@ -253,6 +259,7 @@ pub fn test_panic_when_non_quote_asset_pool_is_used() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
+    size,
   )
   .unwrap();
   create_and_add_option_writer(
@@ -266,6 +273,7 @@ pub fn test_panic_when_non_quote_asset_pool_is_used() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
+    size,
   )
   .unwrap();
 
@@ -279,6 +287,7 @@ pub fn test_panic_when_non_quote_asset_pool_is_used() {
       &underlying_asset_mint_keys,
       &quote_asset_mint_keys,
       &option_market,
+      size,
     )
     .unwrap();
 
@@ -289,6 +298,7 @@ pub fn test_panic_when_non_quote_asset_pool_is_used() {
     &option_writer_keys,
     &exerciser_authority_keys,
     &option_writer_keys,
+    size,
   )
   .unwrap();
   // generate the exercise_covered_call instruction
@@ -305,6 +315,7 @@ pub fn test_panic_when_non_quote_asset_pool_is_used() {
     &option_market.quote_asset_pool,
     &exerciser_option_token_keys.pubkey(),
     &exerciser_authority_keys.pubkey(),
+    size,
   )
   .unwrap();
   // Send transaction to exercise in order to have assets in the quote pool
@@ -317,10 +328,8 @@ pub fn test_panic_when_non_quote_asset_pool_is_used() {
   )
   .unwrap();
 
-  let (option_market_authority, _bump_seed) = Pubkey::find_program_address(
-    &[&option_market_key.to_bytes()[..32]],
-    &options_program_id,
-  );
+  let (option_market_authority, _bump_seed) =
+    Pubkey::find_program_address(&[&option_market_key.to_bytes()[..32]], &options_program_id);
   let data = OptionsInstruction::ExchangeWriterTokenForQuote {}.pack();
   let mut accounts = Vec::with_capacity(8);
   accounts.push(AccountMeta::new_readonly(option_market_key, false));
@@ -365,6 +374,7 @@ pub fn test_panic_when_option_token_is_used() {
   let amount_per_contract = 100;
   let quote_amount_per_contract = 500;
   let expiry = 999_999_999_999_999_999;
+  let size = 1;
   // Create the option market
   let (
     underlying_asset_mint_keys,
@@ -402,6 +412,7 @@ pub fn test_panic_when_option_token_is_used() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
+    size,
   )
   .unwrap();
   // We move the option token from here instead
@@ -422,6 +433,7 @@ pub fn test_panic_when_option_token_is_used() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
+    size,
   )
   .unwrap();
 
@@ -435,6 +447,7 @@ pub fn test_panic_when_option_token_is_used() {
       &underlying_asset_mint_keys,
       &quote_asset_mint_keys,
       &option_market,
+      size,
     )
     .unwrap();
 
@@ -445,6 +458,7 @@ pub fn test_panic_when_option_token_is_used() {
     &tmp_option_writer_keys,
     &exerciser_authority_keys,
     &tmp_option_writer_keys,
+    size,
   )
   .unwrap();
   // generate the exercise_covered_call instruction
@@ -461,6 +475,7 @@ pub fn test_panic_when_option_token_is_used() {
     &option_market.quote_asset_pool,
     &exerciser_option_token_keys.pubkey(),
     &exerciser_authority_keys.pubkey(),
+    size,
   )
   .unwrap();
   // Send transaction to exercise in order to have assets in the quote pool
@@ -473,10 +488,8 @@ pub fn test_panic_when_option_token_is_used() {
   )
   .unwrap();
 
-  let (option_market_authority, _bump_seed) = Pubkey::find_program_address(
-    &[&option_market_key.to_bytes()[..32]],
-    &options_program_id,
-  );
+  let (option_market_authority, _bump_seed) =
+    Pubkey::find_program_address(&[&option_market_key.to_bytes()[..32]], &options_program_id);
   let data = OptionsInstruction::ExchangeWriterTokenForQuote {}.pack();
   let mut accounts = Vec::with_capacity(8);
   accounts.push(AccountMeta::new_readonly(option_market_key, false));

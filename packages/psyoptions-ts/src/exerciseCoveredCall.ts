@@ -11,11 +11,11 @@ import {
 } from '@solana/web3.js';
 import { struct } from 'buffer-layout';
 import { FEE_OWNER_KEY } from './fees';
-import { INTRUCTION_TAG_LAYOUT } from './layout';
+import { INTRUCTION_TAG_LAYOUT, uint64 } from './layout';
 import { TOKEN_PROGRAM_ID } from './utils';
 import { getOptionMarketData } from './utils/getOptionMarketData';
 
-export const EXERCISE_COVERED_CALL_LAYOUT = struct([]);
+export const EXERCISE_COVERED_CALL_LAYOUT = struct([uint64('size')]);
 
 /**
  * Generate the instruction for `ExerciseCoveredCall`.
@@ -44,6 +44,7 @@ export const EXERCISE_COVERED_CALL_LAYOUT = struct([]);
  * @param fundingAccountKey The payer account that is funding the SOL for the TX
  * making the transaction
  * @param quoteAssetMintKey public key for the quote asset mint
+ * @param size number of options to exercise
  * @returns
  */
 export const exerciseCoveredCallInstruction = async ({
@@ -59,6 +60,7 @@ export const exerciseCoveredCallInstruction = async ({
   optionTokenAuthorityKey,
   fundingAccountKey,
   quoteAssetMintKey,
+  size = 1,
 }: {
   programId: PublicKey;
   // The payer account that is funding the SOL for the TX
@@ -73,12 +75,15 @@ export const exerciseCoveredCallInstruction = async ({
   optionTokenKey: PublicKey;
   optionTokenAuthorityKey: PublicKey;
   quoteAssetMintKey: PublicKey;
+  size?: number;
 }) => {
+  const exerciseIXBuffer = Buffer.alloc(EXERCISE_COVERED_CALL_LAYOUT.span);
   // Generate the program derived address needed
   const [marketAuthorityKey] = await PublicKey.findProgramAddress(
     [optionMarketKey.toBuffer()],
     programId,
   );
+  EXERCISE_COVERED_CALL_LAYOUT.encode({ size }, exerciseIXBuffer);
 
   /*
    * Generate the instruction tag. 3 is the tag that denotes the ExerciseCoveredCall instructions
@@ -125,7 +130,7 @@ export const exerciseCoveredCallInstruction = async ({
 
   return new TransactionInstruction({
     keys,
-    data: tagBuffer,
+    data: Buffer.concat([tagBuffer, exerciseIXBuffer]),
     programId,
   });
 };
@@ -144,6 +149,7 @@ export const exerciseCoveredCall = async ({
   optionTokenKey,
   optionTokenAuthorityKey,
   quoteAssetMintKey,
+  size = 1,
 }: {
   connection: Connection;
   payerKey: PublicKey;
@@ -158,6 +164,7 @@ export const exerciseCoveredCall = async ({
   optionTokenKey: PublicKey;
   optionTokenAuthorityKey: PublicKey;
   quoteAssetMintKey: PublicKey;
+  size?: number;
 }) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
@@ -176,6 +183,7 @@ export const exerciseCoveredCall = async ({
     optionTokenAuthorityKey,
     fundingAccountKey: payerKey,
     quoteAssetMintKey,
+    size,
   });
   transaction.add(exerciseInstruction);
 
@@ -201,6 +209,7 @@ export const exerciseCoveredCall = async ({
  * @param optionTokenKey Pubkey for the account to burn the Option Mint from
  * @param optionTokenAuthorityAccount Account that owns the Pubkey to burn
  * Option Mint from
+ * @param size number of options to be exercised
  */
 export const exerciseCoveredCallWithMarketKey = async ({
   connection,
@@ -212,6 +221,7 @@ export const exerciseCoveredCallWithMarketKey = async ({
   exerciserQuoteAssetAuthorityKey,
   optionTokenKey,
   optionTokenAuthorityKey,
+  size = 1,
 }: {
   connection: Connection;
   payerKey: PublicKey;
@@ -222,6 +232,7 @@ export const exerciseCoveredCallWithMarketKey = async ({
   exerciserQuoteAssetAuthorityKey: PublicKey;
   optionTokenKey: PublicKey;
   optionTokenAuthorityKey: PublicKey;
+  size?: number;
 }) => {
   const optionMarketData = await getOptionMarketData({
     connection,
@@ -242,5 +253,6 @@ export const exerciseCoveredCallWithMarketKey = async ({
     optionTokenKey,
     optionTokenAuthorityKey,
     quoteAssetMintKey: optionMarketData.quoteAssetMintKey,
+    size,
   });
 };

@@ -5,11 +5,10 @@ use crate::{
         create_spl_mint_account_uninitialized, mint_tokens_to_account,
     },
 };
-use solana_client::{client_error::ClientError, rpc_client::RpcClient};
 use psyoptions::market::OptionMarket;
+use solana_client::{client_error::ClientError, rpc_client::RpcClient};
 use solana_program::{
-    clock::UnixTimestamp, program_pack::Pack, pubkey::Pubkey,
-    system_instruction,
+    clock::UnixTimestamp, program_pack::Pack, pubkey::Pubkey, system_instruction,
 };
 use solana_sdk::{
     commitment_config::CommitmentConfig,
@@ -208,6 +207,7 @@ pub fn create_and_add_option_writer(
     underlying_asset_pool_key: &Pubkey,
     option_market_key: &Pubkey,
     amount_per_contract: u64,
+    size: u64,
 ) -> Result<(Keypair, Keypair, Keypair, Keypair, Keypair), ClientError> {
     let option_writer_keys = create_account_with_lamports(&client, 10_000_000_000);
     let option_writer_underlying_asset_keys = Keypair::new();
@@ -226,7 +226,7 @@ pub fn create_and_add_option_writer(
         &option_writer_underlying_asset_keys.pubkey(),
         &asset_authority_keys.pubkey(),
         vec![&asset_authority_keys],
-        2 * amount_per_contract,
+        2 * size * amount_per_contract,
     )
     .unwrap();
 
@@ -271,7 +271,7 @@ pub fn create_and_add_option_writer(
         &option_market_key,
         &underlying_asset_mint_keys.pubkey(),
         &option_writer_keys.pubkey(),
-        1,
+        size,
     )
     .unwrap();
     let signers = vec![&option_writer_keys];
@@ -304,6 +304,7 @@ pub fn create_exerciser(
     underlying_asset_mint_keys: &Keypair,
     quote_asset_mint_keys: &Keypair,
     option_market: &OptionMarket,
+    size: u64,
 ) -> Result<(Keypair, Keypair, Keypair), ClientError> {
     // create the Authority account
     let exerciser_authority_keys = create_account_with_lamports(&client, 10_000_000_000);
@@ -334,7 +335,7 @@ pub fn create_exerciser(
         &asset_authority_keys.pubkey(),
         vec![&asset_authority_keys],
         // mint 2x the amount needed to account for fees
-        2 * option_market.quote_amount_per_contract,
+        2 * size * option_market.quote_amount_per_contract,
     )
     .unwrap();
 
@@ -345,7 +346,7 @@ pub fn create_exerciser(
     ))
 }
 
-/// Create an Option Token account for the Exerciser. Transfer an option token from 
+/// Create an Option Token account for the Exerciser. Transfer an option token from
 ///  a Writer to the Exercisor.
 ///
 pub fn move_option_token_to_exerciser(
@@ -354,7 +355,8 @@ pub fn move_option_token_to_exerciser(
     writer_option_mint: &Pubkey,
     writer_option_token_authority: &Keypair,
     exerciser_authority_keys: &Keypair,
-    payer_keys: &Keypair
+    payer_keys: &Keypair,
+    size: u64,
 ) -> Result<Keypair, ClientError> {
     // TODO create an option token account for the Exerciser
     let exerciser_option_token_keys = Keypair::new();
@@ -372,10 +374,16 @@ pub fn move_option_token_to_exerciser(
         &exerciser_option_token_keys.pubkey(),
         &writer_option_token_authority.pubkey(),
         &[],
-        1,
-    ).unwrap();
+        size,
+    )
+    .unwrap();
     let signers = vec![payer_keys, writer_option_token_authority];
-    send_and_confirm_transaction(&client, transfer_option_token_ix, &payer_keys.pubkey(), signers)?;
+    send_and_confirm_transaction(
+        &client,
+        transfer_option_token_ix,
+        &payer_keys.pubkey(),
+        signers,
+    )?;
 
     Ok(exerciser_option_token_keys)
 }

@@ -26,6 +26,7 @@ pub fn test_sucessful_close_position() {
   let underlying_amount_per_contract = 10_000_000_000;
   let quote_amount_per_contract = 50_000_000_000; // strike price of 5
   let expiry = 999_999_999_999_999_999;
+  let size = 1;
   // Create the option market
   let (
     underlying_asset_mint_keys,
@@ -63,6 +64,7 @@ pub fn test_sucessful_close_position() {
     &underlying_asset_pool_key,
     &option_market_key,
     underlying_amount_per_contract,
+    size,
   )
   .unwrap();
   create_and_add_option_writer(
@@ -76,6 +78,7 @@ pub fn test_sucessful_close_position() {
     &underlying_asset_pool_key,
     &option_market_key,
     underlying_amount_per_contract,
+    size,
   )
   .unwrap();
   let option_market_data = client.get_account_data(&option_market_key).unwrap();
@@ -222,6 +225,7 @@ pub fn test_panic_when_non_underlying_asset_pool_is_used_close_position() {
   let amount_per_contract = 100;
   let quote_amount_per_contract = 500;
   let expiry = 999_999_999_999_999_999;
+  let size = 1;
   // Create the option market
   let (
     underlying_asset_mint_keys,
@@ -259,6 +263,7 @@ pub fn test_panic_when_non_underlying_asset_pool_is_used_close_position() {
     &underlying_asset_pool_key,
     &option_market_key,
     amount_per_contract,
+    size,
   )
   .unwrap();
 

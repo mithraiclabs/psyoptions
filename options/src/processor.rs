@@ -374,6 +374,7 @@ impl Processor {
     pub fn process_exercise_covered_call(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
+        size: u64,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let funding_acct = next_account_info(account_info_iter)?;
@@ -416,6 +417,15 @@ impl Processor {
             return Err(PsyOptionsError::OptionMarketHasExpired.into());
         }
 
+        let total_quote_amount = option_market
+            .quote_amount_per_contract
+            .checked_mul(size)
+            .ok_or(PsyOptionsError::MathError)?;
+        let total_underlying_amount = option_market
+            .underlying_amount_per_contract
+            .checked_mul(size)
+            .ok_or(PsyOptionsError::MathError)?;
+
         // transfer the fee amount to the fee_recipient
         fees::transfer_fee(
             funding_acct,
@@ -425,18 +435,18 @@ impl Processor {
             exerciser_quote_asset_acct,
             exerciser_authority_acct,
             fee_owner_acct,
-            option_market.quote_amount_per_contract,
+            total_quote_amount,
             option_market.quote_asset_mint,
         )?;
 
-        // Burn an option token that was in the account passed in
+        // Burn option token(s) from account
         let burn_option_ix = token_instruction::burn(
             &spl_program_acct.key,
             &option_token_acct.key,
             &option_market.option_mint,
             &option_token_authority_acct.key,
             &[],
-            1,
+            size,
         )?;
         invoke_signed(
             &burn_option_ix,
@@ -459,7 +469,7 @@ impl Processor {
             &option_market.quote_asset_pool,
             &exerciser_authority_acct.key,
             &[],
-            option_market.quote_amount_per_contract,
+            total_quote_amount,
         )?;
         invoke(
             &transer_quote_tokens_ix,
@@ -478,7 +488,7 @@ impl Processor {
             &exerciser_underlying_asset_acct.key,
             &market_authority_acct.key,
             &[],
-            option_market.underlying_amount_per_contract,
+            total_underlying_amount,
         )?;
         invoke_signed(
             &transfer_underlying_tokens_ix,
@@ -797,8 +807,8 @@ impl Processor {
             OptionsInstruction::MintCoveredCall { size } => {
                 Self::process_mint_covered_call(program_id, accounts, size)
             }
-            OptionsInstruction::ExerciseCoveredCall {} => {
-                Self::process_exercise_covered_call(program_id, accounts)
+            OptionsInstruction::ExerciseCoveredCall { size } => {
+                Self::process_exercise_covered_call(program_id, accounts, size)
             }
             OptionsInstruction::ClosePostExpiration {} => {
                 Self::process_close_post_expiration(program_id, accounts)
