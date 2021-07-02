@@ -507,7 +507,11 @@ impl Processor {
         Ok(())
     }
 
-    pub fn process_close_position(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+    pub fn process_close_position(
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+        size: u64,
+    ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let spl_program_acct = next_account_info(account_info_iter)?;
         let option_market_acct = next_account_info(account_info_iter)?;
@@ -552,7 +556,7 @@ impl Processor {
             &option_market.writer_token_mint,
             &writer_token_source_authority_acct.key,
             &[],
-            1,
+            size,
         )?;
         invoke_signed(
             &burn_writer_token_ix,
@@ -575,7 +579,7 @@ impl Processor {
             &option_market.option_mint,
             &option_token_src_auth_acct.key,
             &[],
-            1,
+            size,
         )?;
         invoke_signed(
             &burn_option_token_ix,
@@ -591,6 +595,10 @@ impl Processor {
             ]],
         )?;
 
+        let total_underlying_amount = option_market
+            .underlying_amount_per_contract
+            .checked_mul(size)
+            .ok_or(PsyOptionsError::MathError)?;
         // transfer underlying asset from the pool to the option writers's account
         let transfer_underlying_tokens_ix = token_instruction::transfer(
             &spl_program_acct.key,
@@ -598,7 +606,7 @@ impl Processor {
             &underlying_asset_dest_acct.key,
             &market_authority_acct.key,
             &[],
-            option_market.underlying_amount_per_contract,
+            total_underlying_amount,
         )?;
         invoke_signed(
             &transfer_underlying_tokens_ix,
@@ -819,8 +827,8 @@ impl Processor {
             OptionsInstruction::ClosePostExpiration { size } => {
                 Self::process_close_post_expiration(program_id, accounts, size)
             }
-            OptionsInstruction::ClosePosition {} => {
-                Self::process_close_position(program_id, accounts)
+            OptionsInstruction::ClosePosition { size } => {
+                Self::process_close_position(program_id, accounts, size)
             }
             OptionsInstruction::ExchangeWriterTokenForQuote {} => {
                 Self::process_exchange_writer_token_for_quote(program_id, accounts)

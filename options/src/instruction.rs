@@ -108,7 +108,7 @@ pub enum OptionsInstruction {
     /// 8. `[]` Writer Token Source Authority
     /// 9. `[writable]` Underlying Asset Destination
     /// 10. `[writable]` Underlying Asset Pool
-    ClosePosition {},
+    ClosePosition { size: u64 },
     /// Allow a user to exchange their Writer Token for Quote Asset.
     /// Burns the Writer Token and transfers the Quote Asset amount
     /// relative to the option market
@@ -156,7 +156,11 @@ impl OptionsInstruction {
                 let (size, _) = Self::unpack_u64(rest)?;
                 Self::ClosePostExpiration { size }
             }
-            4 => Self::ClosePosition {},
+            4 => { 
+                let (size, _) = Self::unpack_u64(rest)?;
+                Self::ClosePosition { size }
+            
+            },
             5 => Self::ExchangeWriterTokenForQuote {},
             _ => return Err(ProgramError::InvalidInstructionData.into()),
         })
@@ -190,8 +194,9 @@ impl OptionsInstruction {
                 buf.push(3);
                 buf.extend_from_slice(&size.to_le_bytes());
             }
-            &Self::ClosePosition {} => {
+            &Self::ClosePosition { size } => {
                 buf.push(4);
+                buf.extend_from_slice(&size.to_le_bytes());
             }
             &Self::ExchangeWriterTokenForQuote {} => {
                 buf.push(5);
@@ -354,11 +359,12 @@ pub fn close_position(
     writer_token_source: &Pubkey,
     writer_token_source_authority: &Pubkey,
     underlying_asset_dest: &Pubkey,
+    size: u64,
 ) -> Result<Instruction, ProgramError> {
     let (market_authority, _bump_seed) =
         Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
 
-    let data = OptionsInstruction::ClosePosition {}.pack();
+    let data = OptionsInstruction::ClosePosition { size }.pack();
 
     let mut accounts = Vec::with_capacity(11);
     accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
@@ -570,13 +576,14 @@ mod tests {
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
     }
-
+    
     #[test]
     fn test_pack_unpack_close_position() {
-        let check = OptionsInstruction::ClosePosition {};
+        let size = 2;
+        let check = OptionsInstruction::ClosePosition { size };
         let packed = check.pack();
         // add the tag to the expected buffer
-        let expect = Vec::from([4u8]);
+        let expect = Vec::from([4, 2, 0, 0, 0, 0, 0, 0, 0]);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
