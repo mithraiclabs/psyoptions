@@ -7,10 +7,10 @@ import {
   TransactionInstruction,
 } from '@solana/web3.js';
 import { struct } from 'buffer-layout';
-import { INTRUCTION_TAG_LAYOUT } from './layout';
+import { INTRUCTION_TAG_LAYOUT, uint64 } from './layout';
 import { TOKEN_PROGRAM_ID } from './utils';
 
-export const CLOSE_POSITION = struct([]);
+export const CLOSE_POSITION = struct([uint64('size')]);
 
 /**
  * Generate the instruction for `ClosePosition`.
@@ -33,6 +33,7 @@ export const CLOSE_POSITION = struct([]);
  * @param writerTokenSourceAuthorityKey owner of the writerTokenSourceKey, likely the wallet making
  * the transaction
  * @param underlyingAssetDestKey public key of the account to send the underlying asset to
+ * @param size number of options & writer tokens to burn
  * @returns
  */
 export const closePositionInstruction = async ({
@@ -46,6 +47,7 @@ export const closePositionInstruction = async ({
   writerTokenSourceKey,
   writerTokenSourceAuthorityKey,
   underlyingAssetDestKey,
+  size = 1,
 }: {
   programId: PublicKey;
   optionMarketKey: PublicKey;
@@ -57,12 +59,15 @@ export const closePositionInstruction = async ({
   writerTokenSourceKey: PublicKey;
   writerTokenSourceAuthorityKey: PublicKey;
   underlyingAssetDestKey: PublicKey;
+  size?: number;
 }) => {
+  const closePositionIXBuffer = Buffer.alloc(CLOSE_POSITION.span);
   // Generate the program derived address needed
   const [marketAuthorityKey] = await PublicKey.findProgramAddress(
     [optionMarketKey.toBuffer()],
     programId,
   );
+  CLOSE_POSITION.encode({ size }, closePositionIXBuffer);
 
   /*
    * Generate the instruction tag. 4 is the tag that denotes the ClosePosition instruction
@@ -91,7 +96,7 @@ export const closePositionInstruction = async ({
 
   return new TransactionInstruction({
     keys,
-    data: tagBuffer,
+    data: Buffer.concat([tagBuffer, closePositionIXBuffer]),
     programId,
   });
 };
@@ -109,6 +114,7 @@ export const closePosition = async ({
   writerTokenSourceKey,
   writerTokenSourceAuthorityKey,
   underlyingAssetDestKey,
+  size = 1,
 }: {
   connection: Connection;
   payerKey: PublicKey;
@@ -122,6 +128,7 @@ export const closePosition = async ({
   writerTokenSourceKey: PublicKey;
   writerTokenSourceAuthorityKey: PublicKey;
   underlyingAssetDestKey: PublicKey;
+  size?: number;
 }) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
@@ -138,6 +145,7 @@ export const closePosition = async ({
     writerTokenSourceKey,
     writerTokenSourceAuthorityKey,
     underlyingAssetDestKey,
+    size,
   });
   transaction.add(closePositionIx);
   const signers: Keypair[] = [];
