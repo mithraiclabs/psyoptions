@@ -8,11 +8,11 @@ import {
   TransactionInstruction,
 } from '@solana/web3.js';
 import { struct } from 'buffer-layout';
-import { INTRUCTION_TAG_LAYOUT } from './layout';
+import { INTRUCTION_TAG_LAYOUT, uint64 } from './layout';
 import { TOKEN_PROGRAM_ID } from './utils';
 import { getOptionMarketData } from './utils/getOptionMarketData';
 
-export const CLOSE_POST_EXPIRATION_COVERED_CALL = struct([]);
+export const CLOSE_POST_EXPIRATION_COVERED_CALL = struct([uint64('size')]);
 
 /**
  * Generate the instruction for `ClosePostExpiration`
@@ -32,6 +32,7 @@ export const CLOSE_POST_EXPIRATION_COVERED_CALL = struct([]);
  * @param writerTokenSourceKey public key of the account where the Writer Token will be burned from
  * @param writerTokenSourceAuthorityKey owner of the writerTokenSourceKey, likely the wallet
  * making the transaction
+ * @param size number of positions to close (writer tokens to burn)
  * @returns
  */
 export const closePostExpirationCoveredCallInstruction = async ({
@@ -42,6 +43,7 @@ export const closePostExpirationCoveredCallInstruction = async ({
   writerTokenMintKey,
   writerTokenSourceAuthorityKey,
   writerTokenSourceKey,
+  size = 1,
 }: {
   programId: PublicKey;
   optionMarketKey: PublicKey;
@@ -50,11 +52,19 @@ export const closePostExpirationCoveredCallInstruction = async ({
   writerTokenSourceKey: PublicKey;
   writerTokenSourceAuthorityKey: PublicKey;
   underlyingAssetDestKey: PublicKey;
+  size?: number;
 }) => {
+  const closePostExpirationIXBuffer = Buffer.alloc(
+    CLOSE_POST_EXPIRATION_COVERED_CALL.span,
+  );
   // Generate the program derived address needed
   const [marketAuthorityKey] = await PublicKey.findProgramAddress(
     [optionMarketKey.toBuffer()],
     programId,
+  );
+  CLOSE_POST_EXPIRATION_COVERED_CALL.encode(
+    { size },
+    closePostExpirationIXBuffer,
   );
 
   /*
@@ -82,7 +92,7 @@ export const closePostExpirationCoveredCallInstruction = async ({
 
   return new TransactionInstruction({
     keys,
-    data: tagBuffer,
+    data: Buffer.concat([tagBuffer, closePostExpirationIXBuffer]),
     programId,
   });
 };
@@ -97,6 +107,7 @@ export const closePostExpirationCoveredCall = async ({
   writerTokenMintKey,
   writerTokenSourceAuthorityKey,
   writerTokenSourceKey,
+  size = 1,
 }: {
   connection: Connection;
   payerKey: PublicKey;
@@ -108,6 +119,7 @@ export const closePostExpirationCoveredCall = async ({
   writerTokenSourceKey: PublicKey;
   writerTokenSourceAuthorityKey: PublicKey;
   underlyingAssetDestKey: PublicKey;
+  size?: number;
 }) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
@@ -121,6 +133,7 @@ export const closePostExpirationCoveredCall = async ({
     writerTokenMintKey,
     writerTokenSourceAuthorityKey,
     writerTokenSourceKey,
+    size,
   });
   transaction.add(closePostExpiration);
   const signers: Keypair[] = [];
@@ -146,6 +159,7 @@ export const closePostExpirationOption = async ({
   underlyingAssetDestKey,
   writerTokenSourceAuthorityKey,
   writerTokenSourceKey,
+  size = 1,
 }: {
   connection: Connection;
   payerKey: PublicKey;
@@ -154,6 +168,7 @@ export const closePostExpirationOption = async ({
   underlyingAssetDestKey: PublicKey;
   writerTokenSourceKey: PublicKey;
   writerTokenSourceAuthorityKey: PublicKey;
+  size?: number;
 }) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
@@ -171,6 +186,7 @@ export const closePostExpirationOption = async ({
     writerTokenMintKey: optionMarketData.writerTokenMintKey,
     writerTokenSourceAuthorityKey,
     writerTokenSourceKey,
+    size,
   });
   transaction.add(closePostExpiration);
   const signers: Keypair[] = [];

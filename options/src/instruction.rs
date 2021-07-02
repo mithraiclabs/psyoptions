@@ -92,7 +92,7 @@ pub enum OptionsInstruction {
     /// 7. `[writeable]` Underlying Asset Pool
     /// 8. `[]` Sysvar clock
     /// 9. `[]` SPL Token Program
-    ClosePostExpiration {},
+    ClosePostExpiration { size: u64 },
     /// Close a single option contract prior to expiration.
     /// Burns the _option token_ and the _writer token_ and returns the
     /// underlying asset back to the writer (or address specified).
@@ -152,7 +152,10 @@ impl OptionsInstruction {
                 let (size, _) = Self::unpack_u64(rest)?;
                 Self::ExerciseCoveredCall { size }
             }
-            3 => Self::ClosePostExpiration {},
+            3 => {
+                let (size, _) = Self::unpack_u64(rest)?;
+                Self::ClosePostExpiration { size }
+            }
             4 => Self::ClosePosition {},
             5 => Self::ExchangeWriterTokenForQuote {},
             _ => return Err(ProgramError::InvalidInstructionData.into()),
@@ -183,8 +186,9 @@ impl OptionsInstruction {
                 buf.push(2);
                 buf.extend_from_slice(&size.to_le_bytes());
             }
-            &Self::ClosePostExpiration {} => {
+            &Self::ClosePostExpiration { size } => {
                 buf.push(3);
+                buf.extend_from_slice(&size.to_le_bytes());
             }
             &Self::ClosePosition {} => {
                 buf.push(4);
@@ -391,10 +395,11 @@ pub fn close_post_expiration(
     writer_token_source: &Pubkey,
     writer_token_source_authority: &Pubkey,
     underlying_asset_dest: &Pubkey,
+    size: u64,
 ) -> Result<Instruction, ProgramError> {
     let (market_authority, _bump_seed) =
         Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
-    let data = OptionsInstruction::ClosePostExpiration {}.pack();
+    let data = OptionsInstruction::ClosePostExpiration { size }.pack();
 
     let mut accounts = Vec::with_capacity(9);
     accounts.push(AccountMeta::new_readonly(*options_market, false));
@@ -556,10 +561,11 @@ mod tests {
 
     #[test]
     fn test_pack_unpack_close_post_expiration() {
-        let check = OptionsInstruction::ClosePostExpiration {};
+        let size = 2;
+        let check = OptionsInstruction::ClosePostExpiration { size };
         let packed = check.pack();
         // add the tag to the expected buffer
-        let expect = Vec::from([3u8]);
+        let expect = Vec::from([3, 2, 0, 0, 0, 0, 0, 0, 0]);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
