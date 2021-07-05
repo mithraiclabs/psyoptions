@@ -1,6 +1,6 @@
 {
   "name": "@mithraic-labs/psyoptions",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "Solana program instruction bindings for mithraiclabs' PsyOptions",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
