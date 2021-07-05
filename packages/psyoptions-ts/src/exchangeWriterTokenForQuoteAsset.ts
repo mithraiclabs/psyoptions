@@ -7,10 +7,10 @@ import {
   TransactionInstruction,
 } from '@solana/web3.js';
 import { struct, u8 } from 'buffer-layout';
-import { INTRUCTION_TAG_LAYOUT } from './layout';
+import { INTRUCTION_TAG_LAYOUT, uint64 } from './layout';
 import { TOKEN_PROGRAM_ID } from './utils';
 
-export const EXCHANGE_WRITER_TOKEN_FOR_QUOTE = struct([u8('bumpSeed')]);
+export const EXCHANGE_WRITER_TOKEN_FOR_QUOTE = struct([uint64('size')]);
 
 /**
  * Generate the instruction for `ExchangeWriterTokenForQuote`
@@ -30,6 +30,7 @@ export const EXCHANGE_WRITER_TOKEN_FOR_QUOTE = struct([u8('bumpSeed')]);
  * @param quoteAssetDestKey public key of the account to send the quote asset to
  * @param quoteAssetPoolKey public key of the quote asset pool
  * for the market, where the asset will be transfered from
+ * @param size number of writer tokens to burn to claim for quote asset
  * @returns
  */
 export const exchangeWriterTokenForQuoteInstruction = async ({
@@ -40,6 +41,7 @@ export const exchangeWriterTokenForQuoteInstruction = async ({
   writerTokenSourceAuthorityKey,
   quoteAssetDestKey,
   quoteAssetPoolKey,
+  size = 1,
 }: {
   programId: PublicKey;
   optionMarketKey: PublicKey;
@@ -48,11 +50,19 @@ export const exchangeWriterTokenForQuoteInstruction = async ({
   writerTokenSourceAuthorityKey: PublicKey;
   quoteAssetDestKey: PublicKey;
   quoteAssetPoolKey: PublicKey;
+  size?: number;
 }) => {
+  const exchangeWriterTokeForQuoteIXBuffer = Buffer.alloc(
+    EXCHANGE_WRITER_TOKEN_FOR_QUOTE.span,
+  );
   // Generate the program derived address needed
   const [marketAuthorityKey] = await PublicKey.findProgramAddress(
     [optionMarketKey.toBuffer()],
     programId,
+  );
+  EXCHANGE_WRITER_TOKEN_FOR_QUOTE.encode(
+    { size },
+    exchangeWriterTokeForQuoteIXBuffer,
   );
 
   /*
@@ -80,7 +90,7 @@ export const exchangeWriterTokenForQuoteInstruction = async ({
 
   return new TransactionInstruction({
     keys,
-    data: tagBuffer,
+    data: Buffer.concat([tagBuffer, exchangeWriterTokeForQuoteIXBuffer]),
     programId,
   });
 };
@@ -95,6 +105,7 @@ export const exchangeWriterTokenForQuote = async ({
   writerTokenSourceAuthorityKey,
   quoteAssetDestKey,
   quoteAssetPoolKey,
+  size = 1,
 }: {
   connection: Connection;
   payerKey: PublicKey;
@@ -105,6 +116,7 @@ export const exchangeWriterTokenForQuote = async ({
   writerTokenSourceAuthorityKey: PublicKey;
   quoteAssetDestKey: PublicKey;
   quoteAssetPoolKey: PublicKey;
+  size?: number;
 }) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
@@ -118,6 +130,7 @@ export const exchangeWriterTokenForQuote = async ({
     writerTokenSourceAuthorityKey,
     quoteAssetDestKey,
     quoteAssetPoolKey,
+    size,
   });
   transaction.add(closePositionIx);
   const signers: Keypair[] = [];

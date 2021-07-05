@@ -122,7 +122,7 @@ pub enum OptionsInstruction {
     /// 6. `[writeable]` Quote Asset Destination
     /// 7. `[writeable]` Quote Asset Pool
     /// 8. `[]` SPL token program
-    ExchangeWriterTokenForQuote {},
+    ExchangeWriterTokenForQuote { size: u64 },
 }
 
 impl OptionsInstruction {
@@ -161,7 +161,10 @@ impl OptionsInstruction {
                 Self::ClosePosition { size }
             
             },
-            5 => Self::ExchangeWriterTokenForQuote {},
+            5 => {
+                let (size, _) = Self::unpack_u64(rest)?;
+                Self::ExchangeWriterTokenForQuote { size }
+            }
             _ => return Err(ProgramError::InvalidInstructionData.into()),
         })
     }
@@ -198,8 +201,9 @@ impl OptionsInstruction {
                 buf.push(4);
                 buf.extend_from_slice(&size.to_le_bytes());
             }
-            &Self::ExchangeWriterTokenForQuote {} => {
+            &Self::ExchangeWriterTokenForQuote { size } => {
                 buf.push(5);
+                buf.extend_from_slice(&size.to_le_bytes());
             }
         };
         buf
@@ -487,10 +491,11 @@ pub fn exchange_writer_token_for_quote(
     writer_token_source_authority: &Pubkey,
     quote_asset_dest: &Pubkey,
     quote_asset_pool: &Pubkey,
+    size: u64,
 ) -> Result<Instruction, ProgramError> {
     let (option_market_authority, _bump_seed) =
         Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
-    let data = OptionsInstruction::ExchangeWriterTokenForQuote {}.pack();
+    let data = OptionsInstruction::ExchangeWriterTokenForQuote { size }.pack();
 
     let mut accounts = Vec::with_capacity(8);
     accounts.push(AccountMeta::new_readonly(*options_market, false));
@@ -591,10 +596,11 @@ mod tests {
 
     #[test]
     fn test_pack_unpack_exchange_writer_token_for_quote() {
-        let check = OptionsInstruction::ExchangeWriterTokenForQuote {};
+        let size = 2;
+        let check = OptionsInstruction::ExchangeWriterTokenForQuote { size };
         let packed = check.pack();
         // add the tag to the expected buffer
-        let expect = Vec::from([5u8]);
+        let expect = Vec::from([5, 2, 0, 0, 0, 0, 0, 0, 0]);
         assert_eq!(packed, expect);
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);

@@ -720,6 +720,7 @@ impl Processor {
     pub fn process_exchange_writer_token_for_quote(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
+        size: u64,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let option_market_acct = next_account_info(account_info_iter)?;
@@ -759,7 +760,7 @@ impl Processor {
             &option_market.writer_token_mint,
             &writer_token_source_authority_acct.key,
             &[],
-            1,
+            size,
         )?;
         invoke_signed(
             &burn_writer_token_ix,
@@ -775,6 +776,11 @@ impl Processor {
             ]],
         )?;
 
+        let total_quote_amount = option_market
+            .quote_amount_per_contract
+            .checked_mul(size)
+            .ok_or(PsyOptionsError::MathError)?;
+
         // transfer quote asset from the pool to the destination account
         let transfer_underlying_tokens_ix = token_instruction::transfer(
             &spl_token_program_acct.key,
@@ -782,7 +788,7 @@ impl Processor {
             &quote_asset_dest_acct.key,
             &market_authority_acct.key,
             &[],
-            option_market.quote_amount_per_contract,
+            total_quote_amount,
         )?;
         invoke_signed(
             &transfer_underlying_tokens_ix,
@@ -830,8 +836,8 @@ impl Processor {
             OptionsInstruction::ClosePosition { size } => {
                 Self::process_close_position(program_id, accounts, size)
             }
-            OptionsInstruction::ExchangeWriterTokenForQuote {} => {
-                Self::process_exchange_writer_token_for_quote(program_id, accounts)
+            OptionsInstruction::ExchangeWriterTokenForQuote { size } => {
+                Self::process_exchange_writer_token_for_quote(program_id, accounts, size)
             }
         }
     }
