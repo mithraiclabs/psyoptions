@@ -156,11 +156,10 @@ impl OptionsInstruction {
                 let (size, _) = Self::unpack_u64(rest)?;
                 Self::ClosePostExpiration { size }
             }
-            4 => { 
+            4 => {
                 let (size, _) = Self::unpack_u64(rest)?;
                 Self::ClosePosition { size }
-            
-            },
+            }
             5 => {
                 let (size, _) = Self::unpack_u64(rest)?;
                 Self::ExchangeWriterTokenForQuote { size }
@@ -248,7 +247,6 @@ pub fn initialize_market(
     quote_asset_mint: &Pubkey,
     option_mint: &Pubkey,
     writer_token_mint: &Pubkey,
-    options_market: &Pubkey,
     underlying_asset_pool: &Pubkey,
     quote_asset_pool: &Pubkey,
     funding_account: &Pubkey,
@@ -256,9 +254,7 @@ pub fn initialize_market(
     quote_amount_per_contract: u64,
     expiration_unix_timestamp: UnixTimestamp,
 ) -> Result<Instruction, ProgramError> {
-    let (market_authority, bump_seed) =
-        Pubkey::find_program_address(&[&options_market.to_bytes()[..32]], &program_id);
-    let (no_duplication_key, _no_duplication_bump) = Pubkey::find_program_address(
+    let (options_market_key, _no_duplication_bump) = Pubkey::find_program_address(
         &[
             &underlying_asset_mint.to_bytes(),
             &quote_asset_mint.to_bytes(),
@@ -268,6 +264,8 @@ pub fn initialize_market(
         ],
         &program_id,
     );
+    let (market_authority, bump_seed) =
+        Pubkey::find_program_address(&[&options_market_key.to_bytes()[..32]], &program_id);
 
     let data = OptionsInstruction::InitializeMarket {
         underlying_amount_per_contract,
@@ -285,7 +283,6 @@ pub fn initialize_market(
         AccountMeta::new_readonly(*quote_asset_mint, false),
         AccountMeta::new(*option_mint, false),
         AccountMeta::new(*writer_token_mint, false),
-        AccountMeta::new(*options_market, false),
         AccountMeta::new_readonly(market_authority, false),
         AccountMeta::new(*underlying_asset_pool, false),
         AccountMeta::new(*quote_asset_pool, false),
@@ -293,7 +290,7 @@ pub fn initialize_market(
         AccountMeta::new_readonly(fee_owner_key::ID, false),
         AccountMeta::new(mint_fee_key, false),
         AccountMeta::new(exercise_fee_key, false),
-        AccountMeta::new(no_duplication_key, false),
+        AccountMeta::new(options_market_key, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
@@ -581,7 +578,7 @@ mod tests {
         let unpacked = OptionsInstruction::unpack(&expect).unwrap();
         assert_eq!(unpacked, check);
     }
-    
+
     #[test]
     fn test_pack_unpack_close_position() {
         let size = 2;

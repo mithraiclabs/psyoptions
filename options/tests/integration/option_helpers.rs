@@ -19,53 +19,15 @@ use solana_sdk::{
 
 use spl_token::instruction as token_instruction;
 
-fn create_options_market(
-    client: &RpcClient,
-    options_program_id: &Pubkey,
-    options_market: &Keypair,
-    payer_keys: &Keypair,
-) -> Result<(), ClientError> {
-    let data_len = OptionMarket::LEN;
-
-    let min_balance = client.get_minimum_balance_for_rent_exemption(data_len)?;
-
-    let instruction = system_instruction::create_account(
-        &payer_keys.pubkey(),
-        &options_market.pubkey(),
-        min_balance,
-        data_len as u64,
-        options_program_id,
-    );
-
-    let message = Message::new(&[instruction], Some(&payer_keys.pubkey()));
-
-    let (blockhash, _, _) = client
-        .get_recent_blockhash_with_commitment(CommitmentConfig::processed())?
-        .value;
-
-    let mut transaction = Transaction::new_unsigned(message.clone());
-    transaction.try_sign(&[payer_keys, options_market], blockhash)?;
-
-    client.send_and_confirm_transaction_with_spinner_and_commitment(
-        &transaction,
-        CommitmentConfig::processed(),
-    )?;
-    println!("Created Options Market account {}", options_market.pubkey());
-
-    Ok(())
-}
-
 pub fn create_accounts_for_options_market(
     client: &RpcClient,
     options_program_id: &Pubkey,
     option_mint_keys: &Keypair,
     writer_token_keys: &Keypair,
-    option_market_keys: &Keypair,
     payer_keys: &Keypair,
 ) -> Result<(), ClientError> {
     create_spl_mint_account_uninitialized(client, option_mint_keys, payer_keys)?;
     create_spl_mint_account_uninitialized(client, writer_token_keys, payer_keys)?;
-    create_options_market(client, options_program_id, option_market_keys, payer_keys)?;
     Ok(())
 }
 
@@ -158,7 +120,6 @@ pub fn init_option_market(
         &program_id,
         &option_mint_keys,
         &writer_token_mint_keys,
-        &options_market_keys,
         &payer_keys,
     )?;
 
@@ -168,7 +129,6 @@ pub fn init_option_market(
         &quote_asset_mint_keys.pubkey(),
         &option_mint_keys.pubkey(),
         &writer_token_mint_keys.pubkey(),
-        &options_market_keys.pubkey(),
         &underlying_asset_pool_keys.pubkey(),
         &quote_asset_pool_keys.pubkey(),
         &payer_keys.pubkey(),
