@@ -1,9 +1,6 @@
 use crate::{
     option_helpers, solana_helpers,
-    spl_helpers::{
-        create_spl_account_uninitialized, create_spl_mint_account,
-        create_spl_mint_account_uninitialized,
-    },
+    spl_helpers::{create_spl_account_uninitialized, create_spl_mint_account},
     PROGRAM_KEY,
 };
 use solana_client::rpc_client::RpcClient;
@@ -56,7 +53,6 @@ fn test_initialize_market() {
 
     option_helpers::create_accounts_for_options_market(
         &client,
-        &options_program_id,
         &option_mint_keys,
         &writer_token_mint_keys,
         &payer_keys,
@@ -88,10 +84,8 @@ fn test_initialize_market() {
     )
     .unwrap();
 
-    let (option_authority_pubkey, _bump_seed) = Pubkey::find_program_address(
-        &[&options_market_key.to_bytes()[..32]],
-        &options_program_id,
-    );
+    let (option_authority_pubkey, _bump_seed) =
+        Pubkey::find_program_address(&[&options_market_key.to_bytes()[..32]], &options_program_id);
 
     // assert program id is the option mint authority
     let option_mint_data = client.get_account_data(&option_mint_keys.pubkey()).unwrap();
@@ -134,9 +128,7 @@ fn test_initialize_market() {
     assert!(quote_asset_pool_acct.is_initialized());
 
     // assert the option market data is correct
-    let option_market_data = client
-        .get_account_data(&options_market_key)
-        .unwrap();
+    let option_market_data = client.get_account_data(&options_market_key).unwrap();
     let option_market = psyoptions::market::OptionMarket::unpack(&option_market_data[..]).unwrap();
     assert_eq!(option_market.option_mint, option_mint_keys.pubkey());
     assert_eq!(
@@ -190,7 +182,6 @@ fn should_fail_with_same_quote_underlying_assets() {
 
     option_helpers::create_accounts_for_options_market(
         &client,
-        &options_program_id,
         &option_mint_keys,
         &writer_token_mint_keys,
         &payer_keys,
@@ -252,7 +243,6 @@ fn test_no_duplicate_markets() {
 
     option_helpers::create_accounts_for_options_market(
         &client,
-        &options_program_id,
         &option_mint_keys,
         &writer_token_mint_keys,
         &payer_keys,
@@ -299,7 +289,6 @@ fn test_no_duplicate_markets() {
 
     option_helpers::create_accounts_for_options_market(
         &client,
-        &options_program_id,
         &option_mint_keys,
         &writer_token_mint_keys,
         &payer_keys,
@@ -357,7 +346,6 @@ fn test_different_markets() {
 
     option_helpers::create_accounts_for_options_market(
         &client,
-        &options_program_id,
         &option_mint_keys,
         &writer_token_mint_keys,
         &payer_keys,
@@ -404,7 +392,6 @@ fn test_different_markets() {
 
     option_helpers::create_accounts_for_options_market(
         &client,
-        &options_program_id,
         &option_mint_keys,
         &writer_token_mint_keys,
         &payer_keys,
