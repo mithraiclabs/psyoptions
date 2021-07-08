@@ -16,7 +16,7 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import { OPTION_MARKET_LAYOUT } from './market';
-import { publicKey, INTRUCTION_TAG_LAYOUT } from './layout';
+import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { FEE_OWNER_KEY } from './fees';
 
 /**
@@ -56,7 +56,6 @@ export const INITIALIZE_MARKET_LAYOUT = struct([
  * for the new option market
  * @param writerTokenMintKey uninitialized SPL Token mint to be used as the Writer Token mint
  * for the new option market
- * @param optionMarketKey key for a new Account that will store the data for the options market
  * @param underlyingAssetPoolKey unintitialized SPL Token account to store locked underlying asset
  * @param quoteAssetPoolKey unintitialized SPL Token account to store locked quote asset
  * @param fundingAccountKey The payer account that is funding the SOL for the TX
@@ -72,7 +71,6 @@ export const initializeMarketInstruction = async ({
   quoteAssetMintKey,
   optionMintKey,
   writerTokenMintKey,
-  optionMarketKey,
   underlyingAssetPoolKey,
   quoteAssetPoolKey,
   underlyingAmountPerContract,
@@ -91,8 +89,6 @@ export const initializeMarketInstruction = async ({
   optionMintKey: PublicKey;
   // The public key of the SPL Token Mint for the Writer Token
   writerTokenMintKey: PublicKey;
-  // The public key for a new Account that will store the data for the options market
-  optionMarketKey: PublicKey;
   // The public key for a new Account that will be the underlying asset pool
   underlyingAssetPoolKey: PublicKey;
   // The public key for the new Account that will be the quote asset pool
@@ -104,11 +100,6 @@ export const initializeMarketInstruction = async ({
   quoteAmountPerContract: number;
   expirationUnixTimestamp: number;
 }): Promise<TransactionInstruction> => {
-  // Generate the program derived address needed
-  const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
-    [optionMarketKey.toBuffer()],
-    programId,
-  );
   const NU64_LAYOUT = nu64('number');
   const NS64_LAYOUT = ns64('number');
   const underlyingAmountBuf = Buffer.alloc(NU64_LAYOUT.span);
@@ -118,8 +109,9 @@ export const initializeMarketInstruction = async ({
   const expirationBuf = Buffer.alloc(NS64_LAYOUT.span);
   NS64_LAYOUT.encode(expirationUnixTimestamp, expirationBuf);
 
-  // Generate the unique constraint program derived address
-  const [noDuplicationKey, _bumpSeed] = await PublicKey.findProgramAddress(
+  // Generate the option market program derived address from the option
+  // parameters
+  const [optionMarketKey] = await PublicKey.findProgramAddress(
     [
       underlyingAssetMintKey.toBuffer(),
       quoteAssetMintKey.toBuffer(),
@@ -129,6 +121,12 @@ export const initializeMarketInstruction = async ({
     ],
     programId,
   );
+  // Generate the program derived address for signing transfers
+  const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
+    [optionMarketKey.toBuffer()],
+    programId,
+  );
+
   // Get the associated fee address
   const mintFeeKey = await Token.getAssociatedTokenAddress(
     ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -174,7 +172,6 @@ export const initializeMarketInstruction = async ({
       { pubkey: quoteAssetMintKey, isSigner: false, isWritable: false },
       { pubkey: optionMintKey, isSigner: false, isWritable: true },
       { pubkey: writerTokenMintKey, isSigner: false, isWritable: true },
-      { pubkey: optionMarketKey, isSigner: false, isWritable: true },
       {
         pubkey: marketAuthorityKey,
         isSigner: false,
@@ -190,7 +187,7 @@ export const initializeMarketInstruction = async ({
       { pubkey: FEE_OWNER_KEY, isSigner: false, isWritable: false },
       { pubkey: mintFeeKey, isSigner: false, isWritable: true },
       { pubkey: exerciseFeeKey, isSigner: false, isWritable: true },
-      { pubkey: noDuplicationKey, isSigner: false, isWritable: true },
+      { pubkey: optionMarketKey, isSigner: false, isWritable: true },
       { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
       { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
@@ -210,22 +207,17 @@ export const initializeMarketInstruction = async ({
  *
  * @param connection
  * @param payerKey PublicKey to pay for the creation of these new accounts
- * @param programId the public key for the PsyOptions program
  */
 export const initializeAccountsForMarket = async ({
   connection,
   payerKey,
-  programId,
 }: {
   connection: Connection;
   payerKey: PublicKey;
   programId: string | PublicKey;
 }) => {
-  const programPubkey =
-    programId instanceof PublicKey ? programId : new PublicKey(programId);
   const optionMintAccount = new Keypair();
   const writerTokenMintAccount = new Keypair();
-  const optionMarketDataAccount = new Keypair();
   const underlyingAssetPoolAccount = new Keypair();
   const quoteAssetPoolAccount = new Keypair();
 
@@ -256,20 +248,6 @@ export const initializeAccountsForMarket = async ({
     }),
   );
 
-  const optionMarketDataRentBalance =
-    await connection.getMinimumBalanceForRentExemption(
-      OPTION_MARKET_LAYOUT.span,
-    );
-  transaction.add(
-    SystemProgram.createAccount({
-      fromPubkey: payerKey,
-      newAccountPubkey: optionMarketDataAccount.publicKey,
-      lamports: optionMarketDataRentBalance,
-      space: OPTION_MARKET_LAYOUT.span,
-      programId: programPubkey,
-    }),
-  );
-
   const assetPoolRentBalance =
     await connection.getMinimumBalanceForRentExemption(AccountLayout.span);
   transaction.add(
@@ -294,7 +272,6 @@ export const initializeAccountsForMarket = async ({
   const signers = [
     optionMintAccount,
     writerTokenMintAccount,
-    optionMarketDataAccount,
     underlyingAssetPoolAccount,
     quoteAssetPoolAccount,
   ];
@@ -302,7 +279,6 @@ export const initializeAccountsForMarket = async ({
   return {
     transaction,
     signers,
-    optionMarketKey: optionMarketDataAccount.publicKey,
     optionMintKey: optionMintAccount.publicKey,
     writerTokenMintKey: writerTokenMintAccount.publicKey,
     quoteAssetPoolKey: quoteAssetPoolAccount.publicKey,

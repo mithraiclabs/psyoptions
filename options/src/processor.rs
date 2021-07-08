@@ -1,9 +1,4 @@
-use crate::{
-    error::PsyOptionsError,
-    fees,
-    instruction::OptionsInstruction,
-    market::{InitializedAccount, OptionMarket},
-};
+use crate::{error::PsyOptionsError, fees, instruction::OptionsInstruction, market::OptionMarket};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::{Clock, UnixTimestamp},
@@ -42,15 +37,15 @@ impl Processor {
         let quote_asset_mint_acct = next_account_info(account_info_iter)?;
         let option_mint_acct = next_account_info(account_info_iter)?;
         let writer_token_mint_acct = next_account_info(account_info_iter)?;
-        let option_market_acct = next_account_info(account_info_iter)?;
         let market_authority_acct = next_account_info(account_info_iter)?;
         let underlying_asset_pool_acct = next_account_info(account_info_iter)?;
         let quote_asset_pool_acct = next_account_info(account_info_iter)?;
+        // payer
         let funding_account = next_account_info(account_info_iter)?;
         let fee_owner_acct = next_account_info(account_info_iter)?;
         let mint_fee_account = next_account_info(account_info_iter)?;
         let exercise_fee_account = next_account_info(account_info_iter)?;
-        let no_duplication_acct = next_account_info(account_info_iter)?;
+        let option_market_acct = next_account_info(account_info_iter)?;
         let sys_rent_acct = next_account_info(account_info_iter)?;
         let spl_token_program_acct = next_account_info(account_info_iter)?;
         let sys_program_acct = next_account_info(account_info_iter)?;
@@ -58,9 +53,9 @@ impl Processor {
 
         let rent = &Rent::from_account_info(sys_rent_acct)?;
 
-        let mut option_market = OptionMarket::unpack_unchecked(&option_market_acct.data.borrow())?;
+        // let mut option_market = OptionMarket::unpack_unchecked(&option_market_acct.data.borrow())?;
         // check if the no_duplication_acct has already been initialized.;
-        let (no_duplication_key, no_duplication_bump) = Pubkey::find_program_address(
+        let (expected_market_key, expected_market_bump) = Pubkey::find_program_address(
             &[
                 &underlying_asset_mint_acct.key.to_bytes(),
                 &quote_asset_mint_acct.key.to_bytes(),
@@ -71,22 +66,21 @@ impl Processor {
             &program_id,
         );
 
-        if no_duplication_key != *no_duplication_acct.key {
+        if expected_market_key != *option_market_acct.key {
             return Err(PsyOptionsError::WrongDuplicationAccount.into());
         }
-        InitializedAccount::check_account_exists(&no_duplication_acct.data.borrow())?;
-        // create the account with the initialized byte
+        // create the option market account with deterministic key
         invoke_signed(
             &system_instruction::create_account(
                 funding_account.key,
-                no_duplication_acct.key,
-                1.max(rent.minimum_balance(InitializedAccount::get_packed_len())),
-                InitializedAccount::get_packed_len() as u64,
+                option_market_acct.key,
+                1.max(rent.minimum_balance(OptionMarket::LEN)),
+                OptionMarket::LEN as u64,
                 program_id,
             ),
             &[
                 funding_account.clone(),
-                no_duplication_acct.clone(),
+                option_market_acct.clone(),
                 sys_program_acct.clone(),
             ],
             &[&[
@@ -95,19 +89,10 @@ impl Processor {
                 &underlying_amount_per_contract.to_le_bytes(),
                 &quote_amount_per_contract.to_le_bytes(),
                 &expiration_unix_timestamp.to_le_bytes(),
-                &[no_duplication_bump],
+                &[expected_market_bump],
             ]],
         )?;
 
-        InitializedAccount::pack(
-            InitializedAccount { initialized: true },
-            &mut no_duplication_acct.data.borrow_mut(),
-        )?;
-
-        if option_market.initialized {
-            // if the underlying amount is non zero, then we know the market has been initialized
-            return Err(PsyOptionsError::MarketAlreadyInitialized.into());
-        }
         if quote_asset_mint_acct.key == underlying_asset_mint_acct.key {
             return Err(PsyOptionsError::QuoteAndUnderlyingAssetMustDiffer.into());
         }
@@ -218,6 +203,7 @@ impl Processor {
         )?;
 
         // Add all relevant data to the OptionMarket data account
+        let mut option_market = OptionMarket::unpack_unchecked(&option_market_acct.data.borrow())?;
         option_market.option_mint = *option_mint_acct.key;
         option_market.writer_token_mint = *writer_token_mint_acct.key;
         option_market.underlying_asset_mint = *underlying_asset_mint_acct.key;
