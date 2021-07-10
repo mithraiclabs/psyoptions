@@ -15,7 +15,7 @@ import {
   Token,
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
-import { OPTION_MARKET_LAYOUT } from './market';
+import { Market, OPTION_MARKET_LAYOUT } from './market';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { FEE_OWNER_KEY } from './fees';
 
@@ -100,27 +100,17 @@ export const initializeMarketInstruction = async ({
   quoteAmountPerContract: number;
   expirationUnixTimestamp: number;
 }): Promise<TransactionInstruction> => {
-  const NU64_LAYOUT = nu64('number');
-  const NS64_LAYOUT = ns64('number');
-  const underlyingAmountBuf = Buffer.alloc(NU64_LAYOUT.span);
-  NU64_LAYOUT.encode(underlyingAmountPerContract, underlyingAmountBuf);
-  const quoteAmountBuf = Buffer.alloc(NU64_LAYOUT.span);
-  NU64_LAYOUT.encode(quoteAmountPerContract, quoteAmountBuf);
-  const expirationBuf = Buffer.alloc(NS64_LAYOUT.span);
-  NS64_LAYOUT.encode(expirationUnixTimestamp, expirationBuf);
 
   // Generate the option market program derived address from the option
   // parameters
-  const [optionMarketKey] = await PublicKey.findProgramAddress(
-    [
-      underlyingAssetMintKey.toBuffer(),
-      quoteAssetMintKey.toBuffer(),
-      underlyingAmountBuf,
-      quoteAmountBuf,
-      expirationBuf,
-    ],
+  const [optionMarketKey, _marketBumpSeed] = await Market.getDerivedAddressFromParams({
     programId,
-  );
+    underlyingAssetMintKey,
+    quoteAssetMintKey,
+    underlyingAmountPerContract,
+    quoteAmountPerContract,
+    expirationUnixTimestamp
+  })
   // Generate the program derived address for signing transfers
   const [marketAuthorityKey, bumpSeed] = await PublicKey.findProgramAddress(
     [optionMarketKey.toBuffer()],

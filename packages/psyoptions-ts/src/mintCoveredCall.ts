@@ -17,6 +17,7 @@ import {
 import { FEE_OWNER_KEY } from './fees';
 import { INTRUCTION_TAG_LAYOUT, uint64 } from './layout';
 import { getOptionMarketData } from './utils/getOptionMarketData';
+import BN from 'bn.js';
 
 export const MINT_COVERED_CALL_LAYOUT = struct([uint64('size')]);
 
@@ -54,7 +55,7 @@ export const mintCoveredCallInstruction = async ({
   underlyingMintKey,
   underlyingAssetPoolKey,
   underlyingAssetSrcKey,
-  size = 1,
+  size = new BN(1),
 }: {
   programId: PublicKey;
   // The payer account that is funding the SOL for the TX
@@ -69,7 +70,7 @@ export const mintCoveredCallInstruction = async ({
   underlyingAssetPoolKey: PublicKey;
   optionMarketKey: PublicKey;
   authorityPubkey: PublicKey;
-  size?: number;
+  size?: BN;
 }) => {
   const mintIXBuffer = Buffer.alloc(MINT_COVERED_CALL_LAYOUT.span);
   // Generate the program derived address needed
@@ -132,7 +133,7 @@ export const mintCoveredCall = async ({
   optionMarketKey,
   writerTokenMintKey,
   writerTokenDestKey,
-  size = 1,
+  size = new BN(1),
 }: {
   connection: Connection;
   payerKey: PublicKey;
@@ -148,7 +149,7 @@ export const mintCoveredCall = async ({
   underlyingAssetPoolKey: PublicKey;
   writerTokenMintKey: PublicKey;
   writerTokenDestKey: PublicKey;
-  size?: number;
+  size?: BN;
 }) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
@@ -191,7 +192,7 @@ export const readMarketAndMintCoveredCall = async ({
   underlyingAssetAuthorityKey,
   underlyingAssetSrcKey,
   optionMarketKey,
-  size = 1,
+  size = new BN(1),
 }: {
   connection: Connection;
   payerKey: PublicKey;
@@ -202,7 +203,7 @@ export const readMarketAndMintCoveredCall = async ({
   optionMarketKey: PublicKey;
   // The OptionWriter's account that has authority over their underlying asset account
   underlyingAssetAuthorityKey: PublicKey;
-  size?: number;
+  size?: BN;
 }) => {
   const optionMarketData = await getOptionMarketData({
     connection,
