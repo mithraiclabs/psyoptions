@@ -42,7 +42,7 @@ The old program address for Devnet testing is deployed @ `{"programId":"4DvkJJBU
 
 1. Make sure you're on solana CLI >= 1.6.7 `solana-install init v1.6.7`
 2. Build the program `cargo build-bpf --manifest-path options/Cargo.toml`
-3. Set the target network `solana config set --url https://devnet.solana.com`
+3. Set the target network `solana config set --url https://api.devnet.solana.com`
 4. Deploy the program `solana program deploy --program-id $PWD/options/deployed_programs/psyoptions-devnet-beta-3-keypair.json $PWD/options/target/deploy/psyoptions.so`
 
 # Deploying the bindings to NPM
