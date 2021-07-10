@@ -39,6 +39,9 @@ export const OPTION_MARKET_LAYOUT = BufferLayout.struct([
   BufferLayout.u8('initialized'),
 ]);
 
+const NU64_LAYOUT = BufferLayout.nu64('number');
+const NS64_LAYOUT = BufferLayout.ns64('number');
+
 export class Market {
   programId: PublicKey;
 
@@ -58,6 +61,45 @@ export class Market {
       ...bufferData,
       optionMarketKey: pubkey,
     };
+  }
+
+  /**
+   * Generate the option market program derived address from the option
+   * parameters
+   */
+  static getDerivedAddressFromParams = async ({
+    programId,
+    underlyingAssetMintKey,
+    quoteAssetMintKey,
+    underlyingAmountPerContract,
+    quoteAmountPerContract,
+    expirationUnixTimestamp
+  }: {
+    programId: PublicKey;
+    underlyingAssetMintKey: PublicKey;
+    quoteAssetMintKey: PublicKey;
+    underlyingAmountPerContract: number;
+    quoteAmountPerContract: number;
+    expirationUnixTimestamp: number;
+  }) => {
+    const underlyingAmountBuf = Buffer.alloc(NU64_LAYOUT.span);
+    NU64_LAYOUT.encode(underlyingAmountPerContract, underlyingAmountBuf);
+    const quoteAmountBuf = Buffer.alloc(NU64_LAYOUT.span);
+    NU64_LAYOUT.encode(quoteAmountPerContract, quoteAmountBuf);
+    const expirationBuf = Buffer.alloc(NS64_LAYOUT.span);
+    NS64_LAYOUT.encode(expirationUnixTimestamp, expirationBuf);
+
+
+    return PublicKey.findProgramAddress(
+      [
+        underlyingAssetMintKey.toBuffer(),
+        quoteAssetMintKey.toBuffer(),
+        underlyingAmountBuf,
+        quoteAmountBuf,
+        expirationBuf,
+      ],
+      programId,
+    );
   }
 
   /**

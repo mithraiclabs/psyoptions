@@ -37,7 +37,7 @@ class BNLayout extends BufferLayout.Blob {
     return new BN(super.decode(b, offset), 10, 'le');
   }
 
-  encode(src: any, b: Buffer, offset?: number) {
+  encode(src: BN, b: Buffer, offset?: number) {
     return super.encode(src.toArrayLike(Buffer, 'le', this.span), b, offset);
   }
 }
