@@ -15,7 +15,7 @@ import {
   Token,
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
-import { Market, OPTION_MARKET_LAYOUT } from './market';
+import { Market } from './market';
 import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { FEE_OWNER_KEY } from './fees';
 
