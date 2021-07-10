@@ -6,6 +6,7 @@ import {
   Transaction,
   TransactionInstruction,
 } from '@solana/web3.js';
+import BN from 'bn.js';
 import { struct } from 'buffer-layout';
 import { INTRUCTION_TAG_LAYOUT, uint64 } from './layout';
 import { TOKEN_PROGRAM_ID } from './utils';
@@ -47,7 +48,7 @@ export const closePositionInstruction = async ({
   writerTokenSourceKey,
   writerTokenSourceAuthorityKey,
   underlyingAssetDestKey,
-  size = 1,
+  size = new BN(1),
 }: {
   programId: PublicKey;
   optionMarketKey: PublicKey;
@@ -59,7 +60,7 @@ export const closePositionInstruction = async ({
   writerTokenSourceKey: PublicKey;
   writerTokenSourceAuthorityKey: PublicKey;
   underlyingAssetDestKey: PublicKey;
-  size?: number;
+  size?: BN;
 }) => {
   const closePositionIXBuffer = Buffer.alloc(CLOSE_POSITION.span);
   // Generate the program derived address needed
@@ -114,7 +115,7 @@ export const closePosition = async ({
   writerTokenSourceKey,
   writerTokenSourceAuthorityKey,
   underlyingAssetDestKey,
-  size = 1,
+  size = new BN(1),
 }: {
   connection: Connection;
   payerKey: PublicKey;
@@ -128,7 +129,7 @@ export const closePosition = async ({
   writerTokenSourceKey: PublicKey;
   writerTokenSourceAuthorityKey: PublicKey;
   underlyingAssetDestKey: PublicKey;
-  size?: number;
+  size?: BN;
 }) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);

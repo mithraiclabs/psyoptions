@@ -7,6 +7,7 @@ import {
   Transaction,
   TransactionInstruction,
 } from '@solana/web3.js';
+import BN from 'bn.js';
 import { struct } from 'buffer-layout';
 import { INTRUCTION_TAG_LAYOUT, uint64 } from './layout';
 import { TOKEN_PROGRAM_ID } from './utils';
@@ -43,7 +44,7 @@ export const closePostExpirationCoveredCallInstruction = async ({
   writerTokenMintKey,
   writerTokenSourceAuthorityKey,
   writerTokenSourceKey,
-  size = 1,
+  size = new BN(1),
 }: {
   programId: PublicKey;
   optionMarketKey: PublicKey;
@@ -52,7 +53,7 @@ export const closePostExpirationCoveredCallInstruction = async ({
   writerTokenSourceKey: PublicKey;
   writerTokenSourceAuthorityKey: PublicKey;
   underlyingAssetDestKey: PublicKey;
-  size?: number;
+  size?: BN;
 }) => {
   const closePostExpirationIXBuffer = Buffer.alloc(
     CLOSE_POST_EXPIRATION_COVERED_CALL.span,
@@ -107,7 +108,7 @@ export const closePostExpirationCoveredCall = async ({
   writerTokenMintKey,
   writerTokenSourceAuthorityKey,
   writerTokenSourceKey,
-  size = 1,
+  size = new BN(1),
 }: {
   connection: Connection;
   payerKey: PublicKey;
@@ -119,7 +120,7 @@ export const closePostExpirationCoveredCall = async ({
   writerTokenSourceKey: PublicKey;
   writerTokenSourceAuthorityKey: PublicKey;
   underlyingAssetDestKey: PublicKey;
-  size?: number;
+  size?: BN;
 }) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
@@ -159,7 +160,7 @@ export const closePostExpirationOption = async ({
   underlyingAssetDestKey,
   writerTokenSourceAuthorityKey,
   writerTokenSourceKey,
-  size = 1,
+  size = new BN(1),
 }: {
   connection: Connection;
   payerKey: PublicKey;
@@ -168,7 +169,7 @@ export const closePostExpirationOption = async ({
   underlyingAssetDestKey: PublicKey;
   writerTokenSourceKey: PublicKey;
   writerTokenSourceAuthorityKey: PublicKey;
-  size?: number;
+  size?: BN;
 }) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);

@@ -6,6 +6,7 @@ import {
   Transaction,
   TransactionInstruction,
 } from '@solana/web3.js';
+import BN from 'bn.js';
 import { struct, u8 } from 'buffer-layout';
 import { INTRUCTION_TAG_LAYOUT, uint64 } from './layout';
 import { TOKEN_PROGRAM_ID } from './utils';
@@ -41,7 +42,7 @@ export const exchangeWriterTokenForQuoteInstruction = async ({
   writerTokenSourceAuthorityKey,
   quoteAssetDestKey,
   quoteAssetPoolKey,
-  size = 1,
+  size = new BN(1),
 }: {
   programId: PublicKey;
   optionMarketKey: PublicKey;
@@ -50,7 +51,7 @@ export const exchangeWriterTokenForQuoteInstruction = async ({
   writerTokenSourceAuthorityKey: PublicKey;
   quoteAssetDestKey: PublicKey;
   quoteAssetPoolKey: PublicKey;
-  size?: number;
+  size?: BN;
 }) => {
   const exchangeWriterTokeForQuoteIXBuffer = Buffer.alloc(
     EXCHANGE_WRITER_TOKEN_FOR_QUOTE.span,
@@ -105,7 +106,7 @@ export const exchangeWriterTokenForQuote = async ({
   writerTokenSourceAuthorityKey,
   quoteAssetDestKey,
   quoteAssetPoolKey,
-  size = 1,
+  size = new BN(1),
 }: {
   connection: Connection;
   payerKey: PublicKey;
@@ -116,7 +117,7 @@ export const exchangeWriterTokenForQuote = async ({
   writerTokenSourceAuthorityKey: PublicKey;
   quoteAssetDestKey: PublicKey;
   quoteAssetPoolKey: PublicKey;
-  size?: number;
+  size?: BN;
 }) => {
   const programPubkey =
     programId instanceof PublicKey ? programId : new PublicKey(programId);
