@@ -1,4 +1,7 @@
 module.exports = {
-  entryPoints: ['./src'],
+  entryPoints: ['./src/index.ts'],
   exclude: ['./src/types/*'],
+  excludeInternal: true,
+  excludePrivate: true,
+  readme: './README.md'
 };

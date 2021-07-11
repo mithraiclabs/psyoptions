@@ -20,7 +20,7 @@ import { INTRUCTION_TAG_LAYOUT } from './layout';
 import { FEE_OWNER_KEY } from './fees';
 
 /**
- *
+ * @internal
  * OptionsInstruction::InitializeMarket {
  *      /// The amount of the **underlying asset** that derives a single contract
  *      underlying_amount_per_contract: u64,
@@ -48,21 +48,7 @@ export const INITIALIZE_MARKET_LAYOUT = struct([
  *
  * Instruction to initialize a new option market. Strike price is determined by
  * `quote amount per contract / underlying amount per contract`
- *
- * @param programId the public key for the PsyOptions program
- * @param underlyingAssetMintKey SPL Token mint of the underlying asset
- * @param quoteAssetMintKey SPL Token mint of the quote asset
- * @param optionMintKey uninitialized SPL Token mint to be used as the Option Token mint
- * for the new option market
- * @param writerTokenMintKey uninitialized SPL Token mint to be used as the Writer Token mint
- * for the new option market
- * @param underlyingAssetPoolKey unintitialized SPL Token account to store locked underlying asset
- * @param quoteAssetPoolKey unintitialized SPL Token account to store locked quote asset
- * @param fundingAccountKey The payer account that is funding the SOL for the TX
- * @param underlyingAmountPerContract amount of underlying asset needed to mint an Option Token
- * @param quoteAmountPerContract amount of quote needed to exercise the option
- * @param expirationUnixTimestamp unix timestamp when the option market expires
- * @returns
+ * @param {object} __namedParameters
  */
 export const initializeMarketInstruction = async ({
   programId,
@@ -77,27 +63,30 @@ export const initializeMarketInstruction = async ({
   quoteAmountPerContract,
   expirationUnixTimestamp,
 }: {
-  // the deployed program account
+  /** the public key for the PsyOptions program */
   programId: PublicKey;
-  // The payer account that is funding the SOL for the TX
+  /** The payer account that is funding the SOL for the TX */
   fundingAccountKey: PublicKey;
-  // The public key of the SPL Token Mint for the underlying asset
+  /** SPL Token mint of the underlying asset */
   underlyingAssetMintKey: PublicKey;
-  // The public key of the SPL Token Mint for the quote asset
+  /** SPL Token mint of the quote asset */
   quoteAssetMintKey: PublicKey;
-  // The public key of the SPL Token Mint for the new option SPL token
+  /** uninitialized SPL Token mint to be used as the Option Token mint
+   * for the new option market */
   optionMintKey: PublicKey;
-  // The public key of the SPL Token Mint for the Writer Token
+  /** uninitialized SPL Token mint to be used as the Writer Token mint
+   * for the new option market */
   writerTokenMintKey: PublicKey;
-  // The public key for a new Account that will be the underlying asset pool
+  /** unintitialized SPL Token account to store locked underlying asset */
   underlyingAssetPoolKey: PublicKey;
-  // The public key for the new Account that will be the quote asset pool
+  /** unintitialized SPL Token account to store locked quote asset */
   quoteAssetPoolKey: PublicKey;
-  // The amount of underlying asset per contract
+  /** amount of underlying asset needed to mint an Option Token */
   underlyingAmountPerContract: number;
-  // The amount of quote asset required to swap for the underlying asset
-  // i.e. amountPerContract * strike price
+  /** The amount of quote asset required to swap for the underlying asset
+   * i.e. amountPerContract * strike price */
   quoteAmountPerContract: number;
+  /** unix timestamp (in seconds) when the option market expires */
   expirationUnixTimestamp: number;
 }): Promise<TransactionInstruction> => {
 

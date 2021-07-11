@@ -11,7 +11,7 @@
   "scripts": {
     "build": "tsc",
     "build:package": "rollup -c",
-    "generate-docs": "typedoc ./src",
+    "generate-docs": "npx typedoc ./src",
     "lint": "eslint -c .eslintrc.json --fix",
     "prepublishOnly": "rollup -c",
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -37,8 +37,7 @@
     "eslint-plugin-prettier": "^3.3.1",
     "prettier": "^2.2.1",
     "rollup-plugin-typescript2": "^0.30.0",
-    "typedoc": "^0.20.35",
-    "typedoc-plugin-markdown": "^3.6.0",
+    "typedoc": "^0.21.0",
     "typescript": "^4.1.5"
   },
   "peerDependencies": {
