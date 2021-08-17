@@ -35,6 +35,15 @@ Exploring architectures for options trading on Serum
 
 # Deploying the program
 
+## Mainnet
+
+1. Build with anchor `anchor build -p psyoptions --verifiable`
+2. Use an insecure computer to run `solana program write-buffer <target-path> --buffer <buffer-keypair>`
+3. change authority `solana program set-buffer-authority <buffer-address> --new-buffer-authority <hardware-wallet-address>`
+4. Verify the buffer binary is correct `anchor verify -p <lib-name> <buffer-address>`
+4. Switch to hardeware wallet.
+5. Deploy/upgrade with a single transaction from the hardware wallet. `solana program deploy --buffer <buffer-keypair> --program-id <program-keypair> --keypair <hardware-wallet-keypair>`
+
 ## Dev Net
 The program used for Devnet Bet is currently deployed @ `{"programId":"GDvqQy3FkDB2wyNwgZGp5YkmRMUmWbhNNWDMYKbLSZ5N"}`
 

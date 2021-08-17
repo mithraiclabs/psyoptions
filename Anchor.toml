@@ -1,0 +1,11 @@
+anchor_version = "0.13.2"
+
+[workspace]
+members = ["options"]
+
+[provider]
+cluster = "mainnet"
+wallet = "~/.config/solana/id.json"
+
+[programs.mainnet]
+psyoptions = "AAcHauRu6eUDePN3hDDAUTbgyRq5xFbRZJCLsUdpBCJb"
