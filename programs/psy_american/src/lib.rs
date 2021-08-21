@@ -7,13 +7,40 @@ pub mod psy_american {
 
     /// Initialize a new PsyOptions market
     pub fn initialize_market(
-        _ctx: Context<InitializeMarket>, 
-        _underlying_amount_per_contract: u64,
-        _quote_amount_per_contract: u64,
-        _expiration_unix_timestamp: i64,
-        _authority_bump_seed: u8,
+        ctx: Context<InitializeMarket>, 
+        underlying_amount_per_contract: u64,
+        quote_amount_per_contract: u64,
+        expiration_unix_timestamp: i64,
+        authority_bump_seed: u8,
         _bump_seed: u8
     ) -> ProgramResult {
+
+        // TODO: check that underlying_amount_per_contract and quote_amount_per_contract are not 0
+
+        // TODO: check and create the appropriate fee collection account
+
+        // TODO: Initialize the Option Mint, the SPL token that will denote an options contract
+
+        // TODO: Initialize the Writer Token Mint, the SPL token that will denote a writte options contract
+
+        // TODO: Initialize Underlying Pool Account to hold the underlying asset
+
+        // TODO: Inititlize Quote Asset Pool
+
+        // write the data to the OptionMarket account
+        let option_market = &mut ctx.accounts.option_market;
+        option_market.option_mint = *ctx.accounts.option_mint.key;
+        option_market.writer_token_mint = *ctx.accounts.writer_token_mint.key;
+        option_market.underlying_asset_mint = *ctx.accounts.underlying_asset_mint.key;
+        option_market.quote_asset_mint = *ctx.accounts.quote_asset_mint.key;
+        option_market.underlying_amount_per_contract = underlying_amount_per_contract;
+        option_market.quote_amount_per_contract = quote_amount_per_contract;
+        option_market.expiration_unix_timestamp = expiration_unix_timestamp;
+        option_market.underlying_asset_pool = *ctx.accounts.underlying_asset_pool.key;
+        option_market.quote_asset_pool = *ctx.accounts.quote_asset_pool.key;
+        option_market.mint_fee_account = *ctx.accounts.mint_fee_recipient.key;
+        option_market.exercise_fee_account = *ctx.accounts.exercise_fee_recipient.key;
+        option_market.bump_seed = authority_bump_seed;
 
         Ok(())
     }
@@ -97,6 +124,4 @@ pub struct OptionMarket {
     pub exercise_fee_account: Pubkey,
     /// Bump seed for program derived addresses
     pub bump_seed: u8,
-    /// whether the OptionMarket has been initialized or not
-    pub initialized: bool,
 }

@@ -11,9 +11,9 @@ import {
   SYSVAR_RENT_PUBKEY,
 } from "@solana/web3.js";
 import assert from "assert";
-import { OptionMarket } from "../packages/psyoptions-ts/src";
 
 import { FEE_OWNER_KEY } from "../packages/psyoptions-ts/src/fees";
+import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
 import {
   createAccountsForInitializeMarket,
   createUnderlyingAndQuoteMints,
@@ -128,31 +128,29 @@ describe("initialize", () => {
     }
 
     // Fetch the account for the newly created OptionMarket
-    // const optionMarket = (await program.account.optionMarket.fetch(
-    //   optionMarketKey
-    // )) as OptionMarket;
+    const optionMarket = (await program.account.optionMarket.fetch(
+      optionMarketKey
+    )) as OptionMarketV2;
 
-    assert.ok(true);
-
-    // assert.equal(
-    //   optionMarket.underlyingAssetMintKey.toString(),
-    //   underlyingToken.publicKey.toString()
-    // );
-    // assert.equal(
-    //   optionMarket.quoteAssetMintKey.toString(),
-    //   quoteToken.publicKey.toString()
-    // );
-    // assert.equal(
-    //   optionMarket.underlyingAssetPoolKey.toString(),
-    //   underlyingAssetPoolKey.toString()
-    // );
-    // assert.equal(
-    //   optionMarket.quoteAssetPoolKey.toString(),
-    //   quoteAssetPoolKey.toString()
-    // );
-    // assert.equal(
-    //   optionMarket.quoteAssetPoolKey.toString(),
-    //   quoteAssetPoolKey.toString()
-    // );
+    assert.equal(
+      optionMarket.underlyingAssetMint?.toString(),
+      underlyingToken.publicKey.toString()
+    );
+    assert.equal(
+      optionMarket.quoteAssetMint?.toString(),
+      quoteToken.publicKey.toString()
+    );
+    assert.equal(
+      optionMarket.underlyingAssetPool?.toString(),
+      underlyingAssetPoolKey.toString()
+    );
+    assert.equal(
+      optionMarket.quoteAssetPool?.toString(),
+      quoteAssetPoolKey.toString()
+    );
+    assert.equal(
+      optionMarket.quoteAssetPool?.toString(),
+      quoteAssetPoolKey.toString()
+    );
   });
 });
