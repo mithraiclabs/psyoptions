@@ -1,11 +1,9 @@
-anchor_version = "0.13.2"
-
-[workspace]
-members = ["options"]
+[registry]
+url = "https://anchor.projectserum.com"
 
 [provider]
-cluster = "mainnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
-[programs.mainnet]
-psyoptions = "AAcHauRu6eUDePN3hDDAUTbgyRq5xFbRZJCLsUdpBCJb"
+[scripts]
+test = "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
