@@ -19,7 +19,7 @@ import {
   createUnderlyingAndQuoteMints,
 } from "../utils/helpers";
 
-describe("initialize", () => {
+describe("initializeMarket", () => {
   // Configure the client to use the local cluster.
   const provider = anchor.Provider.env();
   const payer = anchor.web3.Keypair.generate();
@@ -33,7 +33,16 @@ describe("initialize", () => {
   let underlyingAssetPoolKey: PublicKey;
   let quoteToken: Token;
   let underlyingToken: Token;
-  before(async () => {
+  let underlyingAmountPerContract = new anchor.BN("10000000000");
+  let quoteAmountPerContract = new anchor.BN("50000000000");
+  let expiration = new anchor.BN(new Date().getTime() / 1000 + 3600);
+  let optionMarketKey: PublicKey;
+  let bumpSeed: number;
+  let marketAuthority: PublicKey;
+  let authorityBumpSeed: number;
+  let mintFeeKey: PublicKey;
+  let exerciseFeeKey: PublicKey;
+  beforeEach(async () => {
     // airdrop to the user so it has funds to use
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(payer.publicKey, 10_000_000_000),
@@ -49,20 +58,15 @@ describe("initialize", () => {
       payer,
       program.programId
     ));
+  });
 
+  it("Is initialized!", async () => {
     ({ underlyingToken, quoteToken } = await createUnderlyingAndQuoteMints(
       provider,
       payer,
       mintAuthority
     ));
-  });
-
-  it("Is initialized!", async () => {
-    const underlyingAmountPerContract = new anchor.BN("10000000000");
-    const quoteAmountPerContract = new anchor.BN("50000000000");
-    const expiration = new anchor.BN(new Date().getTime() / 1000 + 3600);
-
-    let [optionMarketKey, bumpSeed] =
+    [optionMarketKey, bumpSeed] =
       await anchor.web3.PublicKey.findProgramAddress(
         [
           underlyingToken.publicKey.toBuffer(),
@@ -74,20 +78,20 @@ describe("initialize", () => {
         program.programId
       );
 
-    let [marketAuthority, authorityBumpSeed] =
+    [marketAuthority, authorityBumpSeed] =
       await anchor.web3.PublicKey.findProgramAddress(
         [optionMarketKey.toBuffer()],
         program.programId
       );
     // Get the associated fee address
-    const mintFeeKey = await Token.getAssociatedTokenAddress(
+    mintFeeKey = await Token.getAssociatedTokenAddress(
       ASSOCIATED_TOKEN_PROGRAM_ID,
       TOKEN_PROGRAM_ID,
       underlyingToken.publicKey,
       FEE_OWNER_KEY
     );
 
-    const exerciseFeeKey = await Token.getAssociatedTokenAddress(
+    exerciseFeeKey = await Token.getAssociatedTokenAddress(
       ASSOCIATED_TOKEN_PROGRAM_ID,
       TOKEN_PROGRAM_ID,
       quoteToken.publicKey,
@@ -152,5 +156,81 @@ describe("initialize", () => {
       optionMarket.quoteAssetPool?.toString(),
       quoteAssetPoolKey.toString()
     );
+  });
+
+  describe("underlying and quote assets are the same", () => {
+    it("Should error", async () => {
+      ({ underlyingToken, quoteToken } = await createUnderlyingAndQuoteMints(
+        provider,
+        payer,
+        mintAuthority
+      ));
+      underlyingToken = quoteToken;
+      [optionMarketKey, bumpSeed] =
+        await anchor.web3.PublicKey.findProgramAddress(
+          [
+            underlyingToken.publicKey.toBuffer(),
+            underlyingToken.publicKey.toBuffer(),
+            underlyingAmountPerContract.toBuffer("le", 8),
+            quoteAmountPerContract.toBuffer("le", 8),
+            expiration.toBuffer("le", 8),
+          ],
+          program.programId
+        );
+
+      [marketAuthority, authorityBumpSeed] =
+        await anchor.web3.PublicKey.findProgramAddress(
+          [optionMarketKey.toBuffer()],
+          program.programId
+        );
+      // Get the associated fee address
+      mintFeeKey = await Token.getAssociatedTokenAddress(
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+        TOKEN_PROGRAM_ID,
+        underlyingToken.publicKey,
+        FEE_OWNER_KEY
+      );
+
+      exerciseFeeKey = await Token.getAssociatedTokenAddress(
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+        TOKEN_PROGRAM_ID,
+        quoteToken.publicKey,
+        FEE_OWNER_KEY
+      );
+      try {
+        await program.rpc.initializeMarket(
+          underlyingAmountPerContract,
+          quoteAmountPerContract,
+          expiration,
+          authorityBumpSeed,
+          bumpSeed,
+          {
+            accounts: {
+              authority: payer.publicKey,
+              underlyingAssetMint: underlyingToken.publicKey,
+              quoteAssetMint: quoteToken.publicKey,
+              optionMint: optionMintKey,
+              writerTokenMint: writerTokenMintKey,
+              quoteAssetPool: quoteAssetPoolKey,
+              underlyingAssetPool: underlyingAssetPoolKey,
+              optionMarket: optionMarketKey,
+              marketAuthority,
+              feeOwner: FEE_OWNER_KEY,
+              mintFeeRecipient: mintFeeKey,
+              exerciseFeeRecipient: exerciseFeeKey,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+              rent: SYSVAR_RENT_PUBKEY,
+              systemProgram: SystemProgram.programId,
+            },
+            signers: [payer],
+          }
+        );
+        assert.ok(false);
+      } catch (err) {
+        const errMsg = "Same quote and underlying asset, cannot create market";
+        assert.equal(err.toString(), errMsg);
+      }
+    });
   });
 });
