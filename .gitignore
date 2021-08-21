@@ -1,10 +1,7 @@
-node_modules
-target/
-*.so
-*.log
+
+.anchor
 .DS_Store
-packages/**/dist/**/*
-docs
-options/deployed_programs/*
-test-ledger/**/*
-.anchor/**
+target
+**/*.rs.bk
+**/node_modules
+test-ledger/
