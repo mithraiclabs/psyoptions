@@ -26,6 +26,8 @@ export const initializeAccountsForMarket = async ({
   writerTokenMintAccount,
   underlyingAssetPoolAccount,
   quoteAssetPoolAccount,
+  underlyingAssetMint,
+  quoteAssetMint,
 }: {
   connection: Connection;
   payerKey: PublicKey;
@@ -34,6 +36,8 @@ export const initializeAccountsForMarket = async ({
   writerTokenMintAccount: Keypair;
   underlyingAssetPoolAccount: Keypair;
   quoteAssetPoolAccount: Keypair;
+  underlyingAssetMint: PublicKey;
+  quoteAssetMint: PublicKey;
 }) => {
   const transaction = new Transaction();
 
@@ -90,6 +94,14 @@ export const initializeAccountsForMarket = async ({
       space: AccountLayout.span,
       programId: TOKEN_PROGRAM_ID,
     }),
+  );
+  transaction.add(
+    Token.createInitAccountInstruction(
+      TOKEN_PROGRAM_ID,
+      underlyingAssetMint,
+      underlyingAssetPoolAccount.publicKey,
+      optionMarketKey,
+    ),
   );
   transaction.add(
     SystemProgram.createAccount({

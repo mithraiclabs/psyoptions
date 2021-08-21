@@ -41,7 +41,7 @@ pub mod psy_american {
         option_market.underlying_amount_per_contract = underlying_amount_per_contract;
         option_market.quote_amount_per_contract = quote_amount_per_contract;
         option_market.expiration_unix_timestamp = expiration_unix_timestamp;
-        option_market.underlying_asset_pool = *ctx.accounts.underlying_asset_pool.key;
+        option_market.underlying_asset_pool = *ctx.accounts.underlying_asset_pool.to_account_info().key;
         option_market.quote_asset_pool = *ctx.accounts.quote_asset_pool.key;
         option_market.mint_fee_account = *ctx.accounts.mint_fee_recipient.key;
         option_market.exercise_fee_account = *ctx.accounts.exercise_fee_recipient.key;
@@ -70,8 +70,8 @@ pub struct InitializeMarket<'info> {
     pub writer_token_mint: CpiAccount<'info, Mint>,
     #[account(init)]
     pub quote_asset_pool: AccountInfo<'info>,
-    #[account(init)]
-    pub underlying_asset_pool: AccountInfo<'info>,
+    #[account()]
+    pub underlying_asset_pool: CpiAccount<'info, TokenAccount>,
     #[account(
         init,
         seeds = [
@@ -85,7 +85,6 @@ pub struct InitializeMarket<'info> {
         payer = authority,
     )]
     pub option_market: ProgramAccount<'info, OptionMarket>,
-    pub market_authority: AccountInfo<'info>,
     fee_owner: AccountInfo<'info>,
     #[account(mut)]
     pub mint_fee_recipient: AccountInfo<'info>,
@@ -103,6 +102,9 @@ impl<'info> InitializeMarket<'info> {
         }
         if ctx.accounts.writer_token_mint.mint_authority.unwrap() != *ctx.accounts.option_market.to_account_info().key {
             return Err(errors::PsyOptionsError::OptionMarketMustBeMintAuthority.into());
+        }
+        if ctx.accounts.underlying_asset_pool.owner != *ctx.accounts.option_market.to_account_info().key {
+            return Err(errors::PsyOptionsError::OptionMarketMustOwnUnderlyingAssetPool.into());
         }
         Ok(())
     }
