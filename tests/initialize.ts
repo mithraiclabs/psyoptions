@@ -18,6 +18,7 @@ import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
 import {
   createAccountsForInitializeMarket,
   createUnderlyingAndQuoteMints,
+  initNewTokenMint,
 } from "../utils/helpers";
 
 describe("initializeMarket", () => {
@@ -30,9 +31,9 @@ describe("initializeMarket", () => {
 
   let quoteToken: Token;
   let underlyingToken: Token;
-  let underlyingAmountPerContract = new anchor.BN("10000000000");
-  let quoteAmountPerContract = new anchor.BN("50000000000");
-  let expiration = new anchor.BN(new Date().getTime() / 1000 + 3600);
+  let underlyingAmountPerContract: anchor.BN;
+  let quoteAmountPerContract: anchor.BN;
+  let expiration: anchor.BN;
   let optionMarketKey: PublicKey;
   let bumpSeed: number;
   let marketAuthority: PublicKey;
@@ -48,6 +49,9 @@ describe("initializeMarket", () => {
     writerTokenMintAccount = new Keypair();
     underlyingAssetPoolAccount = new Keypair();
     quoteAssetPoolAccount = new Keypair();
+    underlyingAmountPerContract = new anchor.BN("10000000000");
+    quoteAmountPerContract = new anchor.BN("50000000000");
+    expiration = new anchor.BN(new Date().getTime() / 1000 + 3600);
     // airdrop to the user so it has funds to use
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(payer.publicKey, 10_000_000_000),
@@ -163,82 +167,6 @@ describe("initializeMarket", () => {
         optionMarket.quoteAssetPool?.toString(),
         quoteAssetPoolAccount.publicKey.toString()
       );
-    });
-    it("Initializes a mint fee recipient", async () => {
-      try {
-        await program.rpc.initializeMarket(
-          underlyingAmountPerContract,
-          quoteAmountPerContract,
-          expiration,
-          authorityBumpSeed,
-          bumpSeed,
-          {
-            accounts: {
-              authority: payer.publicKey,
-              underlyingAssetMint: underlyingToken.publicKey,
-              quoteAssetMint: quoteToken.publicKey,
-              optionMint: optionMintAccount.publicKey,
-              writerTokenMint: writerTokenMintAccount.publicKey,
-              quoteAssetPool: quoteAssetPoolAccount.publicKey,
-              underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
-              optionMarket: optionMarketKey,
-              marketAuthority,
-              feeOwner: FEE_OWNER_KEY,
-              mintFeeRecipient: mintFeeKey,
-              exerciseFeeRecipient: exerciseFeeKey,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-              rent: SYSVAR_RENT_PUBKEY,
-              systemProgram: SystemProgram.programId,
-            },
-            signers: [payer],
-          }
-        );
-      } catch (err) {
-        console.error(err.toString());
-        throw err;
-      }
-
-      // Fetch the mint fee account
-      const mintFeeAcct = await underlyingToken.getAccountInfo(mintFeeKey);
-      assert.ok(mintFeeAcct.owner.equals(FEE_OWNER_KEY));
-    });
-
-    it("Sets the option mint authority to the marketAuthority", async () => {
-      try {
-        await program.rpc.initializeMarket(
-          underlyingAmountPerContract,
-          quoteAmountPerContract,
-          expiration,
-          authorityBumpSeed,
-          bumpSeed,
-          {
-            accounts: {
-              authority: payer.publicKey,
-              underlyingAssetMint: underlyingToken.publicKey,
-              quoteAssetMint: quoteToken.publicKey,
-              optionMint: optionMintAccount.publicKey,
-              writerTokenMint: writerTokenMintAccount.publicKey,
-              quoteAssetPool: quoteAssetPoolAccount.publicKey,
-              underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
-              optionMarket: optionMarketKey,
-              marketAuthority,
-              feeOwner: FEE_OWNER_KEY,
-              mintFeeRecipient: mintFeeKey,
-              exerciseFeeRecipient: exerciseFeeKey,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-              rent: SYSVAR_RENT_PUBKEY,
-              systemProgram: SystemProgram.programId,
-            },
-            signers: [payer],
-          }
-        );
-      } catch (err) {
-        console.error(err.toString());
-        throw err;
-      }
-
       // Fetch the OptionToken Mint info
       const optionToken = new Token(
         provider.connection,
@@ -504,6 +432,100 @@ describe("initializeMarket", () => {
         assert.ok(false);
       } catch (err) {
         const errMsg = "Same quote and underlying asset, cannot create market";
+        assert.equal(err.toString(), errMsg);
+      }
+    });
+  });
+
+  describe("OptionToken mint authority is not the OptionMarket key", () => {
+    beforeEach(async () => {
+      ({ underlyingToken, quoteToken } = await createUnderlyingAndQuoteMints(
+        provider,
+        payer,
+        mintAuthority
+      ));
+      [optionMarketKey, bumpSeed] =
+        await anchor.web3.PublicKey.findProgramAddress(
+          [
+            underlyingToken.publicKey.toBuffer(),
+            quoteToken.publicKey.toBuffer(),
+            underlyingAmountPerContract.toBuffer("le", 8),
+            quoteAmountPerContract.toBuffer("le", 8),
+            expiration.toBuffer("le", 8),
+          ],
+          program.programId
+        );
+
+      await createAccountsForInitializeMarket(
+        provider.connection,
+        payer,
+        optionMarketKey,
+        optionMintAccount,
+        writerTokenMintAccount,
+        underlyingAssetPoolAccount,
+        quoteAssetPoolAccount
+      );
+
+      const { mintAccount } = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer
+      );
+      optionMintAccount = mintAccount;
+
+      [marketAuthority, authorityBumpSeed] =
+        await anchor.web3.PublicKey.findProgramAddress(
+          [optionMarketKey.toBuffer()],
+          program.programId
+        );
+      // Get the associated fee address
+      mintFeeKey = await Token.getAssociatedTokenAddress(
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+        TOKEN_PROGRAM_ID,
+        underlyingToken.publicKey,
+        FEE_OWNER_KEY
+      );
+
+      exerciseFeeKey = await Token.getAssociatedTokenAddress(
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+        TOKEN_PROGRAM_ID,
+        quoteToken.publicKey,
+        FEE_OWNER_KEY
+      );
+    });
+    it("should error", async () => {
+      try {
+        await program.rpc.initializeMarket(
+          underlyingAmountPerContract,
+          quoteAmountPerContract,
+          expiration,
+          authorityBumpSeed,
+          bumpSeed,
+          {
+            accounts: {
+              authority: payer.publicKey,
+              underlyingAssetMint: underlyingToken.publicKey,
+              quoteAssetMint: quoteToken.publicKey,
+              optionMint: optionMintAccount.publicKey,
+              writerTokenMint: writerTokenMintAccount.publicKey,
+              quoteAssetPool: quoteAssetPoolAccount.publicKey,
+              underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
+              optionMarket: optionMarketKey,
+              marketAuthority,
+              feeOwner: FEE_OWNER_KEY,
+              mintFeeRecipient: mintFeeKey,
+              exerciseFeeRecipient: exerciseFeeKey,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+              rent: SYSVAR_RENT_PUBKEY,
+              systemProgram: SystemProgram.programId,
+            },
+            signers: [payer],
+          }
+        );
+        assert.ok(false);
+      } catch (err) {
+        const errMsg = "OptionMarket must be the mint authority";
         assert.equal(err.toString(), errMsg);
       }
     });

@@ -57,7 +57,7 @@ export const initializeAccountsForMarket = async ({
       optionMintAccount.publicKey,
       8,
       optionMarketKey,
-      undefined,
+      null,
     ),
   );
   // Create the Option Mint Account with rent exemption
