@@ -272,6 +272,7 @@ describe("burnWriterForQuote", () => {
           optionMarketKey,
           optionToken.publicKey,
           exerciser,
+          exerciser,
           exerciserOptionAcct.publicKey,
           underlyingAssetPoolAccount.publicKey,
           exerciserUnderlyingAcct.publicKey,
