@@ -1,5 +1,10 @@
 import { Provider } from "@project-serum/anchor";
-import { MintLayout, Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import {
+  AccountLayout,
+  MintLayout,
+  Token,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 import {
   Connection,
   Keypair,
@@ -45,7 +50,9 @@ export const createAccountsForInitializeMarket = async (
   optionMintAccount: Keypair,
   writerTokenMintAccount: Keypair,
   underlyingAssetPoolAccount: Keypair,
-  quoteAssetPoolAccount: Keypair
+  quoteAssetPoolAccount: Keypair,
+  underlyingAssetMint: PublicKey,
+  quoteAssetMint: PublicKey
 ) => {
   const {
     transaction: createAccountsTx,
@@ -62,6 +69,8 @@ export const createAccountsForInitializeMarket = async (
     writerTokenMintAccount,
     underlyingAssetPoolAccount,
     quoteAssetPoolAccount,
+    underlyingAssetMint,
+    quoteAssetMint,
   });
 
   await sendAndConfirmTransaction(
@@ -123,5 +132,48 @@ export const initNewTokenMint = async (
   );
   return {
     mintAccount,
+  };
+};
+
+export const initNewTokenAccount = async (
+  connection: Connection,
+  /** The owner for the new mint account */
+  owner: PublicKey,
+  /** The SPL Token Mint address */
+  mint: PublicKey,
+  wallet: Keypair
+) => {
+  const tokenAccount = new Keypair();
+  const transaction = new Transaction();
+
+  const assetPoolRentBalance =
+    await connection.getMinimumBalanceForRentExemption(AccountLayout.span);
+  transaction.add(
+    SystemProgram.createAccount({
+      fromPubkey: wallet.publicKey,
+      newAccountPubkey: tokenAccount.publicKey,
+      lamports: assetPoolRentBalance,
+      space: AccountLayout.span,
+      programId: TOKEN_PROGRAM_ID,
+    })
+  );
+  transaction.add(
+    Token.createInitAccountInstruction(
+      TOKEN_PROGRAM_ID,
+      mint,
+      tokenAccount.publicKey,
+      owner
+    )
+  );
+  await sendAndConfirmTransaction(
+    connection,
+    transaction,
+    [wallet, tokenAccount],
+    {
+      commitment: "confirmed",
+    }
+  );
+  return {
+    tokenAccount,
   };
 };
