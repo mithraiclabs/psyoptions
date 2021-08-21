@@ -6,6 +6,7 @@ import {
 } from "@solana/spl-token";
 import {
   AccountInfo,
+  Keypair,
   PublicKey,
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
@@ -27,10 +28,6 @@ describe("initializeMarket", () => {
   anchor.setProvider(provider);
   const program = anchor.workspace.PsyAmerican as anchor.Program;
 
-  let optionMintKey: PublicKey;
-  let writerTokenMintKey: PublicKey;
-  let quoteAssetPoolKey: PublicKey;
-  let underlyingAssetPoolKey: PublicKey;
   let quoteToken: Token;
   let underlyingToken: Token;
   let underlyingAmountPerContract = new anchor.BN("10000000000");
@@ -42,22 +39,20 @@ describe("initializeMarket", () => {
   let authorityBumpSeed: number;
   let mintFeeKey: PublicKey;
   let exerciseFeeKey: PublicKey;
+  let optionMintAccount: Keypair;
+  let writerTokenMintAccount: Keypair;
+  let underlyingAssetPoolAccount: Keypair;
+  let quoteAssetPoolAccount: Keypair;
   beforeEach(async () => {
+    optionMintAccount = new Keypair();
+    writerTokenMintAccount = new Keypair();
+    underlyingAssetPoolAccount = new Keypair();
+    quoteAssetPoolAccount = new Keypair();
     // airdrop to the user so it has funds to use
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(payer.publicKey, 10_000_000_000),
       "confirmed"
     );
-    ({
-      optionMintKey,
-      writerTokenMintKey,
-      quoteAssetPoolKey,
-      underlyingAssetPoolKey,
-    } = await createAccountsForInitializeMarket(
-      provider.connection,
-      payer,
-      program.programId
-    ));
   });
 
   describe("good account setup", () => {
@@ -79,6 +74,15 @@ describe("initializeMarket", () => {
           program.programId
         );
 
+      await createAccountsForInitializeMarket(
+        provider.connection,
+        payer,
+        optionMarketKey,
+        optionMintAccount,
+        writerTokenMintAccount,
+        underlyingAssetPoolAccount,
+        quoteAssetPoolAccount
+      );
       [marketAuthority, authorityBumpSeed] =
         await anchor.web3.PublicKey.findProgramAddress(
           [optionMarketKey.toBuffer()],
@@ -112,10 +116,10 @@ describe("initializeMarket", () => {
               authority: payer.publicKey,
               underlyingAssetMint: underlyingToken.publicKey,
               quoteAssetMint: quoteToken.publicKey,
-              optionMint: optionMintKey,
-              writerTokenMint: writerTokenMintKey,
-              quoteAssetPool: quoteAssetPoolKey,
-              underlyingAssetPool: underlyingAssetPoolKey,
+              optionMint: optionMintAccount.publicKey,
+              writerTokenMint: writerTokenMintAccount.publicKey,
+              quoteAssetPool: quoteAssetPoolAccount.publicKey,
+              underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
               optionMarket: optionMarketKey,
               marketAuthority,
               feeOwner: FEE_OWNER_KEY,
@@ -149,16 +153,101 @@ describe("initializeMarket", () => {
       );
       assert.equal(
         optionMarket.underlyingAssetPool?.toString(),
-        underlyingAssetPoolKey.toString()
+        underlyingAssetPoolAccount.publicKey.toString()
       );
       assert.equal(
         optionMarket.quoteAssetPool?.toString(),
-        quoteAssetPoolKey.toString()
+        quoteAssetPoolAccount.publicKey.toString()
       );
       assert.equal(
         optionMarket.quoteAssetPool?.toString(),
-        quoteAssetPoolKey.toString()
+        quoteAssetPoolAccount.publicKey.toString()
       );
+    });
+    it("Initializes a mint fee recipient", async () => {
+      try {
+        await program.rpc.initializeMarket(
+          underlyingAmountPerContract,
+          quoteAmountPerContract,
+          expiration,
+          authorityBumpSeed,
+          bumpSeed,
+          {
+            accounts: {
+              authority: payer.publicKey,
+              underlyingAssetMint: underlyingToken.publicKey,
+              quoteAssetMint: quoteToken.publicKey,
+              optionMint: optionMintAccount.publicKey,
+              writerTokenMint: writerTokenMintAccount.publicKey,
+              quoteAssetPool: quoteAssetPoolAccount.publicKey,
+              underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
+              optionMarket: optionMarketKey,
+              marketAuthority,
+              feeOwner: FEE_OWNER_KEY,
+              mintFeeRecipient: mintFeeKey,
+              exerciseFeeRecipient: exerciseFeeKey,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+              rent: SYSVAR_RENT_PUBKEY,
+              systemProgram: SystemProgram.programId,
+            },
+            signers: [payer],
+          }
+        );
+      } catch (err) {
+        console.error(err.toString());
+        throw err;
+      }
+
+      // Fetch the mint fee account
+      const mintFeeAcct = await underlyingToken.getAccountInfo(mintFeeKey);
+      assert.ok(mintFeeAcct.owner.equals(FEE_OWNER_KEY));
+    });
+
+    it("Sets the option mint authority to the marketAuthority", async () => {
+      try {
+        await program.rpc.initializeMarket(
+          underlyingAmountPerContract,
+          quoteAmountPerContract,
+          expiration,
+          authorityBumpSeed,
+          bumpSeed,
+          {
+            accounts: {
+              authority: payer.publicKey,
+              underlyingAssetMint: underlyingToken.publicKey,
+              quoteAssetMint: quoteToken.publicKey,
+              optionMint: optionMintAccount.publicKey,
+              writerTokenMint: writerTokenMintAccount.publicKey,
+              quoteAssetPool: quoteAssetPoolAccount.publicKey,
+              underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
+              optionMarket: optionMarketKey,
+              marketAuthority,
+              feeOwner: FEE_OWNER_KEY,
+              mintFeeRecipient: mintFeeKey,
+              exerciseFeeRecipient: exerciseFeeKey,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+              rent: SYSVAR_RENT_PUBKEY,
+              systemProgram: SystemProgram.programId,
+            },
+            signers: [payer],
+          }
+        );
+      } catch (err) {
+        console.error(err.toString());
+        throw err;
+      }
+
+      // Fetch the OptionToken Mint info
+      const optionToken = new Token(
+        provider.connection,
+        optionMintAccount.publicKey,
+        TOKEN_PROGRAM_ID,
+        payer
+      );
+      const optionTokenMint = await optionToken.getMintInfo();
+      assert.ok(optionTokenMint.mintAuthority?.equals(optionMarketKey));
     });
   });
   describe("underlying asset amount <= 0", () => {
@@ -180,7 +269,15 @@ describe("initializeMarket", () => {
           ],
           program.programId
         );
-
+      await createAccountsForInitializeMarket(
+        provider.connection,
+        payer,
+        optionMarketKey,
+        optionMintAccount,
+        writerTokenMintAccount,
+        underlyingAssetPoolAccount,
+        quoteAssetPoolAccount
+      );
       [marketAuthority, authorityBumpSeed] =
         await anchor.web3.PublicKey.findProgramAddress(
           [optionMarketKey.toBuffer()],
@@ -214,10 +311,10 @@ describe("initializeMarket", () => {
               authority: payer.publicKey,
               underlyingAssetMint: underlyingToken.publicKey,
               quoteAssetMint: quoteToken.publicKey,
-              optionMint: optionMintKey,
-              writerTokenMint: writerTokenMintKey,
-              quoteAssetPool: quoteAssetPoolKey,
-              underlyingAssetPool: underlyingAssetPoolKey,
+              optionMint: optionMintAccount.publicKey,
+              writerTokenMint: writerTokenMintAccount.publicKey,
+              quoteAssetPool: quoteAssetPoolAccount.publicKey,
+              underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
               optionMarket: optionMarketKey,
               marketAuthority,
               feeOwner: FEE_OWNER_KEY,
@@ -258,7 +355,15 @@ describe("initializeMarket", () => {
           ],
           program.programId
         );
-
+      await createAccountsForInitializeMarket(
+        provider.connection,
+        payer,
+        optionMarketKey,
+        optionMintAccount,
+        writerTokenMintAccount,
+        underlyingAssetPoolAccount,
+        quoteAssetPoolAccount
+      );
       [marketAuthority, authorityBumpSeed] =
         await anchor.web3.PublicKey.findProgramAddress(
           [optionMarketKey.toBuffer()],
@@ -292,10 +397,10 @@ describe("initializeMarket", () => {
               authority: payer.publicKey,
               underlyingAssetMint: underlyingToken.publicKey,
               quoteAssetMint: quoteToken.publicKey,
-              optionMint: optionMintKey,
-              writerTokenMint: writerTokenMintKey,
-              quoteAssetPool: quoteAssetPoolKey,
-              underlyingAssetPool: underlyingAssetPoolKey,
+              optionMint: optionMintAccount.publicKey,
+              writerTokenMint: writerTokenMintAccount.publicKey,
+              quoteAssetPool: quoteAssetPoolAccount.publicKey,
+              underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
               optionMarket: optionMarketKey,
               marketAuthority,
               feeOwner: FEE_OWNER_KEY,
@@ -337,7 +442,15 @@ describe("initializeMarket", () => {
           ],
           program.programId
         );
-
+      await createAccountsForInitializeMarket(
+        provider.connection,
+        payer,
+        optionMarketKey,
+        optionMintAccount,
+        writerTokenMintAccount,
+        underlyingAssetPoolAccount,
+        quoteAssetPoolAccount
+      );
       [marketAuthority, authorityBumpSeed] =
         await anchor.web3.PublicKey.findProgramAddress(
           [optionMarketKey.toBuffer()],
@@ -371,10 +484,10 @@ describe("initializeMarket", () => {
               authority: payer.publicKey,
               underlyingAssetMint: underlyingToken.publicKey,
               quoteAssetMint: quoteToken.publicKey,
-              optionMint: optionMintKey,
-              writerTokenMint: writerTokenMintKey,
-              quoteAssetPool: quoteAssetPoolKey,
-              underlyingAssetPool: underlyingAssetPoolKey,
+              optionMint: optionMintAccount.publicKey,
+              writerTokenMint: writerTokenMintAccount.publicKey,
+              quoteAssetPool: quoteAssetPoolAccount.publicKey,
+              underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
               optionMarket: optionMarketKey,
               marketAuthority,
               feeOwner: FEE_OWNER_KEY,

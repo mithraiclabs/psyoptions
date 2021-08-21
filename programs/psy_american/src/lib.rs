@@ -37,7 +37,7 @@ pub mod psy_american {
 
         // write the data to the OptionMarket account
         let option_market = &mut ctx.accounts.option_market;
-        option_market.option_mint = *ctx.accounts.option_mint.key;
+        option_market.option_mint = *ctx.accounts.option_mint.to_account_info().key;
         option_market.writer_token_mint = *ctx.accounts.writer_token_mint.key;
         option_market.underlying_asset_mint = *ctx.accounts.underlying_asset_mint.key;
         option_market.quote_asset_mint = *ctx.accounts.quote_asset_mint.key;
@@ -67,8 +67,8 @@ pub struct InitializeMarket<'info> {
     authority: AccountInfo<'info>,
     pub underlying_asset_mint: AccountInfo<'info>,
     pub quote_asset_mint: AccountInfo<'info>,
-    #[account(init)]
-    pub option_mint: AccountInfo<'info>,
+    #[account()]
+    pub option_mint: CpiAccount<'info, Mint>,
     #[account(init)]
     pub writer_token_mint: AccountInfo<'info>,
     #[account(init)]
