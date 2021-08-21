@@ -23,7 +23,6 @@ describe("initialize", () => {
   // Configure the client to use the local cluster.
   const provider = anchor.Provider.env();
   const payer = anchor.web3.Keypair.generate();
-  console.log("*** payer", payer.publicKey.toString());
   const mintAuthority = anchor.web3.Keypair.generate();
   anchor.setProvider(provider);
   const program = anchor.workspace.PsyAmerican as anchor.Program;
@@ -111,11 +110,12 @@ describe("initialize", () => {
             quoteAssetPool: quoteAssetPoolKey,
             underlyingAssetPool: underlyingAssetPoolKey,
             optionMarket: optionMarketKey,
-            // marketAuthority,
-            // mintFeeRecipient: mintFeeKey,
-            // exerciseFeeRecipient: exerciseFeeKey,
-            // tokenProgram: TOKEN_PROGRAM_ID,
-            // associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            marketAuthority,
+            feeOwner: FEE_OWNER_KEY,
+            mintFeeRecipient: mintFeeKey,
+            exerciseFeeRecipient: exerciseFeeKey,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
             rent: SYSVAR_RENT_PUBKEY,
             systemProgram: SystemProgram.programId,
           },

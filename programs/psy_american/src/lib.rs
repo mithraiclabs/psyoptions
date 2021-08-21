@@ -53,13 +53,14 @@ pub struct InitializeMarket<'info> {
         payer = authority,
     )]
     pub option_market: ProgramAccount<'info, OptionMarket>,
-    // pub market_authority: AccountInfo<'info>,
-    // #[account(init)]
-    // pub mint_fee_recipient: AccountInfo<'info>,
-    // #[account(init)]
-    // pub exercise_fee_recipient: AccountInfo<'info>,
-    // token_program: AccountInfo<'info>,
-    // associated_token_program: AccountInfo<'info>,
+    pub market_authority: AccountInfo<'info>,
+    fee_owner: AccountInfo<'info>,
+    #[account(mut)]
+    pub mint_fee_recipient: AccountInfo<'info>,
+    #[account(mut)]
+    pub exercise_fee_recipient: AccountInfo<'info>,
+    token_program: AccountInfo<'info>,
+    associated_token_program: AccountInfo<'info>,
     rent: Sysvar<'info, Rent>,
     system_program: AccountInfo<'info>,
 }
