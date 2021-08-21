@@ -63,17 +63,18 @@ describe("initialize", () => {
     const quoteAmountPerContract = new anchor.BN("50000000000");
     const expiration = new anchor.BN(new Date().getTime() / 1000 + 3600);
 
-    let [optionMarketKey, _bumpSeed] =
+    let [optionMarketKey, bumpSeed] =
       await anchor.web3.PublicKey.findProgramAddress(
         [
           underlyingToken.publicKey.toBuffer(),
           quoteToken.publicKey.toBuffer(),
-          underlyingAmountPerContract.toBuffer(),
-          quoteAmountPerContract.toBuffer(),
-          expiration.toBuffer(),
+          underlyingAmountPerContract.toBuffer("le", 8),
+          quoteAmountPerContract.toBuffer("le", 8),
+          expiration.toBuffer("le", 8),
         ],
         program.programId
       );
+
     let [marketAuthority, authorityBumpSeed] =
       await anchor.web3.PublicKey.findProgramAddress(
         [optionMarketKey.toBuffer()],
@@ -99,6 +100,7 @@ describe("initialize", () => {
         quoteAmountPerContract,
         expiration,
         authorityBumpSeed,
+        bumpSeed,
         {
           accounts: {
             authority: payer.publicKey,
@@ -109,7 +111,7 @@ describe("initialize", () => {
             quoteAssetPool: quoteAssetPoolKey,
             underlyingAssetPool: underlyingAssetPoolKey,
             optionMarket: optionMarketKey,
-            marketAuthority,
+            // marketAuthority,
             // mintFeeRecipient: mintFeeKey,
             // exerciseFeeRecipient: exerciseFeeKey,
             // tokenProgram: TOKEN_PROGRAM_ID,

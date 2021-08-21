@@ -11,6 +11,7 @@ pub mod psy_american {
         _underlying_amount_per_contract: u64,
         _quote_amount_per_contract: u64,
         _expiration_unix_timestamp: i64,
+        _authority_bump_seed: u8,
         _bump_seed: u8
     ) -> ProgramResult {
 
@@ -23,10 +24,11 @@ pub mod psy_american {
     underlying_amount_per_contract: u64,
     quote_amount_per_contract: u64,
     expiration_unix_timestamp: i64,
+    authority_bump_seed: u8,
     bump_seed: u8
 )]
 pub struct InitializeMarket<'info> {
-    #[account(signer)]
+    #[account(mut, signer)]
     authority: AccountInfo<'info>,
     pub underlying_asset_mint: AccountInfo<'info>,
     pub quote_asset_mint: AccountInfo<'info>,
@@ -51,7 +53,7 @@ pub struct InitializeMarket<'info> {
         payer = authority,
     )]
     pub option_market: ProgramAccount<'info, OptionMarket>,
-    pub market_authority: AccountInfo<'info>,
+    // pub market_authority: AccountInfo<'info>,
     // #[account(init)]
     // pub mint_fee_recipient: AccountInfo<'info>,
     // #[account(init)]
