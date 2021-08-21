@@ -28,8 +28,6 @@ pub mod psy_american {
 
         // TODO: check and create the appropriate fee collection account
 
-        // TODO: Initialize the Writer Token Mint, the SPL token that will denote a writte options contract
-
         // TODO: Initialize Underlying Pool Account to hold the underlying asset
 
         // TODO: Inititlize Quote Asset Pool
@@ -37,7 +35,7 @@ pub mod psy_american {
         // write the data to the OptionMarket account
         let option_market = &mut ctx.accounts.option_market;
         option_market.option_mint = *ctx.accounts.option_mint.to_account_info().key;
-        option_market.writer_token_mint = *ctx.accounts.writer_token_mint.key;
+        option_market.writer_token_mint = *ctx.accounts.writer_token_mint.to_account_info().key;
         option_market.underlying_asset_mint = *ctx.accounts.underlying_asset_mint.key;
         option_market.quote_asset_mint = *ctx.accounts.quote_asset_mint.key;
         option_market.underlying_amount_per_contract = underlying_amount_per_contract;
@@ -68,8 +66,8 @@ pub struct InitializeMarket<'info> {
     pub quote_asset_mint: AccountInfo<'info>,
     #[account()]
     pub option_mint: CpiAccount<'info, Mint>,
-    #[account(init)]
-    pub writer_token_mint: AccountInfo<'info>,
+    #[account()]
+    pub writer_token_mint: CpiAccount<'info, Mint>,
     #[account(init)]
     pub quote_asset_pool: AccountInfo<'info>,
     #[account(init)]
@@ -101,6 +99,9 @@ pub struct InitializeMarket<'info> {
 impl<'info> InitializeMarket<'info> {
     fn accounts(ctx: &Context<InitializeMarket<'info>>) -> Result<(), ProgramError> {
         if ctx.accounts.option_mint.mint_authority.unwrap() != *ctx.accounts.option_market.to_account_info().key {
+            return Err(errors::PsyOptionsError::OptionMarketMustBeMintAuthority.into());
+        }
+        if ctx.accounts.writer_token_mint.mint_authority.unwrap() != *ctx.accounts.option_market.to_account_info().key {
             return Err(errors::PsyOptionsError::OptionMarketMustBeMintAuthority.into());
         }
         Ok(())
