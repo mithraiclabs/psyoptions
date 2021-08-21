@@ -60,106 +60,266 @@ describe("initializeMarket", () => {
     ));
   });
 
-  it("Is initialized!", async () => {
-    ({ underlyingToken, quoteToken } = await createUnderlyingAndQuoteMints(
-      provider,
-      payer,
-      mintAuthority
-    ));
-    [optionMarketKey, bumpSeed] =
-      await anchor.web3.PublicKey.findProgramAddress(
-        [
-          underlyingToken.publicKey.toBuffer(),
-          quoteToken.publicKey.toBuffer(),
-          underlyingAmountPerContract.toBuffer("le", 8),
-          quoteAmountPerContract.toBuffer("le", 8),
-          expiration.toBuffer("le", 8),
-        ],
-        program.programId
+  describe("good account setup", () => {
+    beforeEach(async () => {
+      ({ underlyingToken, quoteToken } = await createUnderlyingAndQuoteMints(
+        provider,
+        payer,
+        mintAuthority
+      ));
+      [optionMarketKey, bumpSeed] =
+        await anchor.web3.PublicKey.findProgramAddress(
+          [
+            underlyingToken.publicKey.toBuffer(),
+            quoteToken.publicKey.toBuffer(),
+            underlyingAmountPerContract.toBuffer("le", 8),
+            quoteAmountPerContract.toBuffer("le", 8),
+            expiration.toBuffer("le", 8),
+          ],
+          program.programId
+        );
+
+      [marketAuthority, authorityBumpSeed] =
+        await anchor.web3.PublicKey.findProgramAddress(
+          [optionMarketKey.toBuffer()],
+          program.programId
+        );
+      // Get the associated fee address
+      mintFeeKey = await Token.getAssociatedTokenAddress(
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+        TOKEN_PROGRAM_ID,
+        underlyingToken.publicKey,
+        FEE_OWNER_KEY
       );
 
-    [marketAuthority, authorityBumpSeed] =
-      await anchor.web3.PublicKey.findProgramAddress(
-        [optionMarketKey.toBuffer()],
-        program.programId
+      exerciseFeeKey = await Token.getAssociatedTokenAddress(
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+        TOKEN_PROGRAM_ID,
+        quoteToken.publicKey,
+        FEE_OWNER_KEY
       );
-    // Get the associated fee address
-    mintFeeKey = await Token.getAssociatedTokenAddress(
-      ASSOCIATED_TOKEN_PROGRAM_ID,
-      TOKEN_PROGRAM_ID,
-      underlyingToken.publicKey,
-      FEE_OWNER_KEY
-    );
+    });
+    it("Creates new OptionMarket!", async () => {
+      try {
+        await program.rpc.initializeMarket(
+          underlyingAmountPerContract,
+          quoteAmountPerContract,
+          expiration,
+          authorityBumpSeed,
+          bumpSeed,
+          {
+            accounts: {
+              authority: payer.publicKey,
+              underlyingAssetMint: underlyingToken.publicKey,
+              quoteAssetMint: quoteToken.publicKey,
+              optionMint: optionMintKey,
+              writerTokenMint: writerTokenMintKey,
+              quoteAssetPool: quoteAssetPoolKey,
+              underlyingAssetPool: underlyingAssetPoolKey,
+              optionMarket: optionMarketKey,
+              marketAuthority,
+              feeOwner: FEE_OWNER_KEY,
+              mintFeeRecipient: mintFeeKey,
+              exerciseFeeRecipient: exerciseFeeKey,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+              rent: SYSVAR_RENT_PUBKEY,
+              systemProgram: SystemProgram.programId,
+            },
+            signers: [payer],
+          }
+        );
+      } catch (err) {
+        console.error(err.toString());
+        throw err;
+      }
 
-    exerciseFeeKey = await Token.getAssociatedTokenAddress(
-      ASSOCIATED_TOKEN_PROGRAM_ID,
-      TOKEN_PROGRAM_ID,
-      quoteToken.publicKey,
-      FEE_OWNER_KEY
-    );
-    try {
-      await program.rpc.initializeMarket(
-        underlyingAmountPerContract,
-        quoteAmountPerContract,
-        expiration,
-        authorityBumpSeed,
-        bumpSeed,
-        {
-          accounts: {
-            authority: payer.publicKey,
-            underlyingAssetMint: underlyingToken.publicKey,
-            quoteAssetMint: quoteToken.publicKey,
-            optionMint: optionMintKey,
-            writerTokenMint: writerTokenMintKey,
-            quoteAssetPool: quoteAssetPoolKey,
-            underlyingAssetPool: underlyingAssetPoolKey,
-            optionMarket: optionMarketKey,
-            marketAuthority,
-            feeOwner: FEE_OWNER_KEY,
-            mintFeeRecipient: mintFeeKey,
-            exerciseFeeRecipient: exerciseFeeKey,
-            tokenProgram: TOKEN_PROGRAM_ID,
-            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-            rent: SYSVAR_RENT_PUBKEY,
-            systemProgram: SystemProgram.programId,
-          },
-          signers: [payer],
-        }
+      // Fetch the account for the newly created OptionMarket
+      const optionMarket = (await program.account.optionMarket.fetch(
+        optionMarketKey
+      )) as OptionMarketV2;
+
+      assert.equal(
+        optionMarket.underlyingAssetMint?.toString(),
+        underlyingToken.publicKey.toString()
       );
-    } catch (err) {
-      console.error(err.toString());
-      throw err;
-    }
+      assert.equal(
+        optionMarket.quoteAssetMint?.toString(),
+        quoteToken.publicKey.toString()
+      );
+      assert.equal(
+        optionMarket.underlyingAssetPool?.toString(),
+        underlyingAssetPoolKey.toString()
+      );
+      assert.equal(
+        optionMarket.quoteAssetPool?.toString(),
+        quoteAssetPoolKey.toString()
+      );
+      assert.equal(
+        optionMarket.quoteAssetPool?.toString(),
+        quoteAssetPoolKey.toString()
+      );
+    });
+  });
+  describe("underlying asset amount <= 0", () => {
+    beforeEach(async () => {
+      underlyingAmountPerContract = new anchor.BN(0);
+      ({ underlyingToken, quoteToken } = await createUnderlyingAndQuoteMints(
+        provider,
+        payer,
+        mintAuthority
+      ));
+      [optionMarketKey, bumpSeed] =
+        await anchor.web3.PublicKey.findProgramAddress(
+          [
+            underlyingToken.publicKey.toBuffer(),
+            quoteToken.publicKey.toBuffer(),
+            underlyingAmountPerContract.toBuffer("le", 8),
+            quoteAmountPerContract.toBuffer("le", 8),
+            expiration.toBuffer("le", 8),
+          ],
+          program.programId
+        );
 
-    // Fetch the account for the newly created OptionMarket
-    const optionMarket = (await program.account.optionMarket.fetch(
-      optionMarketKey
-    )) as OptionMarketV2;
+      [marketAuthority, authorityBumpSeed] =
+        await anchor.web3.PublicKey.findProgramAddress(
+          [optionMarketKey.toBuffer()],
+          program.programId
+        );
+      // Get the associated fee address
+      mintFeeKey = await Token.getAssociatedTokenAddress(
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+        TOKEN_PROGRAM_ID,
+        underlyingToken.publicKey,
+        FEE_OWNER_KEY
+      );
 
-    assert.equal(
-      optionMarket.underlyingAssetMint?.toString(),
-      underlyingToken.publicKey.toString()
-    );
-    assert.equal(
-      optionMarket.quoteAssetMint?.toString(),
-      quoteToken.publicKey.toString()
-    );
-    assert.equal(
-      optionMarket.underlyingAssetPool?.toString(),
-      underlyingAssetPoolKey.toString()
-    );
-    assert.equal(
-      optionMarket.quoteAssetPool?.toString(),
-      quoteAssetPoolKey.toString()
-    );
-    assert.equal(
-      optionMarket.quoteAssetPool?.toString(),
-      quoteAssetPoolKey.toString()
-    );
+      exerciseFeeKey = await Token.getAssociatedTokenAddress(
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+        TOKEN_PROGRAM_ID,
+        quoteToken.publicKey,
+        FEE_OWNER_KEY
+      );
+    });
+    it("Should error", async () => {
+      try {
+        await program.rpc.initializeMarket(
+          underlyingAmountPerContract,
+          quoteAmountPerContract,
+          expiration,
+          authorityBumpSeed,
+          bumpSeed,
+          {
+            accounts: {
+              authority: payer.publicKey,
+              underlyingAssetMint: underlyingToken.publicKey,
+              quoteAssetMint: quoteToken.publicKey,
+              optionMint: optionMintKey,
+              writerTokenMint: writerTokenMintKey,
+              quoteAssetPool: quoteAssetPoolKey,
+              underlyingAssetPool: underlyingAssetPoolKey,
+              optionMarket: optionMarketKey,
+              marketAuthority,
+              feeOwner: FEE_OWNER_KEY,
+              mintFeeRecipient: mintFeeKey,
+              exerciseFeeRecipient: exerciseFeeKey,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+              rent: SYSVAR_RENT_PUBKEY,
+              systemProgram: SystemProgram.programId,
+            },
+            signers: [payer],
+          }
+        );
+        assert.ok(false);
+      } catch (err) {
+        const errMsg =
+          "Quote amount and underlying amount per contract must be > 0";
+        assert.equal(err.toString(), errMsg);
+      }
+    });
+  });
+  describe("quote asset amount <= 0", () => {
+    beforeEach(async () => {
+      quoteAmountPerContract = new anchor.BN(0);
+      ({ underlyingToken, quoteToken } = await createUnderlyingAndQuoteMints(
+        provider,
+        payer,
+        mintAuthority
+      ));
+      [optionMarketKey, bumpSeed] =
+        await anchor.web3.PublicKey.findProgramAddress(
+          [
+            underlyingToken.publicKey.toBuffer(),
+            quoteToken.publicKey.toBuffer(),
+            underlyingAmountPerContract.toBuffer("le", 8),
+            quoteAmountPerContract.toBuffer("le", 8),
+            expiration.toBuffer("le", 8),
+          ],
+          program.programId
+        );
+
+      [marketAuthority, authorityBumpSeed] =
+        await anchor.web3.PublicKey.findProgramAddress(
+          [optionMarketKey.toBuffer()],
+          program.programId
+        );
+      // Get the associated fee address
+      mintFeeKey = await Token.getAssociatedTokenAddress(
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+        TOKEN_PROGRAM_ID,
+        underlyingToken.publicKey,
+        FEE_OWNER_KEY
+      );
+
+      exerciseFeeKey = await Token.getAssociatedTokenAddress(
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+        TOKEN_PROGRAM_ID,
+        quoteToken.publicKey,
+        FEE_OWNER_KEY
+      );
+    });
+    it("Should error", async () => {
+      try {
+        await program.rpc.initializeMarket(
+          underlyingAmountPerContract,
+          quoteAmountPerContract,
+          expiration,
+          authorityBumpSeed,
+          bumpSeed,
+          {
+            accounts: {
+              authority: payer.publicKey,
+              underlyingAssetMint: underlyingToken.publicKey,
+              quoteAssetMint: quoteToken.publicKey,
+              optionMint: optionMintKey,
+              writerTokenMint: writerTokenMintKey,
+              quoteAssetPool: quoteAssetPoolKey,
+              underlyingAssetPool: underlyingAssetPoolKey,
+              optionMarket: optionMarketKey,
+              marketAuthority,
+              feeOwner: FEE_OWNER_KEY,
+              mintFeeRecipient: mintFeeKey,
+              exerciseFeeRecipient: exerciseFeeKey,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+              rent: SYSVAR_RENT_PUBKEY,
+              systemProgram: SystemProgram.programId,
+            },
+            signers: [payer],
+          }
+        );
+        assert.ok(false);
+      } catch (err) {
+        const errMsg =
+          "Quote amount and underlying amount per contract must be > 0";
+        assert.equal(err.toString(), errMsg);
+      }
+    });
   });
 
   describe("underlying and quote assets are the same", () => {
-    it("Should error", async () => {
+    beforeEach(async () => {
       ({ underlyingToken, quoteToken } = await createUnderlyingAndQuoteMints(
         provider,
         payer,
@@ -197,6 +357,8 @@ describe("initializeMarket", () => {
         quoteToken.publicKey,
         FEE_OWNER_KEY
       );
+    });
+    it("Should error", async () => {
       try {
         await program.rpc.initializeMarket(
           underlyingAmountPerContract,

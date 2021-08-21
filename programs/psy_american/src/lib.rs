@@ -20,7 +20,10 @@ pub mod psy_american {
         if ctx.accounts.underlying_asset_mint.key == ctx.accounts.quote_asset_mint.key {
             return Err(errors::PsyOptionsError::QuoteAndUnderlyingAssetMustDiffer.into())
         }
-        // TODO: check that underlying_amount_per_contract and quote_amount_per_contract are not 0
+        // check that underlying_amount_per_contract and quote_amount_per_contract are not 0
+        if underlying_amount_per_contract <= 0 || quote_amount_per_contract <= 0 {
+            return Err(errors::PsyOptionsError::QuoteOrUnderlyingAmountCannotBe0.into())
+        }
 
         // TODO: check and create the appropriate fee collection account
 
