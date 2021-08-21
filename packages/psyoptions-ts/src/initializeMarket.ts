@@ -112,6 +112,14 @@ export const initializeAccountsForMarket = async ({
       programId: TOKEN_PROGRAM_ID,
     }),
   );
+  transaction.add(
+    Token.createInitAccountInstruction(
+      TOKEN_PROGRAM_ID,
+      quoteAssetMint,
+      quoteAssetPoolAccount.publicKey,
+      optionMarketKey,
+    ),
+  );
 
   const signers = [
     optionMintAccount,
