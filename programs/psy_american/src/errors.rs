@@ -6,4 +6,6 @@ pub enum PsyOptionsError {
   QuoteAndUnderlyingAssetMustDiffer,
   #[msg("Quote amount and underlying amount per contract must be > 0")]
   QuoteOrUnderlyingAmountCannotBe0,
+  #[msg("OptionMarket must be the mint authority")]
+  OptionMarketMustBeMintAuthority,
 }

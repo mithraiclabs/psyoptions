@@ -6,6 +6,7 @@ use anchor_spl::token::{Mint, TokenAccount};
 pub mod psy_american {
     use super::*;
 
+    #[access_control(InitializeMarket::accounts(&ctx))]
     /// Initialize a new PsyOptions market
     pub fn initialize_market(
         ctx: Context<InitializeMarket>, 
@@ -26,8 +27,6 @@ pub mod psy_american {
         }
 
         // TODO: check and create the appropriate fee collection account
-
-        // TODO: Initialize the Option Mint, the SPL token that will denote an options contract
 
         // TODO: Initialize the Writer Token Mint, the SPL token that will denote a writte options contract
 
@@ -98,6 +97,14 @@ pub struct InitializeMarket<'info> {
     associated_token_program: AccountInfo<'info>,
     rent: Sysvar<'info, Rent>,
     system_program: AccountInfo<'info>,
+}
+impl<'info> InitializeMarket<'info> {
+    fn accounts(ctx: &Context<InitializeMarket<'info>>) -> Result<(), ProgramError> {
+        if ctx.accounts.option_mint.mint_authority.unwrap() != *ctx.accounts.option_market.to_account_info().key {
+            return Err(errors::PsyOptionsError::OptionMarketMustBeMintAuthority.into());
+        }
+        Ok(())
+    }
 }
 
 #[account]
