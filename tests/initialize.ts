@@ -530,4 +530,97 @@ describe("initializeMarket", () => {
       }
     });
   });
+  describe("WriterToken mint authority is not the OptionMarket key", () => {
+    beforeEach(async () => {
+      ({ underlyingToken, quoteToken } = await createUnderlyingAndQuoteMints(
+        provider,
+        payer,
+        mintAuthority
+      ));
+      [optionMarketKey, bumpSeed] =
+        await anchor.web3.PublicKey.findProgramAddress(
+          [
+            underlyingToken.publicKey.toBuffer(),
+            quoteToken.publicKey.toBuffer(),
+            underlyingAmountPerContract.toBuffer("le", 8),
+            quoteAmountPerContract.toBuffer("le", 8),
+            expiration.toBuffer("le", 8),
+          ],
+          program.programId
+        );
+
+      await createAccountsForInitializeMarket(
+        provider.connection,
+        payer,
+        optionMarketKey,
+        optionMintAccount,
+        writerTokenMintAccount,
+        underlyingAssetPoolAccount,
+        quoteAssetPoolAccount
+      );
+
+      const { mintAccount } = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer
+      );
+      writerTokenMintAccount = mintAccount;
+
+      [marketAuthority, authorityBumpSeed] =
+        await anchor.web3.PublicKey.findProgramAddress(
+          [optionMarketKey.toBuffer()],
+          program.programId
+        );
+      // Get the associated fee address
+      mintFeeKey = await Token.getAssociatedTokenAddress(
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+        TOKEN_PROGRAM_ID,
+        underlyingToken.publicKey,
+        FEE_OWNER_KEY
+      );
+
+      exerciseFeeKey = await Token.getAssociatedTokenAddress(
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+        TOKEN_PROGRAM_ID,
+        quoteToken.publicKey,
+        FEE_OWNER_KEY
+      );
+    });
+    it("should error", async () => {
+      try {
+        await program.rpc.initializeMarket(
+          underlyingAmountPerContract,
+          quoteAmountPerContract,
+          expiration,
+          authorityBumpSeed,
+          bumpSeed,
+          {
+            accounts: {
+              authority: payer.publicKey,
+              underlyingAssetMint: underlyingToken.publicKey,
+              quoteAssetMint: quoteToken.publicKey,
+              optionMint: optionMintAccount.publicKey,
+              writerTokenMint: writerTokenMintAccount.publicKey,
+              quoteAssetPool: quoteAssetPoolAccount.publicKey,
+              underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
+              optionMarket: optionMarketKey,
+              marketAuthority,
+              feeOwner: FEE_OWNER_KEY,
+              mintFeeRecipient: mintFeeKey,
+              exerciseFeeRecipient: exerciseFeeKey,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+              rent: SYSVAR_RENT_PUBKEY,
+              systemProgram: SystemProgram.programId,
+            },
+            signers: [payer],
+          }
+        );
+        assert.ok(false);
+      } catch (err) {
+        const errMsg = "OptionMarket must be the mint authority";
+        assert.equal(err.toString(), errMsg);
+      }
+    });
+  });
 });

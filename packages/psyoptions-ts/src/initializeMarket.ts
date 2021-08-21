@@ -70,6 +70,15 @@ export const initializeAccountsForMarket = async ({
       programId: TOKEN_PROGRAM_ID,
     }),
   );
+  transaction.add(
+    Token.createInitMintInstruction(
+      TOKEN_PROGRAM_ID,
+      writerTokenMintAccount.publicKey,
+      8,
+      optionMarketKey,
+      null,
+    ),
+  );
 
   const assetPoolRentBalance =
     await connection.getMinimumBalanceForRentExemption(AccountLayout.span);
