@@ -10,4 +10,6 @@ pub enum PsyOptionsError {
   OptionMarketMustBeMintAuthority,
   #[msg("OptionMarket must own the underlying asset pool")]
   OptionMarketMustOwnUnderlyingAssetPool,
+  #[msg("OptionMarket must own the quote asset pool")]
+  OptionMarketMustOwnQuoteAssetPool,
 }
