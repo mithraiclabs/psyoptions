@@ -1,3 +1,4 @@
+pub mod errors;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, TokenAccount};
 
@@ -15,6 +16,10 @@ pub mod psy_american {
         _bump_seed: u8
     ) -> ProgramResult {
 
+        // check that underlying and quote are not the same asset
+        if ctx.accounts.underlying_asset_mint.key == ctx.accounts.quote_asset_mint.key {
+            return Err(errors::PsyOptionsError::QuoteAndUnderlyingAssetMustDiffer.into())
+        }
         // TODO: check that underlying_amount_per_contract and quote_amount_per_contract are not 0
 
         // TODO: check and create the appropriate fee collection account
