@@ -39,7 +39,11 @@ export const createUnderlyingAndQuoteMints = async (
 export const createAccountsForInitializeMarket = async (
   connection: Connection,
   wallet: Keypair,
-  programId: PublicKey
+  optionMarketKey: PublicKey,
+  optionMintAccount: Keypair,
+  writerTokenMintAccount: Keypair,
+  underlyingAssetPoolAccount: Keypair,
+  quoteAssetPoolAccount: Keypair
 ) => {
   const {
     transaction: createAccountsTx,
@@ -51,7 +55,11 @@ export const createAccountsForInitializeMarket = async (
   } = await initializeAccountsForMarket({
     connection,
     payerKey: wallet.publicKey,
-    programId,
+    optionMarketKey,
+    optionMintAccount,
+    writerTokenMintAccount,
+    underlyingAssetPoolAccount,
+    quoteAssetPoolAccount,
   });
 
   await sendAndConfirmTransaction(
