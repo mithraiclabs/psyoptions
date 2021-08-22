@@ -207,6 +207,14 @@ describe("initializeMarket", () => {
         optionMarket.quoteAssetPool?.toString(),
         quoteAssetPoolAccount.publicKey.toString()
       );
+      assert.equal(
+        optionMarket.mintFeeAccount?.toString(),
+        mintFeeKey?.toString()
+      );
+      assert.equal(
+        optionMarket.exerciseFeeAccount?.toString(),
+        exerciseFeeKey?.toString()
+      );
       // Fetch the OptionToken Mint info
       const optionToken = new Token(
         provider.connection,

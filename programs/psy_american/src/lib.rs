@@ -28,7 +28,7 @@ pub mod psy_american {
             return Err(errors::PsyOptionsError::QuoteOrUnderlyingAmountCannotBe0.into())
         }
 
-        validate_fee_accounts(ctx.remaining_accounts, underlying_amount_per_contract, quote_amount_per_contract)?;
+        let fee_accounts = validate_fee_accounts(ctx.remaining_accounts, underlying_amount_per_contract, quote_amount_per_contract)?;
 
         // write the data to the OptionMarket account
         let option_market = &mut ctx.accounts.option_market;
@@ -41,20 +41,29 @@ pub mod psy_american {
         option_market.expiration_unix_timestamp = expiration_unix_timestamp;
         option_market.underlying_asset_pool = *ctx.accounts.underlying_asset_pool.to_account_info().key;
         option_market.quote_asset_pool = *ctx.accounts.quote_asset_pool.to_account_info().key;
-        // option_market.mint_fee_account = *ctx.accounts.mint_fee_recipient.to_account_info().key;
-        // option_market.exercise_fee_account = *ctx.accounts.exercise_fee_recipient.key;
+        option_market.mint_fee_account = fee_accounts.mint_fee_key;
+        option_market.exercise_fee_account = fee_accounts.exercise_fee_key;
         option_market.bump_seed = authority_bump_seed;
 
         Ok(())
     }
 }
 
+
+struct FeeAccounts {
+    mint_fee_key: Pubkey,
+    exercise_fee_key: Pubkey
+}
 fn validate_fee_accounts<'info>(
     remaining_accounts: &[AccountInfo<'info>],
     underlying_amount_per_contract: u64,
     quote_amount_per_contract: u64
-) -> ProgramResult {
+) -> Result<FeeAccounts, ProgramError> {
     let account_info_iter = &mut remaining_accounts.iter();
+    let mut fee_accounts = FeeAccounts {
+        mint_fee_key: fees::fee_owner_key::ID,
+        exercise_fee_key: fees::fee_owner_key::ID,
+    };
 
     // if the mint fee account is required, check that it exists and has the proper owner
     if fees::fee_amount(underlying_amount_per_contract) > 0 {
@@ -69,6 +78,8 @@ fn validate_fee_accounts<'info>(
             return Err(errors::PsyOptionsError::MintFeeMustBeOwnedByFeeOwner.into()) 
         }
         // TODO: check that the mint fee recipient account's mint is also the underlying mint
+
+        fee_accounts.mint_fee_key = *mint_fee_recipient.key;
     }
 
     // if the exercise fee account is required, check that it exists and has the proper owner
@@ -84,8 +95,10 @@ fn validate_fee_accounts<'info>(
             return Err(errors::PsyOptionsError::ExerciseFeeMustBeOwnedByFeeOwner.into()) 
         }
         // TODO: check that the exercise fee recipient account's mint is also the quote mint
+
+        fee_accounts.exercise_fee_key = *exercise_fee_recipient.key;
     }
-    Ok(())
+    Ok(fee_accounts)
 }
 
 #[derive(Accounts)]
