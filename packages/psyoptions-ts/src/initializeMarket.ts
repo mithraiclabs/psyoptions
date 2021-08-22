@@ -7,10 +7,13 @@ import {
 } from '@solana/web3.js';
 import {
   AccountLayout,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
   MintLayout,
   Token,
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
+import BN from 'bn.js';
+import { feeAmount, FEE_OWNER_KEY } from './fees';
 
 /**
  * Generate and initialize the Accounts to be used for the new option market.
@@ -26,8 +29,10 @@ export const initializeAccountsForMarket = async ({
   writerTokenMintAccount,
   underlyingAssetPoolAccount,
   quoteAssetPoolAccount,
-  underlyingAssetMint,
-  quoteAssetMint,
+  underlyingToken,
+  quoteToken,
+  mintFeeKey,
+  exerciseFeeKey,
 }: {
   connection: Connection;
   payerKey: PublicKey;
@@ -36,8 +41,10 @@ export const initializeAccountsForMarket = async ({
   writerTokenMintAccount: Keypair;
   underlyingAssetPoolAccount: Keypair;
   quoteAssetPoolAccount: Keypair;
-  underlyingAssetMint: PublicKey;
-  quoteAssetMint: PublicKey;
+  underlyingToken: Token;
+  quoteToken: Token;
+  mintFeeKey: PublicKey | null;
+  exerciseFeeKey: PublicKey | null;
 }) => {
   const transaction = new Transaction();
 
@@ -98,7 +105,7 @@ export const initializeAccountsForMarket = async ({
   transaction.add(
     Token.createInitAccountInstruction(
       TOKEN_PROGRAM_ID,
-      underlyingAssetMint,
+      underlyingToken.publicKey,
       underlyingAssetPoolAccount.publicKey,
       optionMarketKey,
     ),
@@ -115,11 +122,34 @@ export const initializeAccountsForMarket = async ({
   transaction.add(
     Token.createInitAccountInstruction(
       TOKEN_PROGRAM_ID,
-      quoteAssetMint,
+      quoteToken.publicKey,
       quoteAssetPoolAccount.publicKey,
       optionMarketKey,
     ),
   );
+
+  // Create the mint fee account if the key was passed in
+  if (mintFeeKey) {
+    const ix = await getOrAddAssociatedTokenAccountTx(
+      mintFeeKey,
+      underlyingToken,
+      payerKey,
+    );
+    if (ix) {
+      transaction.add(ix);
+    }
+  }
+  // Create the exercise fee account if it is required && it does not exist yet
+  if (exerciseFeeKey) {
+    const ix = await getOrAddAssociatedTokenAccountTx(
+      exerciseFeeKey,
+      quoteToken,
+      payerKey,
+    );
+    if (ix) {
+      transaction.add(ix);
+    }
+  }
 
   const signers = [
     optionMintAccount,
@@ -136,4 +166,40 @@ export const initializeAccountsForMarket = async ({
     quoteAssetPoolKey: quoteAssetPoolAccount.publicKey,
     underlyingAssetPoolKey: underlyingAssetPoolAccount.publicKey,
   };
+};
+
+const getOrAddAssociatedTokenAccountTx = async (
+  associatedAddress: PublicKey,
+  token: Token,
+  payer: PublicKey,
+) => {
+  // This is the optimum logic, considering TX fee, client-side computation,
+  // RPC roundtrips and guaranteed idempotent.
+  // Sadly we can't do this atomically;
+  try {
+    await token.getAccountInfo(associatedAddress);
+    return null;
+  } catch (err) {
+    // INVALID_ACCOUNT_OWNER can be possible if the associatedAddress has
+    // already been received some lamports (= became system accounts).
+    // Assuming program derived addressing is safe, this is the only case
+    // for the INVALID_ACCOUNT_OWNER in this code-path
+    if (
+      err.message === 'Failed to find account' ||
+      err.message === 'Invalid account owner'
+    ) {
+      // as this isn't atomic, it's possible others can create associated
+      // accounts meanwhile
+      return Token.createAssociatedTokenAccountInstruction(
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+        TOKEN_PROGRAM_ID,
+        token.publicKey,
+        associatedAddress,
+        FEE_OWNER_KEY,
+        payer,
+      );
+    } else {
+      throw err;
+    }
+  }
 };

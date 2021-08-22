@@ -12,4 +12,10 @@ pub enum PsyOptionsError {
   OptionMarketMustOwnUnderlyingAssetPool,
   #[msg("OptionMarket must own the quote asset pool")]
   OptionMarketMustOwnQuoteAssetPool,
+  #[msg("Stop trying to spoof the SPL Token program! Shame on you")]
+  ExpectedSPLTokenProgramId,
+  #[msg("Mint fee account must be owned by the FEE_OWNER")]
+  MintFeeMustBeOwnedByFeeOwner,
+  #[msg("Exercise fee account must be owned by the FEE_OWNER")]
+  ExerciseFeeMustBeOwnedByFeeOwner,
 }
