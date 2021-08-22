@@ -11,8 +11,10 @@ import {
   PublicKey,
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
+  TransactionInstruction,
 } from "@solana/web3.js";
 import assert from "assert";
+import { getOrAddAssociatedTokenAccountTx } from "../packages/psyoptions-ts/src";
 
 import { feeAmount, FEE_OWNER_KEY } from "../packages/psyoptions-ts/src/fees";
 import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
@@ -46,6 +48,7 @@ describe("initializeMarket", () => {
   let underlyingAssetPoolAccount: Keypair;
   let quoteAssetPoolAccount: Keypair;
   let remainingAccounts: AccountMeta[] = [];
+  let instructions: TransactionInstruction[] = [];
   beforeEach(async () => {
     optionMintAccount = new Keypair();
     writerTokenMintAccount = new Keypair();
@@ -55,6 +58,7 @@ describe("initializeMarket", () => {
     quoteAmountPerContract = new anchor.BN("50000000000");
     expiration = new anchor.BN(new Date().getTime() / 1000 + 3600);
     remainingAccounts = [];
+    instructions = [];
     // airdrop to the user so it has funds to use
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(payer.publicKey, 10_000_000_000),
@@ -64,67 +68,85 @@ describe("initializeMarket", () => {
 
   describe("good account setup", () => {
     beforeEach(async () => {
-      ({ underlyingToken, quoteToken } = await createUnderlyingAndQuoteMints(
-        provider,
-        payer,
-        mintAuthority
-      ));
-      [optionMarketKey, bumpSeed] =
-        await anchor.web3.PublicKey.findProgramAddress(
-          [
-            underlyingToken.publicKey.toBuffer(),
-            quoteToken.publicKey.toBuffer(),
-            underlyingAmountPerContract.toBuffer("le", 8),
-            quoteAmountPerContract.toBuffer("le", 8),
-            expiration.toBuffer("le", 8),
-          ],
-          program.programId
-        );
+      try {
+        ({ underlyingToken, quoteToken } = await createUnderlyingAndQuoteMints(
+          provider,
+          payer,
+          mintAuthority
+        ));
+        [optionMarketKey, bumpSeed] =
+          await anchor.web3.PublicKey.findProgramAddress(
+            [
+              underlyingToken.publicKey.toBuffer(),
+              quoteToken.publicKey.toBuffer(),
+              underlyingAmountPerContract.toBuffer("le", 8),
+              quoteAmountPerContract.toBuffer("le", 8),
+              expiration.toBuffer("le", 8),
+            ],
+            program.programId
+          );
 
-      // Get the associated fee address if the market requires a fee
-      const mintFee = feeAmount(underlyingAmountPerContract);
-      if (mintFee.gtn(0)) {
-        mintFeeKey = await Token.getAssociatedTokenAddress(
-          ASSOCIATED_TOKEN_PROGRAM_ID,
-          TOKEN_PROGRAM_ID,
-          underlyingToken.publicKey,
-          FEE_OWNER_KEY
+        // Get the associated fee address if the market requires a fee
+        const mintFee = feeAmount(underlyingAmountPerContract);
+        if (mintFee.gtn(0)) {
+          mintFeeKey = await Token.getAssociatedTokenAddress(
+            ASSOCIATED_TOKEN_PROGRAM_ID,
+            TOKEN_PROGRAM_ID,
+            underlyingToken.publicKey,
+            FEE_OWNER_KEY
+          );
+          remainingAccounts.push({
+            pubkey: mintFeeKey,
+            isWritable: false,
+            isSigner: false,
+          });
+          const ix = await getOrAddAssociatedTokenAccountTx(
+            mintFeeKey,
+            underlyingToken,
+            payer.publicKey
+          );
+          if (ix) {
+            instructions.push(ix);
+          }
+        }
+
+        const exerciseFee = feeAmount(quoteAmountPerContract);
+        if (exerciseFee.gtn(0)) {
+          exerciseFeeKey = await Token.getAssociatedTokenAddress(
+            ASSOCIATED_TOKEN_PROGRAM_ID,
+            TOKEN_PROGRAM_ID,
+            quoteToken.publicKey,
+            FEE_OWNER_KEY
+          );
+          remainingAccounts.push({
+            pubkey: exerciseFeeKey,
+            isWritable: false,
+            isSigner: false,
+          });
+          const ix = await getOrAddAssociatedTokenAccountTx(
+            exerciseFeeKey,
+            quoteToken,
+            payer.publicKey
+          );
+          if (ix) {
+            instructions.push(ix);
+          }
+        }
+
+        await createAccountsForInitializeMarket(
+          provider.connection,
+          payer,
+          optionMarketKey,
+          optionMintAccount,
+          writerTokenMintAccount,
+          underlyingAssetPoolAccount,
+          quoteAssetPoolAccount,
+          underlyingToken,
+          quoteToken
         );
-        remainingAccounts.push({
-          pubkey: mintFeeKey,
-          isWritable: false,
-          isSigner: false,
-        });
+      } catch (error) {
+        console.error(error);
       }
-
-      const exerciseFee = feeAmount(quoteAmountPerContract);
-      if (exerciseFee.gtn(0)) {
-        exerciseFeeKey = await Token.getAssociatedTokenAddress(
-          ASSOCIATED_TOKEN_PROGRAM_ID,
-          TOKEN_PROGRAM_ID,
-          quoteToken.publicKey,
-          FEE_OWNER_KEY
-        );
-        remainingAccounts.push({
-          pubkey: exerciseFeeKey,
-          isWritable: false,
-          isSigner: false,
-        });
-      }
-
-      await createAccountsForInitializeMarket(
-        provider.connection,
-        payer,
-        optionMarketKey,
-        optionMintAccount,
-        writerTokenMintAccount,
-        underlyingAssetPoolAccount,
-        quoteAssetPoolAccount,
-        underlyingToken,
-        quoteToken,
-        mintFeeKey,
-        exerciseFeeKey
-      );
     });
     it("Creates new OptionMarket!", async () => {
       try {
@@ -152,6 +174,7 @@ describe("initializeMarket", () => {
             },
             remainingAccounts,
             signers: [payer],
+            instructions,
           }
         );
       } catch (err) {
@@ -229,6 +252,14 @@ describe("initializeMarket", () => {
           isWritable: false,
           isSigner: false,
         });
+        const ix = await getOrAddAssociatedTokenAccountTx(
+          mintFeeKey,
+          underlyingToken,
+          payer.publicKey
+        );
+        if (ix) {
+          instructions.push(ix);
+        }
       }
 
       const exerciseFee = feeAmount(quoteAmountPerContract);
@@ -244,6 +275,14 @@ describe("initializeMarket", () => {
           isWritable: false,
           isSigner: false,
         });
+        const ix = await getOrAddAssociatedTokenAccountTx(
+          exerciseFeeKey,
+          quoteToken,
+          payer.publicKey
+        );
+        if (ix) {
+          instructions.push(ix);
+        }
       }
 
       await createAccountsForInitializeMarket(
@@ -255,9 +294,7 @@ describe("initializeMarket", () => {
         underlyingAssetPoolAccount,
         quoteAssetPoolAccount,
         underlyingToken,
-        quoteToken,
-        mintFeeKey,
-        exerciseFeeKey
+        quoteToken
       );
     });
     it("Should error", async () => {
@@ -286,6 +323,7 @@ describe("initializeMarket", () => {
             },
             remainingAccounts,
             signers: [payer],
+            instructions,
           }
         );
         assert.ok(false);
@@ -330,6 +368,14 @@ describe("initializeMarket", () => {
           isWritable: false,
           isSigner: false,
         });
+        const ix = await getOrAddAssociatedTokenAccountTx(
+          mintFeeKey,
+          underlyingToken,
+          payer.publicKey
+        );
+        if (ix) {
+          instructions.push(ix);
+        }
       }
 
       const exerciseFee = feeAmount(quoteAmountPerContract);
@@ -345,6 +391,14 @@ describe("initializeMarket", () => {
           isWritable: false,
           isSigner: false,
         });
+        const ix = await getOrAddAssociatedTokenAccountTx(
+          exerciseFeeKey,
+          quoteToken,
+          payer.publicKey
+        );
+        if (ix) {
+          instructions.push(ix);
+        }
       }
 
       await createAccountsForInitializeMarket(
@@ -356,9 +410,7 @@ describe("initializeMarket", () => {
         underlyingAssetPoolAccount,
         quoteAssetPoolAccount,
         underlyingToken,
-        quoteToken,
-        mintFeeKey,
-        exerciseFeeKey
+        quoteToken
       );
     });
     it("Should error", async () => {
@@ -386,6 +438,8 @@ describe("initializeMarket", () => {
               systemProgram: SystemProgram.programId,
             },
             signers: [payer],
+            remainingAccounts,
+            instructions,
           }
         );
         assert.ok(false);
@@ -417,37 +471,6 @@ describe("initializeMarket", () => {
           program.programId
         );
 
-      // Get the associated fee address if the market requires a fee
-      const mintFee = feeAmount(underlyingAmountPerContract);
-      if (mintFee.gtn(0)) {
-        mintFeeKey = await Token.getAssociatedTokenAddress(
-          ASSOCIATED_TOKEN_PROGRAM_ID,
-          TOKEN_PROGRAM_ID,
-          underlyingToken.publicKey,
-          FEE_OWNER_KEY
-        );
-        remainingAccounts.push({
-          pubkey: mintFeeKey,
-          isWritable: false,
-          isSigner: false,
-        });
-      }
-
-      const exerciseFee = feeAmount(quoteAmountPerContract);
-      if (exerciseFee.gtn(0)) {
-        exerciseFeeKey = await Token.getAssociatedTokenAddress(
-          ASSOCIATED_TOKEN_PROGRAM_ID,
-          TOKEN_PROGRAM_ID,
-          quoteToken.publicKey,
-          FEE_OWNER_KEY
-        );
-        remainingAccounts.push({
-          pubkey: exerciseFeeKey,
-          isWritable: false,
-          isSigner: false,
-        });
-      }
-
       await createAccountsForInitializeMarket(
         provider.connection,
         payer,
@@ -457,9 +480,7 @@ describe("initializeMarket", () => {
         underlyingAssetPoolAccount,
         quoteAssetPoolAccount,
         underlyingToken,
-        quoteToken,
-        mintFeeKey,
-        exerciseFeeKey
+        quoteToken
       );
     });
     it("Should error", async () => {
@@ -530,6 +551,14 @@ describe("initializeMarket", () => {
           isWritable: false,
           isSigner: false,
         });
+        const ix = await getOrAddAssociatedTokenAccountTx(
+          mintFeeKey,
+          underlyingToken,
+          payer.publicKey
+        );
+        if (ix) {
+          instructions.push(ix);
+        }
       }
 
       const exerciseFee = feeAmount(quoteAmountPerContract);
@@ -545,6 +574,14 @@ describe("initializeMarket", () => {
           isWritable: false,
           isSigner: false,
         });
+        const ix = await getOrAddAssociatedTokenAccountTx(
+          exerciseFeeKey,
+          quoteToken,
+          payer.publicKey
+        );
+        if (ix) {
+          instructions.push(ix);
+        }
       }
 
       await createAccountsForInitializeMarket(
@@ -556,9 +593,7 @@ describe("initializeMarket", () => {
         underlyingAssetPoolAccount,
         quoteAssetPoolAccount,
         underlyingToken,
-        quoteToken,
-        mintFeeKey,
-        exerciseFeeKey
+        quoteToken
       );
       const { mintAccount } = await initNewTokenMint(
         provider.connection,
@@ -592,6 +627,8 @@ describe("initializeMarket", () => {
               systemProgram: SystemProgram.programId,
             },
             signers: [payer],
+            remainingAccounts,
+            instructions,
           }
         );
         assert.ok(false);
@@ -634,6 +671,14 @@ describe("initializeMarket", () => {
           isWritable: false,
           isSigner: false,
         });
+        const ix = await getOrAddAssociatedTokenAccountTx(
+          mintFeeKey,
+          underlyingToken,
+          payer.publicKey
+        );
+        if (ix) {
+          instructions.push(ix);
+        }
       }
 
       const exerciseFee = feeAmount(quoteAmountPerContract);
@@ -649,6 +694,14 @@ describe("initializeMarket", () => {
           isWritable: false,
           isSigner: false,
         });
+        const ix = await getOrAddAssociatedTokenAccountTx(
+          exerciseFeeKey,
+          quoteToken,
+          payer.publicKey
+        );
+        if (ix) {
+          instructions.push(ix);
+        }
       }
 
       await createAccountsForInitializeMarket(
@@ -660,9 +713,7 @@ describe("initializeMarket", () => {
         underlyingAssetPoolAccount,
         quoteAssetPoolAccount,
         underlyingToken,
-        quoteToken,
-        mintFeeKey,
-        exerciseFeeKey
+        quoteToken
       );
 
       const { mintAccount } = await initNewTokenMint(
@@ -697,6 +748,8 @@ describe("initializeMarket", () => {
               systemProgram: SystemProgram.programId,
             },
             signers: [payer],
+            remainingAccounts,
+            instructions,
           }
         );
         assert.ok(false);
@@ -740,6 +793,14 @@ describe("initializeMarket", () => {
           isWritable: false,
           isSigner: false,
         });
+        const ix = await getOrAddAssociatedTokenAccountTx(
+          mintFeeKey,
+          underlyingToken,
+          payer.publicKey
+        );
+        if (ix) {
+          instructions.push(ix);
+        }
       }
 
       const exerciseFee = feeAmount(quoteAmountPerContract);
@@ -755,6 +816,14 @@ describe("initializeMarket", () => {
           isWritable: false,
           isSigner: false,
         });
+        const ix = await getOrAddAssociatedTokenAccountTx(
+          exerciseFeeKey,
+          quoteToken,
+          payer.publicKey
+        );
+        if (ix) {
+          instructions.push(ix);
+        }
       }
 
       await createAccountsForInitializeMarket(
@@ -766,9 +835,7 @@ describe("initializeMarket", () => {
         underlyingAssetPoolAccount,
         quoteAssetPoolAccount,
         underlyingToken,
-        quoteToken,
-        mintFeeKey,
-        exerciseFeeKey
+        quoteToken
       );
       // Create a new token account and set it as the underlyingAssetPoolAccount
       const { tokenAccount } = await initNewTokenAccount(
@@ -804,6 +871,8 @@ describe("initializeMarket", () => {
               systemProgram: SystemProgram.programId,
             },
             signers: [payer],
+            remainingAccounts,
+            instructions,
           }
         );
         assert.ok(false);
@@ -845,6 +914,14 @@ describe("initializeMarket", () => {
           isWritable: false,
           isSigner: false,
         });
+        const ix = await getOrAddAssociatedTokenAccountTx(
+          mintFeeKey,
+          underlyingToken,
+          payer.publicKey
+        );
+        if (ix) {
+          instructions.push(ix);
+        }
       }
 
       const exerciseFee = feeAmount(quoteAmountPerContract);
@@ -860,6 +937,14 @@ describe("initializeMarket", () => {
           isWritable: false,
           isSigner: false,
         });
+        const ix = await getOrAddAssociatedTokenAccountTx(
+          exerciseFeeKey,
+          quoteToken,
+          payer.publicKey
+        );
+        if (ix) {
+          instructions.push(ix);
+        }
       }
 
       await createAccountsForInitializeMarket(
@@ -871,9 +956,7 @@ describe("initializeMarket", () => {
         underlyingAssetPoolAccount,
         quoteAssetPoolAccount,
         underlyingToken,
-        quoteToken,
-        mintFeeKey,
-        exerciseFeeKey
+        quoteToken
       );
       // Create a new token account and set it as the underlyingAssetPoolAccount
       const { tokenAccount } = await initNewTokenAccount(
@@ -909,6 +992,8 @@ describe("initializeMarket", () => {
               systemProgram: SystemProgram.programId,
             },
             signers: [payer],
+            remainingAccounts,
+            instructions,
           }
         );
         assert.ok(false);
@@ -947,13 +1032,22 @@ describe("initializeMarket", () => {
             ASSOCIATED_TOKEN_PROGRAM_ID,
             TOKEN_PROGRAM_ID,
             underlyingToken.publicKey,
-            FEE_OWNER_KEY
+            payer.publicKey
           );
           remainingAccounts.push({
             pubkey: mintFeeKey,
             isWritable: false,
             isSigner: false,
           });
+          const ix = await getOrAddAssociatedTokenAccountTx(
+            mintFeeKey,
+            underlyingToken,
+            payer.publicKey,
+            payer.publicKey
+          );
+          if (ix) {
+            instructions.push(ix);
+          }
         }
 
         const exerciseFee = feeAmount(quoteAmountPerContract);
@@ -969,6 +1063,14 @@ describe("initializeMarket", () => {
             isWritable: false,
             isSigner: false,
           });
+          const ix = await getOrAddAssociatedTokenAccountTx(
+            exerciseFeeKey,
+            quoteToken,
+            payer.publicKey
+          );
+          if (ix) {
+            instructions.push(ix);
+          }
         }
 
         await createAccountsForInitializeMarket(
@@ -980,9 +1082,7 @@ describe("initializeMarket", () => {
           underlyingAssetPoolAccount,
           quoteAssetPoolAccount,
           underlyingToken,
-          quoteToken,
-          mintFeeKey,
-          exerciseFeeKey
+          quoteToken
         );
       });
       it("should error", async () => {
@@ -1010,11 +1110,13 @@ describe("initializeMarket", () => {
                 systemProgram: SystemProgram.programId,
               },
               signers: [payer],
+              remainingAccounts,
+              instructions,
             }
           );
           assert.ok(false);
         } catch (err) {
-          const errMsg = "FeeOwner must own the mint fee account";
+          const errMsg = "Mint fee account must be owned by the FEE_OWNER";
           assert.equal(err.toString(), errMsg);
         }
       });

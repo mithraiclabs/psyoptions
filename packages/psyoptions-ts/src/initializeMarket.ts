@@ -12,8 +12,7 @@ import {
   Token,
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
-import BN from 'bn.js';
-import { feeAmount, FEE_OWNER_KEY } from './fees';
+import { FEE_OWNER_KEY } from './fees';
 
 /**
  * Generate and initialize the Accounts to be used for the new option market.
@@ -31,8 +30,6 @@ export const initializeAccountsForMarket = async ({
   quoteAssetPoolAccount,
   underlyingToken,
   quoteToken,
-  mintFeeKey,
-  exerciseFeeKey,
 }: {
   connection: Connection;
   payerKey: PublicKey;
@@ -43,8 +40,6 @@ export const initializeAccountsForMarket = async ({
   quoteAssetPoolAccount: Keypair;
   underlyingToken: Token;
   quoteToken: Token;
-  mintFeeKey: PublicKey | null;
-  exerciseFeeKey: PublicKey | null;
 }) => {
   const transaction = new Transaction();
 
@@ -128,29 +123,6 @@ export const initializeAccountsForMarket = async ({
     ),
   );
 
-  // Create the mint fee account if the key was passed in
-  if (mintFeeKey) {
-    const ix = await getOrAddAssociatedTokenAccountTx(
-      mintFeeKey,
-      underlyingToken,
-      payerKey,
-    );
-    if (ix) {
-      transaction.add(ix);
-    }
-  }
-  // Create the exercise fee account if it is required && it does not exist yet
-  if (exerciseFeeKey) {
-    const ix = await getOrAddAssociatedTokenAccountTx(
-      exerciseFeeKey,
-      quoteToken,
-      payerKey,
-    );
-    if (ix) {
-      transaction.add(ix);
-    }
-  }
-
   const signers = [
     optionMintAccount,
     writerTokenMintAccount,
@@ -168,10 +140,11 @@ export const initializeAccountsForMarket = async ({
   };
 };
 
-const getOrAddAssociatedTokenAccountTx = async (
+export const getOrAddAssociatedTokenAccountTx = async (
   associatedAddress: PublicKey,
   token: Token,
   payer: PublicKey,
+  owner: PublicKey = FEE_OWNER_KEY,
 ) => {
   // This is the optimum logic, considering TX fee, client-side computation,
   // RPC roundtrips and guaranteed idempotent.
@@ -195,7 +168,7 @@ const getOrAddAssociatedTokenAccountTx = async (
         TOKEN_PROGRAM_ID,
         token.publicKey,
         associatedAddress,
-        FEE_OWNER_KEY,
+        owner,
         payer,
       );
     } else {

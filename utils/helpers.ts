@@ -52,9 +52,7 @@ export const createAccountsForInitializeMarket = async (
   underlyingAssetPoolAccount: Keypair,
   quoteAssetPoolAccount: Keypair,
   underlyingToken: Token,
-  quoteToken: Token,
-  mintFeeKey: PublicKey | null,
-  exerciseFeeKey: PublicKey | null
+  quoteToken: Token
 ) => {
   const {
     transaction: createAccountsTx,
@@ -73,8 +71,6 @@ export const createAccountsForInitializeMarket = async (
     quoteAssetPoolAccount,
     underlyingToken,
     quoteToken,
-    mintFeeKey,
-    exerciseFeeKey,
   });
 
   try {
