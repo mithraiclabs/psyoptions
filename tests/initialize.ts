@@ -1122,4 +1122,122 @@ describe("initializeMarket", () => {
       });
     });
   });
+  describe("exercise fee is required based on quote assets per contract", () => {
+    describe("Exercise fee owner is incorrect", () => {
+      beforeEach(async () => {
+        quoteAmountPerContract = new anchor.BN("50000000000");
+        ({ underlyingToken, quoteToken } = await createUnderlyingAndQuoteMints(
+          provider,
+          payer,
+          mintAuthority
+        ));
+        [optionMarketKey, bumpSeed] =
+          await anchor.web3.PublicKey.findProgramAddress(
+            [
+              underlyingToken.publicKey.toBuffer(),
+              quoteToken.publicKey.toBuffer(),
+              underlyingAmountPerContract.toBuffer("le", 8),
+              quoteAmountPerContract.toBuffer("le", 8),
+              expiration.toBuffer("le", 8),
+            ],
+            program.programId
+          );
+
+        // Get the associated fee address if the market requires a fee
+        const mintFee = feeAmount(underlyingAmountPerContract);
+        if (mintFee.gtn(0)) {
+          mintFeeKey = await Token.getAssociatedTokenAddress(
+            ASSOCIATED_TOKEN_PROGRAM_ID,
+            TOKEN_PROGRAM_ID,
+            underlyingToken.publicKey,
+            FEE_OWNER_KEY
+          );
+          remainingAccounts.push({
+            pubkey: mintFeeKey,
+            isWritable: false,
+            isSigner: false,
+          });
+          const ix = await getOrAddAssociatedTokenAccountTx(
+            mintFeeKey,
+            underlyingToken,
+            payer.publicKey
+          );
+          if (ix) {
+            instructions.push(ix);
+          }
+        }
+
+        const exerciseFee = feeAmount(quoteAmountPerContract);
+        if (exerciseFee.gtn(0)) {
+          exerciseFeeKey = await Token.getAssociatedTokenAddress(
+            ASSOCIATED_TOKEN_PROGRAM_ID,
+            TOKEN_PROGRAM_ID,
+            quoteToken.publicKey,
+            payer.publicKey
+          );
+          remainingAccounts.push({
+            pubkey: exerciseFeeKey,
+            isWritable: false,
+            isSigner: false,
+          });
+          const ix = await getOrAddAssociatedTokenAccountTx(
+            exerciseFeeKey,
+            quoteToken,
+            payer.publicKey,
+            payer.publicKey
+          );
+          if (ix) {
+            instructions.push(ix);
+          }
+        }
+
+        await createAccountsForInitializeMarket(
+          provider.connection,
+          payer,
+          optionMarketKey,
+          optionMintAccount,
+          writerTokenMintAccount,
+          underlyingAssetPoolAccount,
+          quoteAssetPoolAccount,
+          underlyingToken,
+          quoteToken
+        );
+      });
+      it("should error", async () => {
+        try {
+          await program.rpc.initializeMarket(
+            underlyingAmountPerContract,
+            quoteAmountPerContract,
+            expiration,
+            authorityBumpSeed,
+            bumpSeed,
+            {
+              accounts: {
+                authority: payer.publicKey,
+                underlyingAssetMint: underlyingToken.publicKey,
+                quoteAssetMint: quoteToken.publicKey,
+                optionMint: optionMintAccount.publicKey,
+                writerTokenMint: writerTokenMintAccount.publicKey,
+                quoteAssetPool: quoteAssetPoolAccount.publicKey,
+                underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
+                optionMarket: optionMarketKey,
+                feeOwner: FEE_OWNER_KEY,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                rent: SYSVAR_RENT_PUBKEY,
+                systemProgram: SystemProgram.programId,
+              },
+              signers: [payer],
+              remainingAccounts,
+              instructions,
+            }
+          );
+          assert.ok(false);
+        } catch (err) {
+          const errMsg = "Exercise fee account must be owned by the FEE_OWNER";
+          assert.equal(err.toString(), errMsg);
+        }
+      });
+    });
+  });
 });
