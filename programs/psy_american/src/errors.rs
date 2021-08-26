@@ -18,4 +18,8 @@ pub enum PsyOptionsError {
   MintFeeMustBeOwnedByFeeOwner,
   #[msg("Exercise fee account must be owned by the FEE_OWNER")]
   ExerciseFeeMustBeOwnedByFeeOwner,
+  #[msg("Mint fee token must be the same as the underlying asset")]
+  MintFeeTokenMustMatchUnderlyingAsset,
+  #[msg("Exercise fee token must be the same as the quote asset")]
+  ExerciseFeeTokenMustMatchQuoteAsset,
 }

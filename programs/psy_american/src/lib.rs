@@ -28,7 +28,7 @@ pub mod psy_american {
             return Err(errors::PsyOptionsError::QuoteOrUnderlyingAmountCannotBe0.into())
         }
 
-        let fee_accounts = validate_fee_accounts(ctx.remaining_accounts, underlying_amount_per_contract, quote_amount_per_contract)?;
+        let fee_accounts = validate_fee_accounts(&ctx, underlying_amount_per_contract, quote_amount_per_contract)?;
 
         // write the data to the OptionMarket account
         let option_market = &mut ctx.accounts.option_market;
@@ -55,11 +55,11 @@ struct FeeAccounts {
     exercise_fee_key: Pubkey
 }
 fn validate_fee_accounts<'info>(
-    remaining_accounts: &[AccountInfo<'info>],
+    ctx: &Context<InitializeMarket>,
     underlying_amount_per_contract: u64,
     quote_amount_per_contract: u64
 ) -> Result<FeeAccounts, ProgramError> {
-    let account_info_iter = &mut remaining_accounts.iter();
+    let account_info_iter = &mut ctx.remaining_accounts.iter();
     let mut fee_accounts = FeeAccounts {
         mint_fee_key: fees::fee_owner_key::ID,
         exercise_fee_key: fees::fee_owner_key::ID,
@@ -77,7 +77,10 @@ fn validate_fee_accounts<'info>(
         if mint_fee_account.owner != fees::fee_owner_key::ID {
             return Err(errors::PsyOptionsError::MintFeeMustBeOwnedByFeeOwner.into()) 
         }
-        // TODO: check that the mint fee recipient account's mint is also the underlying mint
+        // check that the mint fee recipient account's mint is also the underlying mint
+        if mint_fee_account.mint != *ctx.accounts.underlying_asset_mint.key {
+            return Err(errors::PsyOptionsError::MintFeeTokenMustMatchUnderlyingAsset.into())
+        }
 
         fee_accounts.mint_fee_key = *mint_fee_recipient.key;
     }
@@ -94,7 +97,10 @@ fn validate_fee_accounts<'info>(
         if exercise_fee_account.owner != fees::fee_owner_key::ID {
             return Err(errors::PsyOptionsError::ExerciseFeeMustBeOwnedByFeeOwner.into()) 
         }
-        // TODO: check that the exercise fee recipient account's mint is also the quote mint
+        // check that the exercise fee recipient account's mint is also the quote mint
+        if exercise_fee_account.mint != *ctx.accounts.quote_asset_mint.key {
+            return Err(errors::PsyOptionsError::ExerciseFeeTokenMustMatchQuoteAsset.into())
+        }
 
         fee_accounts.exercise_fee_key = *exercise_fee_recipient.key;
     }

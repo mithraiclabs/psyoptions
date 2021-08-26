@@ -53,6 +53,8 @@ describe("initializeMarket", () => {
     opts: {
       underlyingAmountPerContract?: anchor.BN;
       quoteAmountPerContract?: anchor.BN;
+      mintFeeToken?: Token;
+      exerciseFeeToken?: Token;
       mintFeeOwner?: PublicKey;
       exerciseFeeOwner?: PublicKey;
     } = {}
@@ -90,7 +92,7 @@ describe("initializeMarket", () => {
         mintFeeKey = await Token.getAssociatedTokenAddress(
           ASSOCIATED_TOKEN_PROGRAM_ID,
           TOKEN_PROGRAM_ID,
-          underlyingToken.publicKey,
+          opts.mintFeeToken?.publicKey || underlyingToken.publicKey,
           opts.mintFeeOwner || FEE_OWNER_KEY
         );
         remainingAccounts.push({
@@ -100,7 +102,7 @@ describe("initializeMarket", () => {
         });
         const ix = await getOrAddAssociatedTokenAccountTx(
           mintFeeKey,
-          underlyingToken,
+          opts.mintFeeToken || underlyingToken,
           payer.publicKey,
           opts.mintFeeOwner || FEE_OWNER_KEY
         );
@@ -114,7 +116,7 @@ describe("initializeMarket", () => {
         exerciseFeeKey = await Token.getAssociatedTokenAddress(
           ASSOCIATED_TOKEN_PROGRAM_ID,
           TOKEN_PROGRAM_ID,
-          quoteToken.publicKey,
+          opts.exerciseFeeToken?.publicKey || quoteToken.publicKey,
           opts.exerciseFeeOwner || FEE_OWNER_KEY
         );
         remainingAccounts.push({
@@ -124,7 +126,7 @@ describe("initializeMarket", () => {
         });
         const ix = await getOrAddAssociatedTokenAccountTx(
           exerciseFeeKey,
-          quoteToken,
+          opts.exerciseFeeToken || quoteToken,
           payer.publicKey,
           opts.exerciseFeeOwner || FEE_OWNER_KEY
         );
@@ -451,6 +453,32 @@ describe("initializeMarket", () => {
         }
       });
     });
+    describe("Mint fee token is not the underlying asset token", () => {
+      beforeEach(async () => {
+        const { mintAccount } = await initNewTokenMint(
+          provider.connection,
+          payer.publicKey,
+          payer
+        );
+        const mintFeeToken = new Token(
+          provider.connection,
+          mintAccount.publicKey,
+          TOKEN_PROGRAM_ID,
+          payer
+        );
+        await initSetup({ mintFeeToken });
+      });
+      it("should error", async () => {
+        try {
+          await initOptionMarket();
+          assert.ok(false);
+        } catch (err) {
+          const errMsg =
+            "Mint fee token must be the same as the underlying asset";
+          assert.equal(err.toString(), errMsg);
+        }
+      });
+    });
   });
   describe("exercise fee is required based on quote assets per contract", () => {
     describe("Exercise fee owner is incorrect", () => {
@@ -463,6 +491,32 @@ describe("initializeMarket", () => {
           assert.ok(false);
         } catch (err) {
           const errMsg = "Exercise fee account must be owned by the FEE_OWNER";
+          assert.equal(err.toString(), errMsg);
+        }
+      });
+    });
+    describe("Exercise fee token is not the quote asset token", () => {
+      beforeEach(async () => {
+        const { mintAccount } = await initNewTokenMint(
+          provider.connection,
+          payer.publicKey,
+          payer
+        );
+        const exerciseFeeToken = new Token(
+          provider.connection,
+          mintAccount.publicKey,
+          TOKEN_PROGRAM_ID,
+          payer
+        );
+        await initSetup({ exerciseFeeToken });
+      });
+      it("should error", async () => {
+        try {
+          await initOptionMarket();
+          assert.ok(false);
+        } catch (err) {
+          const errMsg =
+            "Exercise fee token must be the same as the quote asset";
           assert.equal(err.toString(), errMsg);
         }
       });
