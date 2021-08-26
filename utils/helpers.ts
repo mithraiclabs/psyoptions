@@ -1,4 +1,4 @@
-import { Provider } from "@project-serum/anchor";
+import { BN, Provider } from "@project-serum/anchor";
 import {
   AccountLayout,
   MintLayout,
@@ -51,8 +51,8 @@ export const createAccountsForInitializeMarket = async (
   writerTokenMintAccount: Keypair,
   underlyingAssetPoolAccount: Keypair,
   quoteAssetPoolAccount: Keypair,
-  underlyingAssetMint: PublicKey,
-  quoteAssetMint: PublicKey
+  underlyingToken: Token,
+  quoteToken: Token
 ) => {
   const {
     transaction: createAccountsTx,
@@ -69,18 +69,22 @@ export const createAccountsForInitializeMarket = async (
     writerTokenMintAccount,
     underlyingAssetPoolAccount,
     quoteAssetPoolAccount,
-    underlyingAssetMint,
-    quoteAssetMint,
+    underlyingToken,
+    quoteToken,
   });
 
-  await sendAndConfirmTransaction(
-    connection,
-    createAccountsTx,
-    [wallet, ...signers],
-    {
-      commitment: "confirmed",
-    }
-  );
+  try {
+    await sendAndConfirmTransaction(
+      connection,
+      createAccountsTx,
+      [wallet, ...signers],
+      {
+        commitment: "confirmed",
+      }
+    );
+  } catch (error) {
+    console.error(error);
+  }
 
   return {
     optionMintKey,
