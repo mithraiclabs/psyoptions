@@ -49,7 +49,7 @@ describe("initializeMarket", () => {
   let quoteAssetPoolAccount: Keypair;
   let remainingAccounts: AccountMeta[] = [];
   let instructions: TransactionInstruction[] = [];
-  const initFn = async (
+  const initSetup = async (
     opts: {
       underlyingAmountPerContract?: anchor.BN;
       quoteAmountPerContract?: anchor.BN;
@@ -148,6 +148,36 @@ describe("initializeMarket", () => {
       console.error(error);
     }
   };
+
+  const initOptionMarket = async () => {
+    await program.rpc.initializeMarket(
+      underlyingAmountPerContract,
+      quoteAmountPerContract,
+      expiration,
+      authorityBumpSeed,
+      bumpSeed,
+      {
+        accounts: {
+          authority: payer.publicKey,
+          underlyingAssetMint: underlyingToken.publicKey,
+          quoteAssetMint: quoteToken.publicKey,
+          optionMint: optionMintAccount.publicKey,
+          writerTokenMint: writerTokenMintAccount.publicKey,
+          quoteAssetPool: quoteAssetPoolAccount.publicKey,
+          underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
+          optionMarket: optionMarketKey,
+          feeOwner: FEE_OWNER_KEY,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          rent: SYSVAR_RENT_PUBKEY,
+          systemProgram: SystemProgram.programId,
+        },
+        remainingAccounts,
+        signers: [payer],
+        instructions,
+      }
+    );
+  };
   beforeEach(async () => {
     optionMintAccount = new Keypair();
     writerTokenMintAccount = new Keypair();
@@ -167,42 +197,15 @@ describe("initializeMarket", () => {
 
   describe("good account setup", () => {
     beforeEach(async () => {
-      await initFn({});
+      await initSetup({});
     });
     it("Creates new OptionMarket!", async () => {
       try {
-        await program.rpc.initializeMarket(
-          underlyingAmountPerContract,
-          quoteAmountPerContract,
-          expiration,
-          authorityBumpSeed,
-          bumpSeed,
-          {
-            accounts: {
-              authority: payer.publicKey,
-              underlyingAssetMint: underlyingToken.publicKey,
-              quoteAssetMint: quoteToken.publicKey,
-              optionMint: optionMintAccount.publicKey,
-              writerTokenMint: writerTokenMintAccount.publicKey,
-              quoteAssetPool: quoteAssetPoolAccount.publicKey,
-              underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
-              optionMarket: optionMarketKey,
-              feeOwner: FEE_OWNER_KEY,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-              rent: SYSVAR_RENT_PUBKEY,
-              systemProgram: SystemProgram.programId,
-            },
-            remainingAccounts,
-            signers: [payer],
-            instructions,
-          }
-        );
+        await initOptionMarket();
       } catch (err) {
         console.error(err.toString());
         throw err;
       }
-
       // Fetch the account for the newly created OptionMarket
       const optionMarket = (await program.account.optionMarket.fetch(
         optionMarketKey
@@ -250,37 +253,11 @@ describe("initializeMarket", () => {
   describe("underlying asset amount <= 0", () => {
     beforeEach(async () => {
       underlyingAmountPerContract = new anchor.BN(0);
-      await initFn({ underlyingAmountPerContract });
+      await initSetup({ underlyingAmountPerContract });
     });
     it("Should error", async () => {
       try {
-        await program.rpc.initializeMarket(
-          underlyingAmountPerContract,
-          quoteAmountPerContract,
-          expiration,
-          authorityBumpSeed,
-          bumpSeed,
-          {
-            accounts: {
-              authority: payer.publicKey,
-              underlyingAssetMint: underlyingToken.publicKey,
-              quoteAssetMint: quoteToken.publicKey,
-              optionMint: optionMintAccount.publicKey,
-              writerTokenMint: writerTokenMintAccount.publicKey,
-              quoteAssetPool: quoteAssetPoolAccount.publicKey,
-              underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
-              optionMarket: optionMarketKey,
-              feeOwner: FEE_OWNER_KEY,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-              rent: SYSVAR_RENT_PUBKEY,
-              systemProgram: SystemProgram.programId,
-            },
-            remainingAccounts,
-            signers: [payer],
-            instructions,
-          }
-        );
+        await initOptionMarket();
         assert.ok(false);
       } catch (err) {
         const errMsg =
@@ -292,37 +269,11 @@ describe("initializeMarket", () => {
   describe("quote asset amount <= 0", () => {
     beforeEach(async () => {
       quoteAmountPerContract = new anchor.BN(0);
-      await initFn({ quoteAmountPerContract });
+      await initSetup({ quoteAmountPerContract });
     });
     it("Should error", async () => {
       try {
-        await program.rpc.initializeMarket(
-          underlyingAmountPerContract,
-          quoteAmountPerContract,
-          expiration,
-          authorityBumpSeed,
-          bumpSeed,
-          {
-            accounts: {
-              authority: payer.publicKey,
-              underlyingAssetMint: underlyingToken.publicKey,
-              quoteAssetMint: quoteToken.publicKey,
-              optionMint: optionMintAccount.publicKey,
-              writerTokenMint: writerTokenMintAccount.publicKey,
-              quoteAssetPool: quoteAssetPoolAccount.publicKey,
-              underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
-              optionMarket: optionMarketKey,
-              feeOwner: FEE_OWNER_KEY,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-              rent: SYSVAR_RENT_PUBKEY,
-              systemProgram: SystemProgram.programId,
-            },
-            signers: [payer],
-            remainingAccounts,
-            instructions,
-          }
-        );
+        await initOptionMarket();
         assert.ok(false);
       } catch (err) {
         const errMsg =
@@ -401,7 +352,7 @@ describe("initializeMarket", () => {
 
   describe("OptionToken mint authority is not the OptionMarket key", () => {
     beforeEach(async () => {
-      await initFn();
+      await initSetup();
       const { mintAccount } = await initNewTokenMint(
         provider.connection,
         payer.publicKey,
@@ -411,33 +362,7 @@ describe("initializeMarket", () => {
     });
     it("should error", async () => {
       try {
-        await program.rpc.initializeMarket(
-          underlyingAmountPerContract,
-          quoteAmountPerContract,
-          expiration,
-          authorityBumpSeed,
-          bumpSeed,
-          {
-            accounts: {
-              authority: payer.publicKey,
-              underlyingAssetMint: underlyingToken.publicKey,
-              quoteAssetMint: quoteToken.publicKey,
-              optionMint: optionMintAccount.publicKey,
-              writerTokenMint: writerTokenMintAccount.publicKey,
-              quoteAssetPool: quoteAssetPoolAccount.publicKey,
-              underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
-              optionMarket: optionMarketKey,
-              feeOwner: FEE_OWNER_KEY,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-              rent: SYSVAR_RENT_PUBKEY,
-              systemProgram: SystemProgram.programId,
-            },
-            signers: [payer],
-            remainingAccounts,
-            instructions,
-          }
-        );
+        await initOptionMarket();
         assert.ok(false);
       } catch (err) {
         const errMsg = "OptionMarket must be the mint authority";
@@ -447,7 +372,7 @@ describe("initializeMarket", () => {
   });
   describe("WriterToken mint authority is not the OptionMarket key", () => {
     beforeEach(async () => {
-      await initFn();
+      await initSetup();
       const { mintAccount } = await initNewTokenMint(
         provider.connection,
         payer.publicKey,
@@ -457,33 +382,7 @@ describe("initializeMarket", () => {
     });
     it("should error", async () => {
       try {
-        await program.rpc.initializeMarket(
-          underlyingAmountPerContract,
-          quoteAmountPerContract,
-          expiration,
-          authorityBumpSeed,
-          bumpSeed,
-          {
-            accounts: {
-              authority: payer.publicKey,
-              underlyingAssetMint: underlyingToken.publicKey,
-              quoteAssetMint: quoteToken.publicKey,
-              optionMint: optionMintAccount.publicKey,
-              writerTokenMint: writerTokenMintAccount.publicKey,
-              quoteAssetPool: quoteAssetPoolAccount.publicKey,
-              underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
-              optionMarket: optionMarketKey,
-              feeOwner: FEE_OWNER_KEY,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-              rent: SYSVAR_RENT_PUBKEY,
-              systemProgram: SystemProgram.programId,
-            },
-            signers: [payer],
-            remainingAccounts,
-            instructions,
-          }
-        );
+        await initOptionMarket();
         assert.ok(false);
       } catch (err) {
         const errMsg = "OptionMarket must be the mint authority";
@@ -494,7 +393,7 @@ describe("initializeMarket", () => {
 
   describe("UnderlyingAssetPool not owned by OptionMarket", () => {
     beforeEach(async () => {
-      await initFn();
+      await initSetup();
       // Create a new token account and set it as the underlyingAssetPoolAccount
       const { tokenAccount } = await initNewTokenAccount(
         provider.connection,
@@ -506,33 +405,7 @@ describe("initializeMarket", () => {
     });
     it("should error", async () => {
       try {
-        await program.rpc.initializeMarket(
-          underlyingAmountPerContract,
-          quoteAmountPerContract,
-          expiration,
-          authorityBumpSeed,
-          bumpSeed,
-          {
-            accounts: {
-              authority: payer.publicKey,
-              underlyingAssetMint: underlyingToken.publicKey,
-              quoteAssetMint: quoteToken.publicKey,
-              optionMint: optionMintAccount.publicKey,
-              writerTokenMint: writerTokenMintAccount.publicKey,
-              quoteAssetPool: quoteAssetPoolAccount.publicKey,
-              underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
-              optionMarket: optionMarketKey,
-              feeOwner: FEE_OWNER_KEY,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-              rent: SYSVAR_RENT_PUBKEY,
-              systemProgram: SystemProgram.programId,
-            },
-            signers: [payer],
-            remainingAccounts,
-            instructions,
-          }
-        );
+        await initOptionMarket();
         assert.ok(false);
       } catch (err) {
         const errMsg = "OptionMarket must own the underlying asset pool";
@@ -542,7 +415,7 @@ describe("initializeMarket", () => {
   });
   describe("QuoteAssetPool not owned by OptionMarket", () => {
     beforeEach(async () => {
-      await initFn();
+      await initSetup();
       // Create a new token account and set it as the underlyingAssetPoolAccount
       const { tokenAccount } = await initNewTokenAccount(
         provider.connection,
@@ -554,33 +427,7 @@ describe("initializeMarket", () => {
     });
     it("should error", async () => {
       try {
-        await program.rpc.initializeMarket(
-          underlyingAmountPerContract,
-          quoteAmountPerContract,
-          expiration,
-          authorityBumpSeed,
-          bumpSeed,
-          {
-            accounts: {
-              authority: payer.publicKey,
-              underlyingAssetMint: underlyingToken.publicKey,
-              quoteAssetMint: quoteToken.publicKey,
-              optionMint: optionMintAccount.publicKey,
-              writerTokenMint: writerTokenMintAccount.publicKey,
-              quoteAssetPool: quoteAssetPoolAccount.publicKey,
-              underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
-              optionMarket: optionMarketKey,
-              feeOwner: FEE_OWNER_KEY,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-              rent: SYSVAR_RENT_PUBKEY,
-              systemProgram: SystemProgram.programId,
-            },
-            signers: [payer],
-            remainingAccounts,
-            instructions,
-          }
-        );
+        await initOptionMarket();
         assert.ok(false);
       } catch (err) {
         const errMsg = "OptionMarket must own the quote asset pool";
@@ -592,37 +439,11 @@ describe("initializeMarket", () => {
   describe("mint fee is required based on underlying assets per contract", () => {
     describe("Mint fee owner is incorrect", () => {
       beforeEach(async () => {
-        await initFn({ mintFeeOwner: payer.publicKey });
+        await initSetup({ mintFeeOwner: payer.publicKey });
       });
       it("should error", async () => {
         try {
-          await program.rpc.initializeMarket(
-            underlyingAmountPerContract,
-            quoteAmountPerContract,
-            expiration,
-            authorityBumpSeed,
-            bumpSeed,
-            {
-              accounts: {
-                authority: payer.publicKey,
-                underlyingAssetMint: underlyingToken.publicKey,
-                quoteAssetMint: quoteToken.publicKey,
-                optionMint: optionMintAccount.publicKey,
-                writerTokenMint: writerTokenMintAccount.publicKey,
-                quoteAssetPool: quoteAssetPoolAccount.publicKey,
-                underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
-                optionMarket: optionMarketKey,
-                feeOwner: FEE_OWNER_KEY,
-                tokenProgram: TOKEN_PROGRAM_ID,
-                associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-                rent: SYSVAR_RENT_PUBKEY,
-                systemProgram: SystemProgram.programId,
-              },
-              signers: [payer],
-              remainingAccounts,
-              instructions,
-            }
-          );
+          await initOptionMarket();
           assert.ok(false);
         } catch (err) {
           const errMsg = "Mint fee account must be owned by the FEE_OWNER";
@@ -634,37 +455,11 @@ describe("initializeMarket", () => {
   describe("exercise fee is required based on quote assets per contract", () => {
     describe("Exercise fee owner is incorrect", () => {
       beforeEach(async () => {
-        await initFn({ exerciseFeeOwner: payer.publicKey });
+        await initSetup({ exerciseFeeOwner: payer.publicKey });
       });
       it("should error", async () => {
         try {
-          await program.rpc.initializeMarket(
-            underlyingAmountPerContract,
-            quoteAmountPerContract,
-            expiration,
-            authorityBumpSeed,
-            bumpSeed,
-            {
-              accounts: {
-                authority: payer.publicKey,
-                underlyingAssetMint: underlyingToken.publicKey,
-                quoteAssetMint: quoteToken.publicKey,
-                optionMint: optionMintAccount.publicKey,
-                writerTokenMint: writerTokenMintAccount.publicKey,
-                quoteAssetPool: quoteAssetPoolAccount.publicKey,
-                underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
-                optionMarket: optionMarketKey,
-                feeOwner: FEE_OWNER_KEY,
-                tokenProgram: TOKEN_PROGRAM_ID,
-                associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-                rent: SYSVAR_RENT_PUBKEY,
-                systemProgram: SystemProgram.programId,
-              },
-              signers: [payer],
-              remainingAccounts,
-              instructions,
-            }
-          );
+          await initOptionMarket();
           assert.ok(false);
         } catch (err) {
           const errMsg = "Exercise fee account must be owned by the FEE_OWNER";
