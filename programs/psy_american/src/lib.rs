@@ -244,7 +244,10 @@ impl<'info> MintOption<'info> {
             return Err(errors::PsyOptionsError::UnderlyingPoolAccountDoesNotMatchMarket.into())
         }
 
-        // TODO: Validate the option mint is the same as on the OptionMarket
+        // Validate the option mint is the same as on the OptionMarket
+        if *ctx.accounts.option_mint.to_account_info().key != ctx.accounts.option_market.option_mint {
+            return Err(errors::PsyOptionsError::OptionTokenMintDoesNotMatchMarket.into())
+        }
 
         // TODO: Validate the writer token mint is the same as on the OptionMarket
 

@@ -25,5 +25,7 @@ pub enum PsyOptionsError {
   #[msg("OptionMarket is expired, can't mint")]
   OptionMarketExpiredCantMint,
   #[msg("Underlying pool account does not match the value on the OptionMarket")]
-  UnderlyingPoolAccountDoesNotMatchMarket
+  UnderlyingPoolAccountDoesNotMatchMarket,
+  #[msg("OptionToken mint does not match the value on the OptionMarket")]
+  OptionTokenMintDoesNotMatchMarket
 }

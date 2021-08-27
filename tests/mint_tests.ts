@@ -22,6 +22,7 @@ import {
   createMinter,
   createUnderlyingAndQuoteMints,
   initNewTokenAccount,
+  initNewTokenMint,
   initSetup,
   wait,
 } from "../utils/helpers";
@@ -326,6 +327,56 @@ describe("mintOption", () => {
       } catch (err) {
         const errMsg =
           "Underlying pool account does not match the value on the OptionMarket";
+        assert.equal(err.toString(), errMsg);
+      }
+    });
+  });
+
+  describe("OptionToken Mint key differs from option market", () => {
+    beforeEach(async () => {
+      ({
+        quoteToken,
+        underlyingToken,
+        underlyingAmountPerContract,
+        quoteAmountPerContract,
+        expiration,
+        optionMarketKey,
+        bumpSeed,
+        mintFeeKey,
+        exerciseFeeKey,
+        optionMintAccount,
+        writerTokenMintAccount,
+        underlyingAssetPoolAccount,
+        quoteAssetPoolAccount,
+        remainingAccounts,
+        instructions,
+      } = await initSetup(provider, payer, mintAuthority, program));
+      await initOptionMarket();
+      // Create a new token mint and set it as the optionMintAccount
+      const { mintAccount } = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer
+      );
+      optionMintAccount = mintAccount;
+      ({ optionAccount, underlyingAccount, writerTokenAccount } =
+        await createMinter(
+          provider.connection,
+          minter,
+          mintAuthority,
+          underlyingToken,
+          underlyingAmountPerContract.muln(2).toNumber(),
+          optionMintAccount.publicKey,
+          writerTokenMintAccount.publicKey
+        ));
+    });
+    it("should error", async () => {
+      try {
+        await mintOptionsTx();
+        assert.ok(false);
+      } catch (err) {
+        const errMsg =
+          "OptionToken mint does not match the value on the OptionMarket";
         assert.equal(err.toString(), errMsg);
       }
     });
