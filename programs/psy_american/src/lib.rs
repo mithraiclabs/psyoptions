@@ -2,7 +2,7 @@ pub mod errors;
 pub mod fees;
 
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, MintTo, TokenAccount};
+use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
 use spl_token::state::Account as SPLTokenAccount;
 use solana_program::{ program_error::ProgramError, program_pack::Pack };
 
@@ -45,9 +45,19 @@ pub mod psy_american {
     }
 
     pub fn mint_option(ctx: Context<MintOption>, size: u64) -> ProgramResult {
-        // TODO: transfer the underlying assets to the underlying assets pool
-
         let option_market = &ctx.accounts.option_market;
+
+        // Transfer the underlying assets to the underlying assets pool
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.underlying_asset_src.to_account_info(),
+            to: ctx.accounts.underlying_asset_pool.to_account_info(),
+            authority: ctx.accounts.user_authority.clone(),
+        };
+        let cpi_token_program = ctx.accounts.token_program.clone();
+        let cpi_ctx = CpiContext::new(cpi_token_program, cpi_accounts);
+        let underlying_transfer_amount = option_market.underlying_amount_per_contract.checked_mul(size).unwrap();
+        token::transfer(cpi_ctx, underlying_transfer_amount)?;
+
         let seeds = &[
             option_market.underlying_asset_mint.as_ref(),
             option_market.quote_asset_mint.as_ref(),
@@ -64,8 +74,8 @@ pub mod psy_american {
             to: ctx.accounts.minted_option_dest.to_account_info(),
             authority: ctx.accounts.option_market.to_account_info(),
         };
-        let cpi_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        let cpi_token_program = ctx.accounts.token_program.clone();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
         token::mint_to(cpi_ctx, size)?;
 
         // Mint a new WriterToken(s)
@@ -74,8 +84,8 @@ pub mod psy_american {
             to: ctx.accounts.minted_writer_token_dest.to_account_info(),
             authority: ctx.accounts.option_market.to_account_info(),
         };
-        let cpi_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        let cpi_token_program = ctx.accounts.token_program.clone();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
         token::mint_to(cpi_ctx, size)?;
 
         Ok(())
@@ -200,7 +210,7 @@ impl<'info> InitializeMarket<'info> {
 #[derive(Accounts)]
 pub struct MintOption<'info> {
     #[account(signer)]
-    authority: AccountInfo<'info>,
+    user_authority: AccountInfo<'info>,
     underlying_asset_mint: AccountInfo<'info>,
     #[account(mut)]
     underlying_asset_pool: CpiAccount<'info, TokenAccount>,

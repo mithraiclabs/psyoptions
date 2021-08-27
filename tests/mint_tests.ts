@@ -117,7 +117,7 @@ describe("mintOption", () => {
   const mintOptionsTx = async () => {
     await program.rpc.mintOption(size, {
       accounts: {
-        authority: payer.publicKey,
+        userAuthority: minter.publicKey,
         underlyingAssetMint: underlyingToken.publicKey,
         underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
         underlyingAssetSrc: underlyingAccount.publicKey,
@@ -134,7 +134,7 @@ describe("mintOption", () => {
         systemProgram: SystemProgram.programId,
       },
       remainingAccounts,
-      signers: [payer],
+      signers: [minter],
     });
   };
 
@@ -183,6 +183,46 @@ describe("mintOption", () => {
       );
       const mintInfo = await writerToken.getMintInfo();
       assert.equal(mintInfo.supply.toString(), size.toString());
+    });
+
+    it("should transfer the underlying from the minter to the pool", async () => {
+      const underlyingPoolBefore = await underlyingToken.getAccountInfo(
+        underlyingAssetPoolAccount.publicKey
+      );
+      const minterUnderlyingBefore = await underlyingToken.getAccountInfo(
+        underlyingAccount.publicKey
+      );
+      try {
+        await mintOptionsTx();
+      } catch (err) {
+        console.error(err.toString());
+        throw err;
+      }
+      const expectedUnderlyingTransfered = size.mul(
+        underlyingAmountPerContract
+      );
+
+      const underlyingPoolAfter = await underlyingToken.getAccountInfo(
+        underlyingAssetPoolAccount.publicKey
+      );
+      const poolDiff = underlyingPoolAfter.amount.sub(
+        underlyingPoolBefore.amount
+      );
+      assert.equal(
+        poolDiff.toString(),
+        expectedUnderlyingTransfered.toString()
+      );
+
+      const minterUnderlyingAfter = await underlyingToken.getAccountInfo(
+        underlyingAccount.publicKey
+      );
+      const minterUnderlyingDiff = minterUnderlyingAfter.amount.sub(
+        minterUnderlyingBefore.amount
+      );
+      assert.equal(
+        expectedUnderlyingTransfered.neg().toString(),
+        minterUnderlyingDiff.toString()
+      );
     });
   });
 });
