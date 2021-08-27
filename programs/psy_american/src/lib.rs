@@ -52,7 +52,7 @@ pub mod psy_american {
         Ok(())
     }
 
-    #[access_control(MintOption::unexpired_market(&ctx) MintOption::accounts(&ctx) MintOption::validate_mint_fee_acct(&ctx))]
+    #[access_control(MintOption::unexpired_market(&ctx) MintOption::accounts(&ctx) MintOption::validate_mint_fee_acct(&ctx) validate_size(size))]
     pub fn mint_option(ctx: Context<MintOption>, size: u64) -> ProgramResult {
         let option_market = &ctx.accounts.option_market;
 
@@ -106,6 +106,14 @@ pub mod psy_american {
 struct FeeAccounts {
     mint_fee_key: Pubkey,
     exercise_fee_key: Pubkey
+}
+
+/// Validate that the size is greater than 0
+fn validate_size(size: u64) -> Result<(), ProgramError> {
+    if size <= 0 {
+        return Err(errors::PsyOptionsError::SizeCantBeLessThanEqZero.into())
+    }
+    Ok(())
 }
 
 fn validate_fee_accounts<'info>(
@@ -259,8 +267,6 @@ impl<'info> MintOption<'info> {
         if *ctx.accounts.writer_token_mint.to_account_info().key != ctx.accounts.option_market.writer_token_mint {
             return Err(errors::PsyOptionsError::WriterTokenMintDoesNotMatchMarket.into())
         }
-
-        // TODO: Validate size is > 0
 
         Ok(())
     }

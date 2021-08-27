@@ -495,4 +495,49 @@ describe("mintOption", () => {
       }
     });
   });
+
+  describe("Size <= 0", () => {
+    beforeEach(async () => {
+      ({
+        quoteToken,
+        underlyingToken,
+        underlyingAmountPerContract,
+        quoteAmountPerContract,
+        expiration,
+        optionMarketKey,
+        bumpSeed,
+        mintFeeKey,
+        exerciseFeeKey,
+        optionMintAccount,
+        writerTokenMintAccount,
+        underlyingAssetPoolAccount,
+        quoteAssetPoolAccount,
+        remainingAccounts,
+        instructions,
+      } = await initSetup(provider, payer, mintAuthority, program));
+      await initOptionMarket();
+      ({ optionAccount, underlyingAccount, writerTokenAccount } =
+        await createMinter(
+          provider.connection,
+          minter,
+          mintAuthority,
+          underlyingToken,
+          underlyingAmountPerContract.muln(2).toNumber(),
+          optionMintAccount.publicKey,
+          writerTokenMintAccount.publicKey
+        ));
+
+      // Set the size to 0 to trigger an error
+      size = new anchor.BN(0);
+    });
+    it("should error", async () => {
+      try {
+        await mintOptionsTx();
+        assert.ok(false);
+      } catch (err) {
+        const errMsg = "The size argument must be > 0";
+        assert.equal(err.toString(), errMsg);
+      }
+    });
+  });
 });
