@@ -1,20 +1,28 @@
+import * as anchor from "@project-serum/anchor";
 import { BN, Provider } from "@project-serum/anchor";
 import {
   AccountLayout,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
   MintLayout,
   Token,
   TOKEN_PROGRAM_ID,
   u64,
 } from "@solana/spl-token";
 import {
+  AccountMeta,
   Connection,
   Keypair,
   PublicKey,
   sendAndConfirmTransaction,
   SystemProgram,
   Transaction,
+  TransactionInstruction,
 } from "@solana/web3.js";
-import { initializeAccountsForMarket } from "../packages/psyoptions-ts/src";
+import {
+  getOrAddAssociatedTokenAccountTx,
+  initializeAccountsForMarket,
+} from "../packages/psyoptions-ts/src";
+import { feeAmount, FEE_OWNER_KEY } from "../packages/psyoptions-ts/src/fees";
 
 export const createUnderlyingAndQuoteMints = async (
   provider: Provider,
@@ -192,11 +200,75 @@ export const createMinter = async (
   optionMint: PublicKey,
   writerTokenMint: PublicKey
 ) => {
-  const { tokenAccount: underlyingAccount } = await initNewTokenAccount(
+  const transaction = new Transaction();
+
+  const underlyingAccount = new Keypair();
+  const assetPoolRentBalance =
+    await connection.getMinimumBalanceForRentExemption(AccountLayout.span);
+  transaction.add(
+    SystemProgram.createAccount({
+      fromPubkey: minter.publicKey,
+      newAccountPubkey: underlyingAccount.publicKey,
+      lamports: assetPoolRentBalance,
+      space: AccountLayout.span,
+      programId: TOKEN_PROGRAM_ID,
+    })
+  );
+  transaction.add(
+    Token.createInitAccountInstruction(
+      TOKEN_PROGRAM_ID,
+      underlyingToken.publicKey,
+      underlyingAccount.publicKey,
+      minter.publicKey
+    )
+  );
+
+  // create an associated token account to hold the options
+  const optionAccount = new Keypair();
+  transaction.add(
+    SystemProgram.createAccount({
+      fromPubkey: minter.publicKey,
+      newAccountPubkey: optionAccount.publicKey,
+      lamports: assetPoolRentBalance,
+      space: AccountLayout.span,
+      programId: TOKEN_PROGRAM_ID,
+    })
+  );
+  transaction.add(
+    Token.createInitAccountInstruction(
+      TOKEN_PROGRAM_ID,
+      optionMint,
+      optionAccount.publicKey,
+      minter.publicKey
+    )
+  );
+
+  // create an associated token account to hold the writer tokens
+  const writerTokenAccount = new Keypair();
+  transaction.add(
+    SystemProgram.createAccount({
+      fromPubkey: minter.publicKey,
+      newAccountPubkey: writerTokenAccount.publicKey,
+      lamports: assetPoolRentBalance,
+      space: AccountLayout.span,
+      programId: TOKEN_PROGRAM_ID,
+    })
+  );
+  transaction.add(
+    Token.createInitAccountInstruction(
+      TOKEN_PROGRAM_ID,
+      writerTokenMint,
+      writerTokenAccount.publicKey,
+      minter.publicKey
+    )
+  );
+  await sendAndConfirmTransaction(
     connection,
-    minter.publicKey,
-    underlyingToken.publicKey,
-    minter
+    transaction,
+    [minter, underlyingAccount, optionAccount, writerTokenAccount],
+    {
+      commitment: "confirmed",
+    }
   );
 
   // mint underlying tokens to the minter's account
@@ -206,19 +278,144 @@ export const createMinter = async (
     [],
     underlyingAmountPerContract.muln(2).toNumber()
   );
-  // create an associated token account to hold the options
-  const { tokenAccount: optionAccount } = await initNewTokenAccount(
-    connection,
-    minter.publicKey,
-    optionMint,
-    minter
-  );
-  // create an associated token account to hold the writer tokens
-  const { tokenAccount: writerTokenAccount } = await initNewTokenAccount(
-    connection,
-    minter.publicKey,
-    writerTokenMint,
-    minter
-  );
   return { optionAccount, underlyingAccount, writerTokenAccount };
+};
+
+export const initSetup = async (
+  provider: anchor.Provider,
+  payer: Keypair,
+  mintAuthority: Keypair,
+  program: anchor.Program,
+  opts: {
+    underlyingAmountPerContract?: anchor.BN;
+    quoteAmountPerContract?: anchor.BN;
+    mintFeeToken?: Token;
+    exerciseFeeToken?: Token;
+    mintFeeOwner?: PublicKey;
+    exerciseFeeOwner?: PublicKey;
+  } = {}
+) => {
+  let quoteToken: Token;
+  let underlyingToken: Token;
+  let underlyingAmountPerContract = new anchor.BN("10000000000");
+  let quoteAmountPerContract = new anchor.BN("50000000000");
+  let expiration = new anchor.BN(new Date().getTime() / 1000 + 3600);
+  let optionMarketKey: PublicKey;
+  let bumpSeed: number;
+  let mintFeeKey = new Keypair().publicKey;
+  let exerciseFeeKey = new Keypair().publicKey;
+  const optionMintAccount = new Keypair();
+  let writerTokenMintAccount = new Keypair();
+  let underlyingAssetPoolAccount = new Keypair();
+  let quoteAssetPoolAccount = new Keypair();
+  let remainingAccounts: AccountMeta[] = [];
+  let instructions: TransactionInstruction[] = [];
+  try {
+    // Handle overriding underlyingAmountPerContract
+    underlyingAmountPerContract = opts.underlyingAmountPerContract
+      ? opts.underlyingAmountPerContract
+      : underlyingAmountPerContract;
+    // Handle overriding quoteAmountPerContract
+    quoteAmountPerContract = opts.quoteAmountPerContract
+      ? opts.quoteAmountPerContract
+      : quoteAmountPerContract;
+
+    ({ underlyingToken, quoteToken } = await createUnderlyingAndQuoteMints(
+      provider,
+      payer,
+      mintAuthority
+    ));
+    [optionMarketKey, bumpSeed] =
+      await anchor.web3.PublicKey.findProgramAddress(
+        [
+          underlyingToken.publicKey.toBuffer(),
+          quoteToken.publicKey.toBuffer(),
+          underlyingAmountPerContract.toBuffer("le", 8),
+          quoteAmountPerContract.toBuffer("le", 8),
+          expiration.toBuffer("le", 8),
+        ],
+        program.programId
+      );
+
+    // Get the associated fee address if the market requires a fee
+    const mintFee = feeAmount(underlyingAmountPerContract);
+    if (mintFee.gtn(0)) {
+      mintFeeKey = await Token.getAssociatedTokenAddress(
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+        TOKEN_PROGRAM_ID,
+        opts.mintFeeToken?.publicKey || underlyingToken.publicKey,
+        opts.mintFeeOwner || FEE_OWNER_KEY
+      );
+      remainingAccounts.push({
+        pubkey: mintFeeKey,
+        isWritable: false,
+        isSigner: false,
+      });
+      const ix = await getOrAddAssociatedTokenAccountTx(
+        mintFeeKey,
+        opts.mintFeeToken || underlyingToken,
+        payer.publicKey,
+        opts.mintFeeOwner || FEE_OWNER_KEY
+      );
+      if (ix) {
+        instructions.push(ix);
+      }
+    }
+
+    const exerciseFee = feeAmount(quoteAmountPerContract);
+    if (exerciseFee.gtn(0)) {
+      exerciseFeeKey = await Token.getAssociatedTokenAddress(
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+        TOKEN_PROGRAM_ID,
+        opts.exerciseFeeToken?.publicKey || quoteToken.publicKey,
+        opts.exerciseFeeOwner || FEE_OWNER_KEY
+      );
+      remainingAccounts.push({
+        pubkey: exerciseFeeKey,
+        isWritable: false,
+        isSigner: false,
+      });
+      const ix = await getOrAddAssociatedTokenAccountTx(
+        exerciseFeeKey,
+        opts.exerciseFeeToken || quoteToken,
+        payer.publicKey,
+        opts.exerciseFeeOwner || FEE_OWNER_KEY
+      );
+      if (ix) {
+        instructions.push(ix);
+      }
+    }
+
+    await createAccountsForInitializeMarket(
+      provider.connection,
+      payer,
+      optionMarketKey,
+      optionMintAccount,
+      writerTokenMintAccount,
+      underlyingAssetPoolAccount,
+      quoteAssetPoolAccount,
+      underlyingToken,
+      quoteToken
+    );
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+  return {
+    quoteToken,
+    underlyingToken,
+    underlyingAmountPerContract,
+    quoteAmountPerContract,
+    expiration,
+    optionMarketKey,
+    bumpSeed,
+    mintFeeKey,
+    exerciseFeeKey,
+    optionMintAccount,
+    writerTokenMintAccount,
+    underlyingAssetPoolAccount,
+    quoteAssetPoolAccount,
+    remainingAccounts,
+    instructions,
+  };
 };

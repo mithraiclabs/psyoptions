@@ -21,6 +21,7 @@ import {
   createAccountsForInitializeMarket,
   createMinter,
   createUnderlyingAndQuoteMints,
+  initSetup,
 } from "../utils/helpers";
 
 describe("mintOption", () => {
@@ -47,108 +48,6 @@ describe("mintOption", () => {
   let quoteAssetPoolAccount: Keypair;
   let remainingAccounts: AccountMeta[] = [];
   let instructions: TransactionInstruction[] = [];
-  const initSetup = async (
-    opts: {
-      underlyingAmountPerContract?: anchor.BN;
-      quoteAmountPerContract?: anchor.BN;
-      mintFeeToken?: Token;
-      exerciseFeeToken?: Token;
-      mintFeeOwner?: PublicKey;
-      exerciseFeeOwner?: PublicKey;
-    } = {}
-  ) => {
-    try {
-      // Handle overriding underlyingAmountPerContract
-      underlyingAmountPerContract = opts.underlyingAmountPerContract
-        ? opts.underlyingAmountPerContract
-        : underlyingAmountPerContract;
-      // Handle overriding quoteAmountPerContract
-      quoteAmountPerContract = opts.quoteAmountPerContract
-        ? opts.quoteAmountPerContract
-        : quoteAmountPerContract;
-
-      ({ underlyingToken, quoteToken } = await createUnderlyingAndQuoteMints(
-        provider,
-        payer,
-        mintAuthority
-      ));
-      [optionMarketKey, bumpSeed] =
-        await anchor.web3.PublicKey.findProgramAddress(
-          [
-            underlyingToken.publicKey.toBuffer(),
-            quoteToken.publicKey.toBuffer(),
-            underlyingAmountPerContract.toBuffer("le", 8),
-            quoteAmountPerContract.toBuffer("le", 8),
-            expiration.toBuffer("le", 8),
-          ],
-          program.programId
-        );
-
-      // Get the associated fee address if the market requires a fee
-      const mintFee = feeAmount(underlyingAmountPerContract);
-      if (mintFee.gtn(0)) {
-        mintFeeKey = await Token.getAssociatedTokenAddress(
-          ASSOCIATED_TOKEN_PROGRAM_ID,
-          TOKEN_PROGRAM_ID,
-          opts.mintFeeToken?.publicKey || underlyingToken.publicKey,
-          opts.mintFeeOwner || FEE_OWNER_KEY
-        );
-        remainingAccounts.push({
-          pubkey: mintFeeKey,
-          isWritable: false,
-          isSigner: false,
-        });
-        const ix = await getOrAddAssociatedTokenAccountTx(
-          mintFeeKey,
-          opts.mintFeeToken || underlyingToken,
-          payer.publicKey,
-          opts.mintFeeOwner || FEE_OWNER_KEY
-        );
-        if (ix) {
-          instructions.push(ix);
-        }
-      }
-
-      const exerciseFee = feeAmount(quoteAmountPerContract);
-      if (exerciseFee.gtn(0)) {
-        exerciseFeeKey = await Token.getAssociatedTokenAddress(
-          ASSOCIATED_TOKEN_PROGRAM_ID,
-          TOKEN_PROGRAM_ID,
-          opts.exerciseFeeToken?.publicKey || quoteToken.publicKey,
-          opts.exerciseFeeOwner || FEE_OWNER_KEY
-        );
-        remainingAccounts.push({
-          pubkey: exerciseFeeKey,
-          isWritable: false,
-          isSigner: false,
-        });
-        const ix = await getOrAddAssociatedTokenAccountTx(
-          exerciseFeeKey,
-          opts.exerciseFeeToken || quoteToken,
-          payer.publicKey,
-          opts.exerciseFeeOwner || FEE_OWNER_KEY
-        );
-        if (ix) {
-          instructions.push(ix);
-        }
-      }
-
-      await createAccountsForInitializeMarket(
-        provider.connection,
-        payer,
-        optionMarketKey,
-        optionMintAccount,
-        writerTokenMintAccount,
-        underlyingAssetPoolAccount,
-        quoteAssetPoolAccount,
-        underlyingToken,
-        quoteToken
-      );
-    } catch (err) {
-      console.error(err);
-      throw err;
-    }
-  };
 
   const initOptionMarket = async () => {
     await program.rpc.initializeMarket(
@@ -179,15 +78,6 @@ describe("mintOption", () => {
     );
   };
   beforeEach(async () => {
-    optionMintAccount = new Keypair();
-    writerTokenMintAccount = new Keypair();
-    underlyingAssetPoolAccount = new Keypair();
-    quoteAssetPoolAccount = new Keypair();
-    underlyingAmountPerContract = new anchor.BN("10000000000");
-    quoteAmountPerContract = new anchor.BN("50000000000");
-    expiration = new anchor.BN(new Date().getTime() / 1000 + 3600);
-    remainingAccounts = [];
-    instructions = [];
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(payer.publicKey, 10_000_000_000),
       "confirmed"
@@ -199,7 +89,23 @@ describe("mintOption", () => {
       ),
       "confirmed"
     );
-    await initSetup();
+    ({
+      quoteToken,
+      underlyingToken,
+      underlyingAmountPerContract,
+      quoteAmountPerContract,
+      expiration,
+      optionMarketKey,
+      bumpSeed,
+      mintFeeKey,
+      exerciseFeeKey,
+      optionMintAccount,
+      writerTokenMintAccount,
+      underlyingAssetPoolAccount,
+      quoteAssetPoolAccount,
+      remainingAccounts,
+      instructions,
+    } = await initSetup(provider, payer, mintAuthority, program));
     await initOptionMarket();
   });
 
