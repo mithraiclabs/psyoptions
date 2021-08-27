@@ -249,7 +249,10 @@ impl<'info> MintOption<'info> {
             return Err(errors::PsyOptionsError::OptionTokenMintDoesNotMatchMarket.into())
         }
 
-        // TODO: Validate the writer token mint is the same as on the OptionMarket
+        // Validate the writer token mint is the same as on the OptionMarket
+        if *ctx.accounts.writer_token_mint.to_account_info().key != ctx.accounts.option_market.writer_token_mint {
+            return Err(errors::PsyOptionsError::WriterTokenMintDoesNotMatchMarket.into())
+        }
 
         // TODO: Validate the mint fee account is the same as the OptionMarket
 

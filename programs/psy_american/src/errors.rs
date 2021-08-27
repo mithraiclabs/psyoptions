@@ -27,5 +27,7 @@ pub enum PsyOptionsError {
   #[msg("Underlying pool account does not match the value on the OptionMarket")]
   UnderlyingPoolAccountDoesNotMatchMarket,
   #[msg("OptionToken mint does not match the value on the OptionMarket")]
-  OptionTokenMintDoesNotMatchMarket
+  OptionTokenMintDoesNotMatchMarket,
+  #[msg("WriterToken mint does not match the value on the OptionMarket")]
+  WriterTokenMintDoesNotMatchMarket
 }

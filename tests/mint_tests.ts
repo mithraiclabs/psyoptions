@@ -381,4 +381,54 @@ describe("mintOption", () => {
       }
     });
   });
+
+  describe("WriterToken Mint key differs from option market", () => {
+    beforeEach(async () => {
+      ({
+        quoteToken,
+        underlyingToken,
+        underlyingAmountPerContract,
+        quoteAmountPerContract,
+        expiration,
+        optionMarketKey,
+        bumpSeed,
+        mintFeeKey,
+        exerciseFeeKey,
+        optionMintAccount,
+        writerTokenMintAccount,
+        underlyingAssetPoolAccount,
+        quoteAssetPoolAccount,
+        remainingAccounts,
+        instructions,
+      } = await initSetup(provider, payer, mintAuthority, program));
+      await initOptionMarket();
+      // Create a new token mint and set it as the optionMintAccount
+      const { mintAccount } = await initNewTokenMint(
+        provider.connection,
+        payer.publicKey,
+        payer
+      );
+      writerTokenMintAccount = mintAccount;
+      ({ optionAccount, underlyingAccount, writerTokenAccount } =
+        await createMinter(
+          provider.connection,
+          minter,
+          mintAuthority,
+          underlyingToken,
+          underlyingAmountPerContract.muln(2).toNumber(),
+          optionMintAccount.publicKey,
+          writerTokenMintAccount.publicKey
+        ));
+    });
+    it("should error", async () => {
+      try {
+        await mintOptionsTx();
+        assert.ok(false);
+      } catch (err) {
+        const errMsg =
+          "WriterToken mint does not match the value on the OptionMarket";
+        assert.equal(err.toString(), errMsg);
+      }
+    });
+  });
 });
