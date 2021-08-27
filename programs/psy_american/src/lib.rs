@@ -46,7 +46,7 @@ pub mod psy_american {
         Ok(())
     }
 
-    #[access_control(MintOption::unexpired_market(&ctx))]
+    #[access_control(MintOption::unexpired_market(&ctx) MintOption::accounts(&ctx))]
     pub fn mint_option(ctx: Context<MintOption>, size: u64) -> ProgramResult {
         let option_market = &ctx.accounts.option_market;
 
@@ -238,8 +238,11 @@ pub struct MintOption<'info> {
     system_program: AccountInfo<'info>,
 }
 impl<'info> MintOption<'info> {
-    fn accounts(_ctx: &Context<MintOption<'info>>) -> Result<(), ProgramError> {
-        // TODO: Validate the underlying asset pool is the same as on the OptionMarket
+    fn accounts(ctx: &Context<MintOption<'info>>) -> Result<(), ProgramError> {
+        // Validate the underlying asset pool is the same as on the OptionMarket
+        if *ctx.accounts.underlying_asset_pool.to_account_info().key != ctx.accounts.option_market.underlying_asset_pool {
+            return Err(errors::PsyOptionsError::UnderlyingPoolAccountDoesNotMatchMarket.into())
+        }
 
         // TODO: Validate the option mint is the same as on the OptionMarket
 

@@ -21,6 +21,7 @@ import {
   createAccountsForInitializeMarket,
   createMinter,
   createUnderlyingAndQuoteMints,
+  initNewTokenAccount,
   initSetup,
   wait,
 } from "../utils/helpers";
@@ -97,12 +98,18 @@ describe("mintOption", () => {
     );
   });
 
-  const mintOptionsTx = async () => {
+  const mintOptionsTx = async (
+    opts: {
+      underlyingAssetPoolAccount?: Keypair;
+    } = {}
+  ) => {
     await program.rpc.mintOption(size, {
       accounts: {
         userAuthority: minter.publicKey,
         underlyingAssetMint: underlyingToken.publicKey,
-        underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
+        underlyingAssetPool: (
+          opts.underlyingAssetPoolAccount || underlyingAssetPoolAccount
+        ).publicKey,
         underlyingAssetSrc: underlyingAccount.publicKey,
         optionMint: optionMintAccount.publicKey,
         mintedOptionDest: optionAccount.publicKey,
@@ -268,6 +275,57 @@ describe("mintOption", () => {
         assert.ok(false);
       } catch (err) {
         const errMsg = "OptionMarket is expired, can't mint";
+        assert.equal(err.toString(), errMsg);
+      }
+    });
+  });
+
+  describe("Underlying pool key differs from option market", () => {
+    beforeEach(async () => {
+      ({
+        quoteToken,
+        underlyingToken,
+        underlyingAmountPerContract,
+        quoteAmountPerContract,
+        expiration,
+        optionMarketKey,
+        bumpSeed,
+        mintFeeKey,
+        exerciseFeeKey,
+        optionMintAccount,
+        writerTokenMintAccount,
+        underlyingAssetPoolAccount,
+        quoteAssetPoolAccount,
+        remainingAccounts,
+        instructions,
+      } = await initSetup(provider, payer, mintAuthority, program));
+      await initOptionMarket();
+      ({ optionAccount, underlyingAccount, writerTokenAccount } =
+        await createMinter(
+          provider.connection,
+          minter,
+          mintAuthority,
+          underlyingToken,
+          underlyingAmountPerContract.muln(2).toNumber(),
+          optionMintAccount.publicKey,
+          writerTokenMintAccount.publicKey
+        ));
+      // Create a new token account and set it as the underlyingAssetPoolAccount
+      const { tokenAccount } = await initNewTokenAccount(
+        provider.connection,
+        payer.publicKey,
+        underlyingToken.publicKey,
+        payer
+      );
+      underlyingAssetPoolAccount = tokenAccount;
+    });
+    it("should error", async () => {
+      try {
+        await mintOptionsTx();
+        assert.ok(false);
+      } catch (err) {
+        const errMsg =
+          "Underlying pool account does not match the value on the OptionMarket";
         assert.equal(err.toString(), errMsg);
       }
     });
