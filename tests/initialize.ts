@@ -40,7 +40,6 @@ describe("initializeMarket", () => {
   let expiration: anchor.BN;
   let optionMarketKey: PublicKey;
   let bumpSeed: number;
-  let authorityBumpSeed: number;
   let mintFeeKey: PublicKey | null;
   let exerciseFeeKey: PublicKey;
   let optionMintAccount: Keypair;
@@ -156,7 +155,6 @@ describe("initializeMarket", () => {
       underlyingAmountPerContract,
       quoteAmountPerContract,
       expiration,
-      authorityBumpSeed,
       bumpSeed,
       {
         accounts: {
@@ -323,7 +321,6 @@ describe("initializeMarket", () => {
           underlyingAmountPerContract,
           quoteAmountPerContract,
           expiration,
-          authorityBumpSeed,
           bumpSeed,
           {
             accounts: {

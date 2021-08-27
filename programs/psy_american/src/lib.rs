@@ -2,12 +2,9 @@ pub mod errors;
 pub mod fees;
 
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, TokenAccount};
+use anchor_spl::token::{self, Mint, MintTo, TokenAccount};
 use spl_token::state::Account as SPLTokenAccount;
-use solana_program::{ 
-    program_error::ProgramError,
-    program_pack::Pack
-};
+use solana_program::{ program_error::ProgramError, program_pack::Pack };
 
 #[program]
 pub mod psy_american {
@@ -20,8 +17,7 @@ pub mod psy_american {
         underlying_amount_per_contract: u64,
         quote_amount_per_contract: u64,
         expiration_unix_timestamp: i64,
-        authority_bump_seed: u8,
-        _bump_seed: u8
+        bump_seed: u8
     ) -> ProgramResult {
         // check that underlying_amount_per_contract and quote_amount_per_contract are not 0
         if underlying_amount_per_contract <= 0 || quote_amount_per_contract <= 0 {
@@ -43,7 +39,31 @@ pub mod psy_american {
         option_market.quote_asset_pool = *ctx.accounts.quote_asset_pool.to_account_info().key;
         option_market.mint_fee_account = fee_accounts.mint_fee_key;
         option_market.exercise_fee_account = fee_accounts.exercise_fee_key;
-        option_market.bump_seed = authority_bump_seed;
+        option_market.bump_seed = bump_seed;
+
+        Ok(())
+    }
+
+    pub fn mint_option(ctx: Context<MintOption>, size: u64) -> ProgramResult {
+        // Mint a new option
+        let cpi_accounts = MintTo {
+            mint: ctx.accounts.option_mint.to_account_info(),
+            to: ctx.accounts.minted_option_dest.to_account_info(),
+            authority: ctx.accounts.option_market.to_account_info(),
+        };
+        let option_market = &ctx.accounts.option_market;
+        let seeds = &[
+            option_market.underlying_asset_mint.as_ref(),
+            option_market.quote_asset_mint.as_ref(),
+            &option_market.underlying_amount_per_contract.to_le_bytes(),
+            &option_market.quote_amount_per_contract.to_le_bytes(),
+            &option_market.expiration_unix_timestamp.to_le_bytes(),
+            &[option_market.bump_seed]
+        ];
+        let signer = &[&seeds[..]];
+        let cpi_program = ctx.accounts.token_program.clone();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        token::mint_to(cpi_ctx, size)?;
 
         Ok(())
     }
@@ -112,7 +132,6 @@ fn validate_fee_accounts<'info>(
     underlying_amount_per_contract: u64,
     quote_amount_per_contract: u64,
     expiration_unix_timestamp: i64,
-    authority_bump_seed: u8,
     bump_seed: u8
 )]
 pub struct InitializeMarket<'info> {
@@ -161,6 +180,38 @@ impl<'info> InitializeMarket<'info> {
         if ctx.accounts.underlying_asset_mint.key == ctx.accounts.quote_asset_mint.key {
             return Err(errors::PsyOptionsError::QuoteAndUnderlyingAssetMustDiffer.into())
         }
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct MintOption<'info> {
+    #[account(signer)]
+    authority: AccountInfo<'info>,
+    underlying_asset_mint: AccountInfo<'info>,
+    #[account(mut)]
+    underlying_asset_pool: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    underlying_asset_src: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    option_mint: CpiAccount<'info, Mint>,
+    #[account(mut)]
+    minted_option_dest: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    writer_token_mint: CpiAccount<'info, Mint>,
+    #[account(mut)]
+    minted_writer_token_dest: CpiAccount<'info, TokenAccount>,
+    option_market: ProgramAccount<'info, OptionMarket>,
+    fee_owner: AccountInfo<'info>,
+
+    token_program: AccountInfo<'info>,
+    associated_token_program: AccountInfo<'info>,
+    clock: Sysvar<'info, Clock>,
+    rent: Sysvar<'info, Rent>,
+    system_program: AccountInfo<'info>,
+}
+impl<'info> MintOption<'info> {
+    fn accounts(_ctx: &Context<MintOption<'info>>) -> Result<(), ProgramError> {
         Ok(())
     }
 }

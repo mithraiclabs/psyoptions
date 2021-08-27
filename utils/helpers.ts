@@ -4,6 +4,7 @@ import {
   MintLayout,
   Token,
   TOKEN_PROGRAM_ID,
+  u64,
 } from "@solana/spl-token";
 import {
   Connection,
@@ -180,4 +181,44 @@ export const initNewTokenAccount = async (
   return {
     tokenAccount,
   };
+};
+
+export const createMinter = async (
+  connection: Connection,
+  minter: Keypair,
+  mintAuthority: Keypair,
+  underlyingToken: Token,
+  underlyingAmountPerContract: BN,
+  optionMint: PublicKey,
+  writerTokenMint: PublicKey
+) => {
+  const { tokenAccount: underlyingAccount } = await initNewTokenAccount(
+    connection,
+    minter.publicKey,
+    underlyingToken.publicKey,
+    minter
+  );
+
+  // mint underlying tokens to the minter's account
+  await underlyingToken.mintTo(
+    underlyingAccount.publicKey,
+    mintAuthority,
+    [],
+    underlyingAmountPerContract.muln(2).toNumber()
+  );
+  // create an associated token account to hold the options
+  const { tokenAccount: optionAccount } = await initNewTokenAccount(
+    connection,
+    minter.publicKey,
+    optionMint,
+    minter
+  );
+  // create an associated token account to hold the writer tokens
+  const { tokenAccount: writerTokenAccount } = await initNewTokenAccount(
+    connection,
+    minter.publicKey,
+    writerTokenMint,
+    minter
+  );
+  return { optionAccount, underlyingAccount, writerTokenAccount };
 };
