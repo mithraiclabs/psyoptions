@@ -29,5 +29,7 @@ pub enum PsyOptionsError {
   #[msg("OptionToken mint does not match the value on the OptionMarket")]
   OptionTokenMintDoesNotMatchMarket,
   #[msg("WriterToken mint does not match the value on the OptionMarket")]
-  WriterTokenMintDoesNotMatchMarket
+  WriterTokenMintDoesNotMatchMarket,
+  #[msg("MintFee key does not match the value on the OptionMarket")]
+  MintFeeKeyDoesNotMatchOptionMarket,
 }

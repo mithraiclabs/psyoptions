@@ -102,6 +102,7 @@ describe("mintOption", () => {
   const mintOptionsTx = async (
     opts: {
       underlyingAssetPoolAccount?: Keypair;
+      remainingAccounts?: AccountMeta[];
     } = {}
   ) => {
     await program.rpc.mintOption(size, {
@@ -124,7 +125,9 @@ describe("mintOption", () => {
         rent: SYSVAR_RENT_PUBKEY,
         systemProgram: SystemProgram.programId,
       },
-      remainingAccounts,
+      remainingAccounts: opts.remainingAccounts
+        ? opts.remainingAccounts
+        : remainingAccounts,
       signers: [minter],
     });
   };
@@ -427,6 +430,67 @@ describe("mintOption", () => {
       } catch (err) {
         const errMsg =
           "WriterToken mint does not match the value on the OptionMarket";
+        assert.equal(err.toString(), errMsg);
+      }
+    });
+  });
+
+  describe("MintFee account differs from option market", () => {
+    let badMintFeeKey: PublicKey;
+    beforeEach(async () => {
+      ({
+        quoteToken,
+        underlyingToken,
+        underlyingAmountPerContract,
+        quoteAmountPerContract,
+        expiration,
+        optionMarketKey,
+        bumpSeed,
+        mintFeeKey,
+        exerciseFeeKey,
+        optionMintAccount,
+        writerTokenMintAccount,
+        underlyingAssetPoolAccount,
+        quoteAssetPoolAccount,
+        remainingAccounts,
+        instructions,
+      } = await initSetup(provider, payer, mintAuthority, program));
+      await initOptionMarket();
+      // Create a new token account and set it as the mintFeeKey
+      const { tokenAccount } = await initNewTokenAccount(
+        provider.connection,
+        FEE_OWNER_KEY,
+        underlyingToken.publicKey,
+        payer
+      );
+      badMintFeeKey = tokenAccount.publicKey;
+
+      ({ optionAccount, underlyingAccount, writerTokenAccount } =
+        await createMinter(
+          provider.connection,
+          minter,
+          mintAuthority,
+          underlyingToken,
+          underlyingAmountPerContract.muln(2).toNumber(),
+          optionMintAccount.publicKey,
+          writerTokenMintAccount.publicKey
+        ));
+    });
+    it("should error", async () => {
+      try {
+        await mintOptionsTx({
+          remainingAccounts: [
+            {
+              pubkey: badMintFeeKey,
+              isWritable: true,
+              isSigner: false,
+            },
+          ],
+        });
+        assert.ok(false);
+      } catch (err) {
+        const errMsg =
+          "MintFee key does not match the value on the OptionMarket";
         assert.equal(err.toString(), errMsg);
       }
     });

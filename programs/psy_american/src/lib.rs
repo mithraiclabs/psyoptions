@@ -26,7 +26,13 @@ pub mod psy_american {
             return Err(errors::PsyOptionsError::QuoteOrUnderlyingAmountCannotBe0.into())
         }
 
-        let fee_accounts = validate_fee_accounts(&ctx, underlying_amount_per_contract, quote_amount_per_contract)?;
+        let fee_accounts = validate_fee_accounts(
+            &ctx.remaining_accounts, 
+            &ctx.accounts.underlying_asset_mint.key,
+            &ctx.accounts.quote_asset_mint.key,
+            underlying_amount_per_contract,
+            quote_amount_per_contract
+        )?;
 
         // write the data to the OptionMarket account
         let option_market = &mut ctx.accounts.option_market;
@@ -46,7 +52,7 @@ pub mod psy_american {
         Ok(())
     }
 
-    #[access_control(MintOption::unexpired_market(&ctx) MintOption::accounts(&ctx))]
+    #[access_control(MintOption::unexpired_market(&ctx) MintOption::accounts(&ctx) MintOption::validate_mint_fee_acct(&ctx))]
     pub fn mint_option(ctx: Context<MintOption>, size: u64) -> ProgramResult {
         let option_market = &ctx.accounts.option_market;
 
@@ -101,12 +107,15 @@ struct FeeAccounts {
     mint_fee_key: Pubkey,
     exercise_fee_key: Pubkey
 }
+
 fn validate_fee_accounts<'info>(
-    ctx: &Context<InitializeMarket>,
+    remaining_accounts: &[AccountInfo],
+    underlying_asset_mint: &Pubkey,
+    quote_asset_mint: &Pubkey,
     underlying_amount_per_contract: u64,
     quote_amount_per_contract: u64
 ) -> Result<FeeAccounts, ProgramError> {
-    let account_info_iter = &mut ctx.remaining_accounts.iter();
+    let account_info_iter = &mut remaining_accounts.iter();
     let mut fee_accounts = FeeAccounts {
         mint_fee_key: fees::fee_owner_key::ID,
         exercise_fee_key: fees::fee_owner_key::ID,
@@ -115,17 +124,15 @@ fn validate_fee_accounts<'info>(
     // if the mint fee account is required, check that it exists and has the proper owner
     if fees::fee_amount(underlying_amount_per_contract) > 0 {
         let mint_fee_recipient = next_account_info(account_info_iter)?;
-        msg!("mint fee program owner: {:?}", mint_fee_recipient.owner);
         if mint_fee_recipient.owner != &spl_token::ID {
             return Err(errors::PsyOptionsError::ExpectedSPLTokenProgramId.into())
         }
         let mint_fee_account = SPLTokenAccount::unpack_from_slice(&mint_fee_recipient.try_borrow_data()?)?;
-        msg!("mint owner: {:?}, fee_owner: {:?}", mint_fee_account.owner, fees::fee_owner_key::ID);
         if mint_fee_account.owner != fees::fee_owner_key::ID {
             return Err(errors::PsyOptionsError::MintFeeMustBeOwnedByFeeOwner.into()) 
         }
         // check that the mint fee recipient account's mint is also the underlying mint
-        if mint_fee_account.mint != *ctx.accounts.underlying_asset_mint.key {
+        if mint_fee_account.mint != *underlying_asset_mint {
             return Err(errors::PsyOptionsError::MintFeeTokenMustMatchUnderlyingAsset.into())
         }
 
@@ -135,17 +142,15 @@ fn validate_fee_accounts<'info>(
     // if the exercise fee account is required, check that it exists and has the proper owner
     if fees::fee_amount(quote_amount_per_contract) > 0 {
         let exercise_fee_recipient = next_account_info(account_info_iter)?;
-        msg!("exercise_fee_recipient owner: {:?}", exercise_fee_recipient.owner);
         if exercise_fee_recipient.owner != &spl_token::ID {
             return Err(errors::PsyOptionsError::ExpectedSPLTokenProgramId.into())
         }
         let exercise_fee_account = SPLTokenAccount::unpack_from_slice(&exercise_fee_recipient.try_borrow_data()?)?;
-        msg!("owner: {:?}, fee_owner: {:?}", exercise_fee_account.owner, fees::fee_owner_key::ID);
         if exercise_fee_account.owner != fees::fee_owner_key::ID {
             return Err(errors::PsyOptionsError::ExerciseFeeMustBeOwnedByFeeOwner.into()) 
         }
         // check that the exercise fee recipient account's mint is also the quote mint
-        if exercise_fee_account.mint != *ctx.accounts.quote_asset_mint.key {
+        if exercise_fee_account.mint != *quote_asset_mint {
             return Err(errors::PsyOptionsError::ExerciseFeeTokenMustMatchQuoteAsset.into())
         }
 
@@ -231,6 +236,7 @@ pub struct MintOption<'info> {
     option_market: ProgramAccount<'info, OptionMarket>,
     fee_owner: AccountInfo<'info>,
 
+
     token_program: AccountInfo<'info>,
     associated_token_program: AccountInfo<'info>,
     clock: Sysvar<'info, Clock>,
@@ -254,8 +260,6 @@ impl<'info> MintOption<'info> {
             return Err(errors::PsyOptionsError::WriterTokenMintDoesNotMatchMarket.into())
         }
 
-        // TODO: Validate the mint fee account is the same as the OptionMarket
-
         // TODO: Validate size is > 0
 
         Ok(())
@@ -264,6 +268,30 @@ impl<'info> MintOption<'info> {
         // Validate the market is not expired
         if ctx.accounts.option_market.expiration_unix_timestamp < ctx.accounts.clock.unix_timestamp {
             return Err(errors::PsyOptionsError::OptionMarketExpiredCantMint.into())
+        }
+        Ok(())
+    }
+
+    fn validate_mint_fee_acct(ctx: &Context<MintOption<'info>>) -> Result<(), ProgramError> {
+        let option_market = &ctx.accounts.option_market;
+        let account_info_iter = &mut ctx.remaining_accounts.iter();
+
+        if fees::fee_amount(option_market.underlying_amount_per_contract) > 0 {
+            let mint_fee_recipient = next_account_info(account_info_iter)?;
+            if mint_fee_recipient.owner != &spl_token::ID {
+                return Err(errors::PsyOptionsError::ExpectedSPLTokenProgramId.into())
+            }
+            let mint_fee_account = SPLTokenAccount::unpack_from_slice(&mint_fee_recipient.try_borrow_data()?)?;
+            if mint_fee_account.owner != fees::fee_owner_key::ID {
+                return Err(errors::PsyOptionsError::MintFeeMustBeOwnedByFeeOwner.into()) 
+            }
+            // check that the mint fee recipient account's mint is also the underlying mint
+            if mint_fee_account.mint != option_market.underlying_asset_mint {
+                return Err(errors::PsyOptionsError::MintFeeTokenMustMatchUnderlyingAsset.into())
+            }
+            if *mint_fee_recipient.key != option_market.mint_fee_account {
+                return Err(errors::PsyOptionsError::MintFeeKeyDoesNotMatchOptionMarket.into())
+            }
         }
         Ok(())
     }
