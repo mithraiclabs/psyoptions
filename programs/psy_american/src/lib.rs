@@ -19,6 +19,8 @@ pub mod psy_american {
         expiration_unix_timestamp: i64,
         bump_seed: u8
     ) -> ProgramResult {
+        // TODO: (nice to have) Validate the expiration is in the future
+
         // check that underlying_amount_per_contract and quote_amount_per_contract are not 0
         if underlying_amount_per_contract <= 0 || quote_amount_per_contract <= 0 {
             return Err(errors::PsyOptionsError::QuoteOrUnderlyingAmountCannotBe0.into())
@@ -44,6 +46,7 @@ pub mod psy_american {
         Ok(())
     }
 
+    #[access_control(MintOption::unexpired_market(&ctx))]
     pub fn mint_option(ctx: Context<MintOption>, size: u64) -> ProgramResult {
         let option_market = &ctx.accounts.option_market;
 
@@ -88,10 +91,11 @@ pub mod psy_american {
         let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
         token::mint_to(cpi_ctx, size)?;
 
+        // TODO: Take a mint fee
+
         Ok(())
     }
 }
-
 
 struct FeeAccounts {
     mint_fee_key: Pubkey,
@@ -235,6 +239,23 @@ pub struct MintOption<'info> {
 }
 impl<'info> MintOption<'info> {
     fn accounts(_ctx: &Context<MintOption<'info>>) -> Result<(), ProgramError> {
+        // TODO: Validate the underlying asset pool is the same as on the OptionMarket
+
+        // TODO: Validate the option mint is the same as on the OptionMarket
+
+        // TODO: Validate the writer token mint is the same as on the OptionMarket
+
+        // TODO: Validate the mint fee account is the same as the OptionMarket
+
+        // TODO: Validate size is > 0
+
+        Ok(())
+    }
+    fn unexpired_market(ctx: &Context<MintOption<'info>>) -> Result<(), ProgramError> {
+        // Validate the market is not expired
+        if ctx.accounts.option_market.expiration_unix_timestamp < ctx.accounts.clock.unix_timestamp {
+            return Err(errors::PsyOptionsError::OptionMarketExpiredCantMint.into())
+        }
         Ok(())
     }
 }

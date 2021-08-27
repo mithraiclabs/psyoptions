@@ -22,6 +22,7 @@ import {
   createMinter,
   createUnderlyingAndQuoteMints,
   initSetup,
+  wait,
 } from "../utils/helpers";
 
 describe("mintOption", () => {
@@ -94,24 +95,6 @@ describe("mintOption", () => {
       ),
       "confirmed"
     );
-    ({
-      quoteToken,
-      underlyingToken,
-      underlyingAmountPerContract,
-      quoteAmountPerContract,
-      expiration,
-      optionMarketKey,
-      bumpSeed,
-      mintFeeKey,
-      exerciseFeeKey,
-      optionMintAccount,
-      writerTokenMintAccount,
-      underlyingAssetPoolAccount,
-      quoteAssetPoolAccount,
-      remainingAccounts,
-      instructions,
-    } = await initSetup(provider, payer, mintAuthority, program));
-    await initOptionMarket();
   });
 
   const mintOptionsTx = async () => {
@@ -140,6 +123,24 @@ describe("mintOption", () => {
 
   describe("proper mint", () => {
     beforeEach(async () => {
+      ({
+        quoteToken,
+        underlyingToken,
+        underlyingAmountPerContract,
+        quoteAmountPerContract,
+        expiration,
+        optionMarketKey,
+        bumpSeed,
+        mintFeeKey,
+        exerciseFeeKey,
+        optionMintAccount,
+        writerTokenMintAccount,
+        underlyingAssetPoolAccount,
+        quoteAssetPoolAccount,
+        remainingAccounts,
+        instructions,
+      } = await initSetup(provider, payer, mintAuthority, program));
+      await initOptionMarket();
       ({ optionAccount, underlyingAccount, writerTokenAccount } =
         await createMinter(
           provider.connection,
@@ -223,6 +224,52 @@ describe("mintOption", () => {
         expectedUnderlyingTransfered.neg().toString(),
         minterUnderlyingDiff.toString()
       );
+    });
+  });
+
+  describe("OptionMarket expired", () => {
+    beforeEach(async () => {
+      ({
+        quoteToken,
+        underlyingToken,
+        underlyingAmountPerContract,
+        quoteAmountPerContract,
+        expiration,
+        optionMarketKey,
+        bumpSeed,
+        mintFeeKey,
+        exerciseFeeKey,
+        optionMintAccount,
+        writerTokenMintAccount,
+        underlyingAssetPoolAccount,
+        quoteAssetPoolAccount,
+        remainingAccounts,
+        instructions,
+      } = await initSetup(provider, payer, mintAuthority, program, {
+        // set expiration to 2 seconds from now
+        expiration: new anchor.BN(new Date().getTime() / 1000 + 2),
+      }));
+      await initOptionMarket();
+      ({ optionAccount, underlyingAccount, writerTokenAccount } =
+        await createMinter(
+          provider.connection,
+          minter,
+          mintAuthority,
+          underlyingToken,
+          underlyingAmountPerContract.muln(2).toNumber(),
+          optionMintAccount.publicKey,
+          writerTokenMintAccount.publicKey
+        ));
+    });
+    it("should error", async () => {
+      try {
+        await wait(2000);
+        await mintOptionsTx();
+        assert.ok(false);
+      } catch (err) {
+        const errMsg = "OptionMarket is expired, can't mint";
+        assert.equal(err.toString(), errMsg);
+      }
     });
   });
 });

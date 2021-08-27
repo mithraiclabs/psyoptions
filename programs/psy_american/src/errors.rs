@@ -22,6 +22,6 @@ pub enum PsyOptionsError {
   MintFeeTokenMustMatchUnderlyingAsset,
   #[msg("Exercise fee token must be the same as the quote asset")]
   ExerciseFeeTokenMustMatchQuoteAsset,
-  #[msg("Overflow error on checked math")]
-  OverflowError,
+  #[msg("OptionMarket is expired, can't mint")]
+  OptionMarketExpiredCantMint
 }

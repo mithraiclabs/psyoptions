@@ -24,6 +24,9 @@ import {
 } from "../packages/psyoptions-ts/src";
 import { feeAmount, FEE_OWNER_KEY } from "../packages/psyoptions-ts/src/fees";
 
+export const wait = (delayMS: number) =>
+  new Promise((resolve) => setTimeout(resolve, delayMS));
+
 export const createUnderlyingAndQuoteMints = async (
   provider: Provider,
   wallet: Keypair,
@@ -293,13 +296,17 @@ export const initSetup = async (
     exerciseFeeToken?: Token;
     mintFeeOwner?: PublicKey;
     exerciseFeeOwner?: PublicKey;
+    expiration?: anchor.BN;
   } = {}
 ) => {
   let quoteToken: Token;
   let underlyingToken: Token;
-  let underlyingAmountPerContract = new anchor.BN("10000000000");
-  let quoteAmountPerContract = new anchor.BN("50000000000");
-  let expiration = new anchor.BN(new Date().getTime() / 1000 + 3600);
+  let underlyingAmountPerContract =
+    opts.underlyingAmountPerContract || new anchor.BN("10000000000");
+  let quoteAmountPerContract =
+    opts.quoteAmountPerContract || new anchor.BN("50000000000");
+  let expiration =
+    opts.expiration || new anchor.BN(new Date().getTime() / 1000 + 3600);
   let optionMarketKey: PublicKey;
   let bumpSeed: number;
   let mintFeeKey = new Keypair().publicKey;
@@ -311,15 +318,6 @@ export const initSetup = async (
   let remainingAccounts: AccountMeta[] = [];
   let instructions: TransactionInstruction[] = [];
   try {
-    // Handle overriding underlyingAmountPerContract
-    underlyingAmountPerContract = opts.underlyingAmountPerContract
-      ? opts.underlyingAmountPerContract
-      : underlyingAmountPerContract;
-    // Handle overriding quoteAmountPerContract
-    quoteAmountPerContract = opts.quoteAmountPerContract
-      ? opts.quoteAmountPerContract
-      : quoteAmountPerContract;
-
     ({ underlyingToken, quoteToken } = await createUnderlyingAndQuoteMints(
       provider,
       payer,
