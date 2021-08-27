@@ -49,6 +49,11 @@ describe("mintOption", () => {
   let remainingAccounts: AccountMeta[] = [];
   let instructions: TransactionInstruction[] = [];
 
+  let optionAccount: Keypair;
+  let underlyingAccount: Keypair;
+  let writerTokenAccount: Keypair;
+  let size = new u64(1);
+
   const initOptionMarket = async () => {
     await program.rpc.initializeMarket(
       underlyingAmountPerContract,
@@ -109,41 +114,46 @@ describe("mintOption", () => {
     await initOptionMarket();
   });
 
+  const mintOptionsTx = async () => {
+    await program.rpc.mintOption(size, {
+      accounts: {
+        authority: payer.publicKey,
+        underlyingAssetMint: underlyingToken.publicKey,
+        underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
+        underlyingAssetSrc: underlyingAccount.publicKey,
+        optionMint: optionMintAccount.publicKey,
+        mintedOptionDest: optionAccount.publicKey,
+        writerTokenMint: writerTokenMintAccount.publicKey,
+        mintedWriterTokenDest: writerTokenAccount.publicKey,
+        optionMarket: optionMarketKey,
+        feeOwner: FEE_OWNER_KEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        clock: SYSVAR_CLOCK_PUBKEY,
+        rent: SYSVAR_RENT_PUBKEY,
+        systemProgram: SystemProgram.programId,
+      },
+      remainingAccounts,
+      signers: [payer],
+    });
+  };
+
   describe("proper mint", () => {
-    it("should mint 1 option", async () => {
-      const size = new u64(1);
+    beforeEach(async () => {
+      ({ optionAccount, underlyingAccount, writerTokenAccount } =
+        await createMinter(
+          provider.connection,
+          minter,
+          mintAuthority,
+          underlyingToken,
+          underlyingAmountPerContract.muln(2).toNumber(),
+          optionMintAccount.publicKey,
+          writerTokenMintAccount.publicKey
+        ));
+    });
+    it("should mint size OptionTokens", async () => {
       try {
-        const { optionAccount, underlyingAccount, writerTokenAccount } =
-          await createMinter(
-            provider.connection,
-            minter,
-            mintAuthority,
-            underlyingToken,
-            underlyingAmountPerContract,
-            optionMintAccount.publicKey,
-            writerTokenMintAccount.publicKey
-          );
-        await program.rpc.mintOption(size, {
-          accounts: {
-            authority: payer.publicKey,
-            underlyingAssetMint: underlyingToken.publicKey,
-            underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
-            underlyingAssetSrc: underlyingAccount.publicKey,
-            optionMint: optionMintAccount.publicKey,
-            mintedOptionDest: optionAccount.publicKey,
-            writerTokenMint: writerTokenMintAccount.publicKey,
-            mintedWriterTokenDest: writerTokenAccount.publicKey,
-            optionMarket: optionMarketKey,
-            feeOwner: FEE_OWNER_KEY,
-            tokenProgram: TOKEN_PROGRAM_ID,
-            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-            clock: SYSVAR_CLOCK_PUBKEY,
-            rent: SYSVAR_RENT_PUBKEY,
-            systemProgram: SystemProgram.programId,
-          },
-          remainingAccounts,
-          signers: [payer],
-        });
+        await mintOptionsTx();
       } catch (err) {
         console.error(err.toString());
         throw err;
@@ -155,6 +165,23 @@ describe("mintOption", () => {
         payer
       );
       const mintInfo = await optionMintToken.getMintInfo();
+      assert.equal(mintInfo.supply.toString(), size.toString());
+    });
+
+    it("should mint size WriterTokens", async () => {
+      try {
+        await mintOptionsTx();
+      } catch (err) {
+        console.error(err.toString());
+        throw err;
+      }
+      const writerToken = new Token(
+        provider.connection,
+        writerTokenMintAccount.publicKey,
+        TOKEN_PROGRAM_ID,
+        payer
+      );
+      const mintInfo = await writerToken.getMintInfo();
       assert.equal(mintInfo.supply.toString(), size.toString());
     });
   });

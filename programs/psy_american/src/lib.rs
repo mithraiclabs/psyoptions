@@ -45,12 +45,8 @@ pub mod psy_american {
     }
 
     pub fn mint_option(ctx: Context<MintOption>, size: u64) -> ProgramResult {
-        // Mint a new option
-        let cpi_accounts = MintTo {
-            mint: ctx.accounts.option_mint.to_account_info(),
-            to: ctx.accounts.minted_option_dest.to_account_info(),
-            authority: ctx.accounts.option_market.to_account_info(),
-        };
+        // TODO: transfer the underlying assets to the underlying assets pool
+
         let option_market = &ctx.accounts.option_market;
         let seeds = &[
             option_market.underlying_asset_mint.as_ref(),
@@ -61,6 +57,23 @@ pub mod psy_american {
             &[option_market.bump_seed]
         ];
         let signer = &[&seeds[..]];
+
+        // Mint a new OptionToken(s)
+        let cpi_accounts = MintTo {
+            mint: ctx.accounts.option_mint.to_account_info(),
+            to: ctx.accounts.minted_option_dest.to_account_info(),
+            authority: ctx.accounts.option_market.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.token_program.clone();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        token::mint_to(cpi_ctx, size)?;
+
+        // Mint a new WriterToken(s)
+        let cpi_accounts = MintTo {
+            mint: ctx.accounts.writer_token_mint.to_account_info(),
+            to: ctx.accounts.minted_writer_token_dest.to_account_info(),
+            authority: ctx.accounts.option_market.to_account_info(),
+        };
         let cpi_program = ctx.accounts.token_program.clone();
         let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
         token::mint_to(cpi_ctx, size)?;

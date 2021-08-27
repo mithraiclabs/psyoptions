@@ -196,7 +196,7 @@ export const createMinter = async (
   minter: Keypair,
   mintAuthority: Keypair,
   underlyingToken: Token,
-  underlyingAmountPerContract: BN,
+  underlyingAmount: number,
   optionMint: PublicKey,
   writerTokenMint: PublicKey
 ) => {
@@ -276,7 +276,7 @@ export const createMinter = async (
     underlyingAccount.publicKey,
     mintAuthority,
     [],
-    underlyingAmountPerContract.muln(2).toNumber()
+    underlyingAmount
   );
   return { optionAccount, underlyingAccount, writerTokenAccount };
 };
