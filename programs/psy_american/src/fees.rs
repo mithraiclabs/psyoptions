@@ -1,4 +1,3 @@
-
 /// The fee_owner_key will own all of the associated accounts where token fees are paid to.
 /// In the future this should be a program derived address owned by a fully decntralized
 /// fee sweeping program.
@@ -21,6 +20,11 @@ struct U64F64(u128);
 
 impl U64F64 {
   #[inline(always)]
+  const fn add(self, other: U64F64) -> U64F64 {
+      U64F64(self.0 + other.0)
+  }
+
+  #[inline(always)]
   const fn mul_u64(self, other: u64) -> U64F64 {
     U64F64(self.0 * other as u128)
   }
@@ -37,7 +41,7 @@ fn fee_bps(bps: u64) -> U64F64 {
 }
 
 fn fee_rate() -> U64F64 {
-  fee_bps(5)
+  U64F64(fee_bps(5).0 + 1)
 }
 
 /// Calculates the fee for Minting and Exercising.
