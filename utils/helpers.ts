@@ -284,6 +284,96 @@ export const createMinter = async (
   return { optionAccount, underlyingAccount, writerTokenAccount };
 };
 
+export const createExerciser = async (
+  connection: Connection,
+  minter: Keypair,
+  mintAuthority: Keypair,
+  quoteToken: Token,
+  quoteAmount: number,
+  optionMint: PublicKey,
+  writerTokenMint: PublicKey
+) => {
+  const transaction = new Transaction();
+
+  const quoteAccount = new Keypair();
+  const assetPoolRentBalance =
+    await connection.getMinimumBalanceForRentExemption(AccountLayout.span);
+  transaction.add(
+    SystemProgram.createAccount({
+      fromPubkey: minter.publicKey,
+      newAccountPubkey: quoteAccount.publicKey,
+      lamports: assetPoolRentBalance,
+      space: AccountLayout.span,
+      programId: TOKEN_PROGRAM_ID,
+    })
+  );
+  transaction.add(
+    Token.createInitAccountInstruction(
+      TOKEN_PROGRAM_ID,
+      quoteToken.publicKey,
+      quoteAccount.publicKey,
+      minter.publicKey
+    )
+  );
+
+  // create an associated token account to hold the options
+  const optionAccount = new Keypair();
+  transaction.add(
+    SystemProgram.createAccount({
+      fromPubkey: minter.publicKey,
+      newAccountPubkey: optionAccount.publicKey,
+      lamports: assetPoolRentBalance,
+      space: AccountLayout.span,
+      programId: TOKEN_PROGRAM_ID,
+    })
+  );
+  transaction.add(
+    Token.createInitAccountInstruction(
+      TOKEN_PROGRAM_ID,
+      optionMint,
+      optionAccount.publicKey,
+      minter.publicKey
+    )
+  );
+
+  // create an associated token account to hold the writer tokens
+  const writerTokenAccount = new Keypair();
+  transaction.add(
+    SystemProgram.createAccount({
+      fromPubkey: minter.publicKey,
+      newAccountPubkey: writerTokenAccount.publicKey,
+      lamports: assetPoolRentBalance,
+      space: AccountLayout.span,
+      programId: TOKEN_PROGRAM_ID,
+    })
+  );
+  transaction.add(
+    Token.createInitAccountInstruction(
+      TOKEN_PROGRAM_ID,
+      writerTokenMint,
+      writerTokenAccount.publicKey,
+      minter.publicKey
+    )
+  );
+  await sendAndConfirmTransaction(
+    connection,
+    transaction,
+    [minter, quoteAccount, optionAccount, writerTokenAccount],
+    {
+      commitment: "confirmed",
+    }
+  );
+
+  // mint underlying tokens to the minter's account
+  await quoteToken.mintTo(
+    quoteAccount.publicKey,
+    mintAuthority,
+    [],
+    quoteAmount
+  );
+  return { optionAccount, quoteAccount, writerTokenAccount };
+};
+
 export const initSetup = async (
   provider: anchor.Provider,
   payer: Keypair,

@@ -134,6 +134,10 @@ pub mod psy_american {
 
         Ok(())
     }
+
+    pub fn exercise_option<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, ExerciseOption<'info>>, size: u64) -> ProgramResult {
+        Ok(())
+    }
 }
 
 struct FeeAccounts {
@@ -344,6 +348,12 @@ impl<'info> MintOption<'info> {
         }
         Ok(())
     }
+}
+
+#[derive(Accounts)]
+pub struct ExerciseOption<'info> {
+    #[account(signer)]
+    user_authority: AccountInfo<'info>,
 }
 
 #[account]
