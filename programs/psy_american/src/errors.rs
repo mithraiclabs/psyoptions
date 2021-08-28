@@ -22,4 +22,16 @@ pub enum PsyOptionsError {
   MintFeeTokenMustMatchUnderlyingAsset,
   #[msg("Exercise fee token must be the same as the quote asset")]
   ExerciseFeeTokenMustMatchQuoteAsset,
+  #[msg("OptionMarket is expired, can't mint")]
+  OptionMarketExpiredCantMint,
+  #[msg("Underlying pool account does not match the value on the OptionMarket")]
+  UnderlyingPoolAccountDoesNotMatchMarket,
+  #[msg("OptionToken mint does not match the value on the OptionMarket")]
+  OptionTokenMintDoesNotMatchMarket,
+  #[msg("WriterToken mint does not match the value on the OptionMarket")]
+  WriterTokenMintDoesNotMatchMarket,
+  #[msg("MintFee key does not match the value on the OptionMarket")]
+  MintFeeKeyDoesNotMatchOptionMarket,
+  #[msg("The size argument must be > 0")]
+  SizeCantBeLessThanEqZero
 }
