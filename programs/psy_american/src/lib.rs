@@ -136,6 +136,30 @@ pub mod psy_american {
     }
 
     pub fn exercise_option<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, ExerciseOption<'info>>, size: u64) -> ProgramResult {
+        let option_market = &ctx.accounts.option_market;
+        let seeds = &[
+            option_market.underlying_asset_mint.as_ref(),
+            option_market.quote_asset_mint.as_ref(),
+            &option_market.underlying_amount_per_contract.to_le_bytes(),
+            &option_market.quote_amount_per_contract.to_le_bytes(),
+            &option_market.expiration_unix_timestamp.to_le_bytes(),
+            &[option_market.bump_seed]
+        ];
+        let signer = &[&seeds[..]];
+        // TODO: Burn the size of option tokens
+        msg!("exerciser_option_token_src owner {:?}, user_authority {:?}", ctx.accounts.exerciser_option_token_src.owner, ctx.accounts.user_authority.key);
+        let cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_program.clone(),
+            token::Burn {
+                mint: ctx.accounts.option_mint.to_account_info(),
+                to: ctx.accounts.exerciser_option_token_src.to_account_info(),
+                authority: ctx.accounts.user_authority.to_account_info(),
+            },
+            signer,
+        );
+        token::burn(cpi_ctx, size)?;
+
+        // TODO: 
         Ok(())
     }
 }
@@ -354,6 +378,13 @@ impl<'info> MintOption<'info> {
 pub struct ExerciseOption<'info> {
     #[account(signer)]
     user_authority: AccountInfo<'info>,
+    option_market: ProgramAccount<'info, OptionMarket>,
+    #[account(mut)]
+    option_mint: CpiAccount<'info, Mint>,
+    #[account(mut)]
+    exerciser_option_token_src: CpiAccount<'info, TokenAccount>,
+
+    token_program: AccountInfo<'info>,
 }
 
 #[account]

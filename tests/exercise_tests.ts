@@ -24,6 +24,7 @@ import {
 import {
   createExerciser,
   createMinter,
+  exerciseOptionTx,
   initNewTokenAccount,
   initNewTokenMint,
   initSetup,
@@ -42,6 +43,7 @@ describe("exerciseOption", () => {
   const program = anchor.workspace.PsyAmerican as anchor.Program;
 
   const minter = anchor.web3.Keypair.generate();
+  const exerciser = anchor.web3.Keypair.generate();
 
   let quoteToken: Token;
   let underlyingToken: Token;
@@ -62,7 +64,7 @@ describe("exerciseOption", () => {
   let instructions: TransactionInstruction[] = [];
 
   let optionToken: Token;
-  let size = new u64(2);
+  let size = new u64(1);
 
   const initOptionMarket = async () => {
     await program.rpc.initializeMarket(
@@ -145,6 +147,13 @@ describe("exerciseOption", () => {
       ),
       "confirmed"
     );
+    await provider.connection.confirmTransaction(
+      await provider.connection.requestAirdrop(
+        exerciser.publicKey,
+        100 * LAMPORTS_PER_SOL
+      ),
+      "confirmed"
+    );
     // Initialize a new OptionMarket
     ({
       quoteToken,
@@ -190,7 +199,7 @@ describe("exerciseOption", () => {
     ({ optionAccount: exerciserOptionAcct, quoteAccount: exerciserQuoteAcct } =
       await createExerciser(
         provider.connection,
-        minter,
+        exerciser,
         mintAuthority,
         quoteToken,
         new anchor.BN(100).mul(quoteAmountPerContract).muln(2).toNumber(),
@@ -214,7 +223,7 @@ describe("exerciseOption", () => {
     );
   });
   beforeEach(async () => {
-    size = new u64(2);
+    size = new u64(1);
   });
 
   it("should be properly setup", async () => {
@@ -226,5 +235,27 @@ describe("exerciseOption", () => {
 
   describe("proper exercise", () => {
     beforeEach(async () => {});
+    it("should burn the option token", async () => {
+      const optionTokenBefore = await optionToken.getMintInfo();
+      try {
+        await exerciseOptionTx(
+          program,
+          size,
+          optionMarketKey,
+          optionToken.publicKey,
+          exerciser,
+          exerciserOptionAcct.publicKey,
+          []
+        );
+      } catch (err) {
+        console.error(err.toString());
+        throw err;
+      }
+      const optionTokenAfter = await optionToken.getMintInfo();
+      const optionTokenDiff = optionTokenAfter.supply.sub(
+        optionTokenBefore.supply
+      );
+      assert.equal(optionTokenDiff.toString(), size.neg().toString());
+    });
   });
 });

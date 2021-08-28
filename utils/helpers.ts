@@ -286,7 +286,7 @@ export const createMinter = async (
 
 export const createExerciser = async (
   connection: Connection,
-  minter: Keypair,
+  exerciser: Keypair,
   mintAuthority: Keypair,
   quoteToken: Token,
   quoteAmount: number,
@@ -300,7 +300,7 @@ export const createExerciser = async (
     await connection.getMinimumBalanceForRentExemption(AccountLayout.span);
   transaction.add(
     SystemProgram.createAccount({
-      fromPubkey: minter.publicKey,
+      fromPubkey: exerciser.publicKey,
       newAccountPubkey: quoteAccount.publicKey,
       lamports: assetPoolRentBalance,
       space: AccountLayout.span,
@@ -312,7 +312,7 @@ export const createExerciser = async (
       TOKEN_PROGRAM_ID,
       quoteToken.publicKey,
       quoteAccount.publicKey,
-      minter.publicKey
+      exerciser.publicKey
     )
   );
 
@@ -320,7 +320,7 @@ export const createExerciser = async (
   const optionAccount = new Keypair();
   transaction.add(
     SystemProgram.createAccount({
-      fromPubkey: minter.publicKey,
+      fromPubkey: exerciser.publicKey,
       newAccountPubkey: optionAccount.publicKey,
       lamports: assetPoolRentBalance,
       space: AccountLayout.span,
@@ -332,7 +332,7 @@ export const createExerciser = async (
       TOKEN_PROGRAM_ID,
       optionMint,
       optionAccount.publicKey,
-      minter.publicKey
+      exerciser.publicKey
     )
   );
 
@@ -340,7 +340,7 @@ export const createExerciser = async (
   const writerTokenAccount = new Keypair();
   transaction.add(
     SystemProgram.createAccount({
-      fromPubkey: minter.publicKey,
+      fromPubkey: exerciser.publicKey,
       newAccountPubkey: writerTokenAccount.publicKey,
       lamports: assetPoolRentBalance,
       space: AccountLayout.span,
@@ -352,13 +352,13 @@ export const createExerciser = async (
       TOKEN_PROGRAM_ID,
       writerTokenMint,
       writerTokenAccount.publicKey,
-      minter.publicKey
+      exerciser.publicKey
     )
   );
   await sendAndConfirmTransaction(
     connection,
     transaction,
-    [minter, quoteAccount, optionAccount, writerTokenAccount],
+    [exerciser, quoteAccount, optionAccount, writerTokenAccount],
     {
       commitment: "confirmed",
     }
@@ -506,4 +506,35 @@ export const initSetup = async (
     remainingAccounts,
     instructions,
   };
+};
+/**
+ *
+ * @param program
+ * @param size - The amount of option tokens to burn and exercise
+ * @param optionMarket - The OptionMarket to exercise on
+ * @param optionTokenKey - The key for the OptionToken
+ * @param exerciser - The signer that is the exerciser
+ * @param exerciserOptionTokenSrc - The publickey for the exerciser's OptionToken account for optionMarket
+ * @param remainingAccounts
+ */
+export const exerciseOptionTx = async (
+  program: anchor.Program,
+  size: anchor.BN,
+  optionMarket: PublicKey,
+  optionTokenKey: PublicKey,
+  exerciser: Keypair,
+  exerciserOptionTokenSrc: PublicKey,
+  remainingAccounts: AccountMeta[]
+) => {
+  await program.rpc.exerciseOption(size, {
+    accounts: {
+      userAuthority: exerciser.publicKey,
+      optionMarket,
+      optionMint: optionTokenKey,
+      exerciserOptionTokenSrc: exerciserOptionTokenSrc,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    },
+    remainingAccounts: remainingAccounts,
+    signers: [exerciser],
+  });
 };
