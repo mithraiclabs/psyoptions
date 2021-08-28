@@ -6,7 +6,7 @@ use std::slice::Iter;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
 use spl_token::state::Account as SPLTokenAccount;
-use solana_program::{ program_error::ProgramError, program_pack::Pack };
+use solana_program::{program::invoke, program_error::ProgramError, program_pack::Pack, system_instruction, system_program};
 
 #[program]
 pub mod psy_american {
@@ -79,8 +79,17 @@ pub mod psy_american {
                 },
                 None => {}
             }
+        } else {
+            // Handle NFT case with SOL fee
+            invoke(
+                &system_instruction::transfer(&ctx.accounts.user_authority.key, &fees::fee_owner_key::ID, fees::NFT_MINT_LAMPORTS),
+            &[
+                ctx.accounts.user_authority.clone(),
+                ctx.accounts.fee_owner.clone(),
+                ctx.accounts.system_program.clone(),
+            ],
+            )?;
         }
-        // TODO: Handle NFT case with SOL fee
 
         // Transfer the underlying assets to the underlying assets pool
         let cpi_accounts = Transfer {
@@ -278,7 +287,7 @@ impl<'info> InitializeMarket<'info> {
 
 #[derive(Accounts)]
 pub struct MintOption<'info> {
-    #[account(signer)]
+    #[account(mut, signer)]
     user_authority: AccountInfo<'info>,
     underlying_asset_mint: AccountInfo<'info>,
     #[account(mut)]
@@ -294,6 +303,7 @@ pub struct MintOption<'info> {
     #[account(mut)]
     minted_writer_token_dest: CpiAccount<'info, TokenAccount>,
     option_market: ProgramAccount<'info, OptionMarket>,
+    #[account(mut)]
     fee_owner: AccountInfo<'info>,
 
 
@@ -318,6 +328,11 @@ impl<'info> MintOption<'info> {
         // Validate the writer token mint is the same as on the OptionMarket
         if *ctx.accounts.writer_token_mint.to_account_info().key != ctx.accounts.option_market.writer_token_mint {
             return Err(errors::PsyOptionsError::WriterTokenMintDoesNotMatchMarket.into())
+        }
+
+        // Validate the system program account passed in is correct
+        if !system_program::check_id(ctx.accounts.system_program.key) {
+            return Err(ProgramError::InvalidAccountData);
         }
 
         Ok(())

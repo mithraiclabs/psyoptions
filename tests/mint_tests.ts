@@ -15,7 +15,11 @@ import {
   SYSVAR_RENT_PUBKEY,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { feeAmount, FEE_OWNER_KEY } from "../packages/psyoptions-ts/src/fees";
+import {
+  feeAmount,
+  FEE_OWNER_KEY,
+  NFT_MINT_LAMPORTS,
+} from "../packages/psyoptions-ts/src/fees";
 import {
   createMinter,
   initNewTokenAccount,
@@ -94,6 +98,7 @@ describe("mintOption", () => {
       ),
       "confirmed"
     );
+    size = new u64(2);
   });
 
   const mintOptionsTx = async (
@@ -547,6 +552,67 @@ describe("mintOption", () => {
         const errMsg = "The size argument must be > 0";
         assert.equal(err.toString(), errMsg);
       }
+    });
+  });
+  describe("OptionMarket is for NFT", () => {
+    beforeEach(async () => {
+      ({
+        quoteToken,
+        underlyingToken,
+        underlyingAmountPerContract,
+        quoteAmountPerContract,
+        expiration,
+        optionMarketKey,
+        bumpSeed,
+        mintFeeKey,
+        exerciseFeeKey,
+        optionMintAccount,
+        writerTokenMintAccount,
+        underlyingAssetPoolAccount,
+        quoteAssetPoolAccount,
+        remainingAccounts,
+        instructions,
+      } = await initSetup(provider, payer, mintAuthority, program, {
+        underlyingAmountPerContract: new anchor.BN("1"),
+      }));
+      await initOptionMarket();
+      ({ optionAccount, underlyingAccount, writerTokenAccount } =
+        await createMinter(
+          provider.connection,
+          minter,
+          mintAuthority,
+          underlyingToken,
+          underlyingAmountPerContract.muln(2).toNumber(),
+          optionMintAccount.publicKey,
+          writerTokenMintAccount.publicKey
+        ));
+    });
+    it("should transfer enough lamports as required by the fee", async () => {
+      const minterBefore = await provider.connection.getAccountInfo(
+        minter.publicKey
+      );
+      const feeOwnerBefore =
+        (await provider.connection.getAccountInfo(FEE_OWNER_KEY))?.lamports ||
+        0;
+      try {
+        await mintOptionsTx();
+      } catch (err) {
+        console.error(err.toString());
+        throw err;
+      }
+      const minterAfter = await provider.connection.getAccountInfo(
+        minter.publicKey
+      );
+      const feeOwnerAfter =
+        (await provider.connection.getAccountInfo(FEE_OWNER_KEY))?.lamports ||
+        0;
+      if (!minterAfter?.lamports || !minterBefore?.lamports) {
+        throw new Error("minter has no lamports");
+      }
+      const minterDiff = minterAfter?.lamports - minterBefore?.lamports;
+      const feeOwnerDiff = feeOwnerAfter - feeOwnerBefore;
+      assert.equal(-minterDiff, NFT_MINT_LAMPORTS);
+      assert.equal(feeOwnerDiff, NFT_MINT_LAMPORTS);
     });
   });
 });
