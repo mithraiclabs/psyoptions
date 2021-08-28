@@ -15,12 +15,9 @@ import {
   SYSVAR_RENT_PUBKEY,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { getOrAddAssociatedTokenAccountTx } from "../packages/psyoptions-ts/src";
 import { feeAmount, FEE_OWNER_KEY } from "../packages/psyoptions-ts/src/fees";
 import {
-  createAccountsForInitializeMarket,
   createMinter,
-  createUnderlyingAndQuoteMints,
   initNewTokenAccount,
   initNewTokenMint,
   initSetup,
@@ -55,7 +52,7 @@ describe("mintOption", () => {
   let optionAccount: Keypair;
   let underlyingAccount: Keypair;
   let writerTokenAccount: Keypair;
-  let size = new u64(1);
+  let size = new u64(2);
 
   const initOptionMarket = async () => {
     await program.rpc.initializeMarket(
@@ -158,7 +155,7 @@ describe("mintOption", () => {
           minter,
           mintAuthority,
           underlyingToken,
-          underlyingAmountPerContract.muln(2).toNumber(),
+          size.mul(underlyingAmountPerContract).muln(2).toNumber(),
           optionMintAccount.publicKey,
           writerTokenMintAccount.publicKey
         ));
@@ -197,7 +194,13 @@ describe("mintOption", () => {
       assert.equal(mintInfo.supply.toString(), size.toString());
     });
 
-    it("should transfer the underlying from the minter to the pool", async () => {
+    it("should transfer the underlying from the minter to the pool and take a fee", async () => {
+      if (!mintFeeKey) {
+        throw new Error("mintFeeKey wasn't set when it should be");
+      }
+      const mintFeeAcctBefore = await underlyingToken.getAccountInfo(
+        mintFeeKey
+      );
       const underlyingPoolBefore = await underlyingToken.getAccountInfo(
         underlyingAssetPoolAccount.publicKey
       );
@@ -213,6 +216,7 @@ describe("mintOption", () => {
       const expectedUnderlyingTransfered = size.mul(
         underlyingAmountPerContract
       );
+      const mintFeeAmount = feeAmount(underlyingAmountPerContract);
 
       const underlyingPoolAfter = await underlyingToken.getAccountInfo(
         underlyingAssetPoolAccount.publicKey
@@ -220,6 +224,7 @@ describe("mintOption", () => {
       const poolDiff = underlyingPoolAfter.amount.sub(
         underlyingPoolBefore.amount
       );
+      const mintFeeAcctAfter = await underlyingToken.getAccountInfo(mintFeeKey);
       assert.equal(
         poolDiff.toString(),
         expectedUnderlyingTransfered.toString()
@@ -232,9 +237,13 @@ describe("mintOption", () => {
         minterUnderlyingBefore.amount
       );
       assert.equal(
-        expectedUnderlyingTransfered.neg().toString(),
+        expectedUnderlyingTransfered.add(mintFeeAmount).neg().toString(),
         minterUnderlyingDiff.toString()
       );
+      const mintFeeAcctDiff = mintFeeAcctAfter.amount.sub(
+        mintFeeAcctBefore.amount
+      );
+      assert.equal(mintFeeAcctDiff.toString(), mintFeeAmount.toString());
     });
   });
 

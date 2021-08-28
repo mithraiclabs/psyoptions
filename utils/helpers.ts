@@ -346,7 +346,7 @@ export const initSetup = async (
       );
       remainingAccounts.push({
         pubkey: mintFeeKey,
-        isWritable: false,
+        isWritable: true,
         isSigner: false,
       });
       const ix = await getOrAddAssociatedTokenAccountTx(
