@@ -30,6 +30,7 @@ import {
   initSetup,
   wait,
 } from "../utils/helpers";
+import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
 
 // TODO: Create an exerciser
 // TODO: Transfer an option to the exerciser
@@ -56,6 +57,7 @@ describe("exerciseOption", () => {
   let exerciseFeeKey: PublicKey;
   let exerciserOptionAcct: Keypair;
   let exerciserQuoteAcct: Keypair;
+  let exerciserUnderlyingAcct: Keypair;
   let optionMintAccount: Keypair;
   let writerTokenMintAccount: Keypair;
   let underlyingAssetPoolAccount: Keypair;
@@ -196,16 +198,19 @@ describe("exerciseOption", () => {
       { size: new anchor.BN(10) }
     );
     // Create an exerciser
-    ({ optionAccount: exerciserOptionAcct, quoteAccount: exerciserQuoteAcct } =
-      await createExerciser(
-        provider.connection,
-        exerciser,
-        mintAuthority,
-        quoteToken,
-        new anchor.BN(100).mul(quoteAmountPerContract).muln(2).toNumber(),
-        optionMintAccount.publicKey,
-        writerTokenMintAccount.publicKey
-      ));
+    ({
+      optionAccount: exerciserOptionAcct,
+      quoteAccount: exerciserQuoteAcct,
+      underlyingAccount: exerciserUnderlyingAcct,
+    } = await createExerciser(
+      provider.connection,
+      exerciser,
+      mintAuthority,
+      quoteToken,
+      new anchor.BN(100).mul(quoteAmountPerContract).muln(2).toNumber(),
+      optionMintAccount.publicKey,
+      underlyingToken.publicKey
+    ));
 
     // Transfer a options to the exerciser
     optionToken = new Token(
@@ -235,8 +240,11 @@ describe("exerciseOption", () => {
 
   describe("proper exercise", () => {
     beforeEach(async () => {});
-    it("should burn the option token", async () => {
+    it("should burn the option token, swap the quote and underlying assets", async () => {
       const optionTokenBefore = await optionToken.getMintInfo();
+      const underlyingPoolBefore = await underlyingToken.getAccountInfo(
+        underlyingAssetPoolAccount.publicKey
+      );
       try {
         await exerciseOptionTx(
           program,
@@ -245,6 +253,8 @@ describe("exerciseOption", () => {
           optionToken.publicKey,
           exerciser,
           exerciserOptionAcct.publicKey,
+          underlyingAssetPoolAccount.publicKey,
+          exerciserUnderlyingAcct.publicKey,
           []
         );
       } catch (err) {
@@ -256,6 +266,17 @@ describe("exerciseOption", () => {
         optionTokenBefore.supply
       );
       assert.equal(optionTokenDiff.toString(), size.neg().toString());
+
+      const underlyingPoolAfter = await underlyingToken.getAccountInfo(
+        underlyingAssetPoolAccount.publicKey
+      );
+      const underlyingPoolDiff = underlyingPoolAfter.amount.sub(
+        underlyingPoolBefore.amount
+      );
+      assert.equal(
+        underlyingPoolDiff.toString(),
+        size.mul(underlyingAmountPerContract).neg().toString()
+      );
     });
   });
 });

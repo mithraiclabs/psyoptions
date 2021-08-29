@@ -291,7 +291,7 @@ export const createExerciser = async (
   quoteToken: Token,
   quoteAmount: number,
   optionMint: PublicKey,
-  writerTokenMint: PublicKey
+  underlyingTokenMint: PublicKey
 ) => {
   const transaction = new Transaction();
 
@@ -336,12 +336,12 @@ export const createExerciser = async (
     )
   );
 
-  // create an associated token account to hold the writer tokens
-  const writerTokenAccount = new Keypair();
+  // create an associated token account to hold the underlying tokens
+  const underlyingAccount = new Keypair();
   transaction.add(
     SystemProgram.createAccount({
       fromPubkey: exerciser.publicKey,
-      newAccountPubkey: writerTokenAccount.publicKey,
+      newAccountPubkey: underlyingAccount.publicKey,
       lamports: assetPoolRentBalance,
       space: AccountLayout.span,
       programId: TOKEN_PROGRAM_ID,
@@ -350,15 +350,15 @@ export const createExerciser = async (
   transaction.add(
     Token.createInitAccountInstruction(
       TOKEN_PROGRAM_ID,
-      writerTokenMint,
-      writerTokenAccount.publicKey,
+      underlyingTokenMint,
+      underlyingAccount.publicKey,
       exerciser.publicKey
     )
   );
   await sendAndConfirmTransaction(
     connection,
     transaction,
-    [exerciser, quoteAccount, optionAccount, writerTokenAccount],
+    [exerciser, quoteAccount, optionAccount, underlyingAccount],
     {
       commitment: "confirmed",
     }
@@ -371,7 +371,7 @@ export const createExerciser = async (
     [],
     quoteAmount
   );
-  return { optionAccount, quoteAccount, writerTokenAccount };
+  return { optionAccount, quoteAccount, underlyingAccount };
 };
 
 export const initSetup = async (
@@ -515,6 +515,8 @@ export const initSetup = async (
  * @param optionTokenKey - The key for the OptionToken
  * @param exerciser - The signer that is the exerciser
  * @param exerciserOptionTokenSrc - The publickey for the exerciser's OptionToken account for optionMarket
+ * @param underlyingAssetPoolKey - The publickey for the OptionMarket's underlying asset pool
+ * @param underlyingAssetDestKey - The publickey of the exerciser's underlying asset account
  * @param remainingAccounts
  */
 export const exerciseOptionTx = async (
@@ -524,6 +526,8 @@ export const exerciseOptionTx = async (
   optionTokenKey: PublicKey,
   exerciser: Keypair,
   exerciserOptionTokenSrc: PublicKey,
+  underlyingAssetPoolKey: PublicKey,
+  underlyingAssetDestKey: PublicKey,
   remainingAccounts: AccountMeta[]
 ) => {
   await program.rpc.exerciseOption(size, {
@@ -532,6 +536,8 @@ export const exerciseOptionTx = async (
       optionMarket,
       optionMint: optionTokenKey,
       exerciserOptionTokenSrc: exerciserOptionTokenSrc,
+      underlyingAssetPool: underlyingAssetPoolKey,
+      underlyingAssetDest: underlyingAssetDestKey,
       tokenProgram: TOKEN_PROGRAM_ID,
     },
     remainingAccounts: remainingAccounts,

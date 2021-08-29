@@ -146,8 +146,7 @@ pub mod psy_american {
             &[option_market.bump_seed]
         ];
         let signer = &[&seeds[..]];
-        // TODO: Burn the size of option tokens
-        msg!("exerciser_option_token_src owner {:?}, user_authority {:?}", ctx.accounts.exerciser_option_token_src.owner, ctx.accounts.user_authority.key);
+        // Burn the size of option tokens
         let cpi_ctx = CpiContext::new_with_signer(
             ctx.accounts.token_program.clone(),
             token::Burn {
@@ -159,7 +158,20 @@ pub mod psy_american {
         );
         token::burn(cpi_ctx, size)?;
 
-        // TODO: 
+        // TODO: Transfer the quote assets to the pool
+
+        // Transfer the underlying assets from the pool to the exerciser
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.underlying_asset_pool.to_account_info(),
+            to: ctx.accounts.underlying_asset_dest.to_account_info(),
+            authority: ctx.accounts.option_market.to_account_info(),
+        };
+        let cpi_token_program = ctx.accounts.token_program.clone();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
+        let underlying_transfer_amount = option_market.underlying_amount_per_contract.checked_mul(size).unwrap();
+        token::transfer(cpi_ctx, underlying_transfer_amount)?;
+    
+        // TODO: Transfer an exercise fee
         Ok(())
     }
 }
@@ -383,6 +395,10 @@ pub struct ExerciseOption<'info> {
     option_mint: CpiAccount<'info, Mint>,
     #[account(mut)]
     exerciser_option_token_src: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    underlying_asset_pool: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    underlying_asset_dest: CpiAccount<'info, TokenAccount>,
 
     token_program: AccountInfo<'info>,
 }
