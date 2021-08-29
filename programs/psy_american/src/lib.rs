@@ -1,8 +1,6 @@
 pub mod errors;
 pub mod fees;
 
-use std::slice::Iter;
-
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
 use spl_token::state::Account as SPLTokenAccount;
@@ -12,7 +10,7 @@ use solana_program::{program::invoke, program_error::ProgramError, program_pack:
 pub mod psy_american {
     use super::*;
 
-    #[access_control(InitializeMarket::accounts(&ctx, underlying_amount_per_contract, quote_amount_per_contract))]
+    #[access_control(InitializeMarket::accounts(&ctx))]
     /// Initialize a new PsyOptions market
     pub fn initialize_market(
         ctx: Context<InitializeMarket>, 
@@ -373,7 +371,7 @@ pub struct InitializeMarket<'info> {
     system_program: AccountInfo<'info>,
 }
 impl<'info> InitializeMarket<'info> {
-    fn accounts(ctx: &Context<InitializeMarket<'info>>, underlying_amount_per_contract: u64, quote_amount_per_contract: u64) -> Result<(), ProgramError> {
+    fn accounts(ctx: &Context<InitializeMarket<'info>>) -> Result<(), ProgramError> {
         if ctx.accounts.option_mint.mint_authority.unwrap() != *ctx.accounts.option_market.to_account_info().key {
             return Err(errors::PsyOptionsError::OptionMarketMustBeMintAuthority.into());
         }

@@ -200,7 +200,7 @@ describe("exerciseOption", () => {
         minterOptionAcct,
         minterWriterAcct,
         minterUnderlyingAccount,
-        { size: new anchor.BN(10) }
+        { size: new anchor.BN(100) }
       );
       // Create an exerciser
       ({
@@ -229,7 +229,7 @@ describe("exerciseOption", () => {
         exerciserOptionAcct.publicKey,
         minter,
         [],
-        new u64(1)
+        new u64(100)
       );
     });
     beforeEach(async () => {
@@ -240,7 +240,7 @@ describe("exerciseOption", () => {
       const exerciserOption = await optionToken.getAccountInfo(
         exerciserOptionAcct.publicKey
       );
-      assert.equal(exerciserOption.amount.toString(), new u64(1).toString());
+      assert.equal(exerciserOption.amount.toString(), new u64(100).toString());
     });
 
     describe("proper exercise", () => {
