@@ -135,6 +135,8 @@ pub mod psy_american {
     }
 
     pub fn exercise_option<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, ExerciseOption<'info>>, size: u64) -> ProgramResult {
+        // TODO: Validate the OptionMarket has not expired
+
         let option_market = &ctx.accounts.option_market;
         let seeds = &[
             option_market.underlying_asset_mint.as_ref(),
@@ -323,10 +325,10 @@ fn validate_exercise_fee_acct<'c, 'info>(
         if exercise_fee_account.mint != option_market.quote_asset_mint {
             return Err(errors::PsyOptionsError::ExerciseFeeTokenMustMatchQuoteAsset.into())
         }
-        // TODO: Check the exercise fee account matches the one on the OptionMarket
-        // if *exercise_fee_recipient.key != option_market.exercise_fee_account {
-        //     return Err(errors::PsyOptionsError::ExerciseFeeKeyDoesNotMatchOptionMarket.into())
-        // }
+        // Check the exercise fee account matches the one on the OptionMarket
+        if *exercise_fee_recipient.key != option_market.exercise_fee_account {
+            return Err(errors::PsyOptionsError::ExerciseFeeKeyDoesNotMatchOptionMarket.into())
+        }
         acct = Some(exercise_fee_recipient);
     } else {
         acct = None;

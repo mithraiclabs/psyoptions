@@ -244,7 +244,6 @@ describe("exerciseOption", () => {
     });
 
     describe("proper exercise", () => {
-      beforeEach(async () => {});
       it("should burn the option token, swap the quote and underlying assets", async () => {
         const optionTokenBefore = await optionToken.getMintInfo();
         const underlyingPoolBefore = await underlyingToken.getAccountInfo(
@@ -317,6 +316,47 @@ describe("exerciseOption", () => {
           exerciserQuoteDiff.neg().toString(),
           exerciseFee.add(size.mul(quoteAmountPerContract)).toString()
         );
+      });
+    });
+    describe("exercise fee key does not match OptionMarket", () => {
+      let badExerciseFeeKey: PublicKey;
+      beforeEach(async () => {
+        // Create a new token account and set it as the mintFeeKey
+        const { tokenAccount } = await initNewTokenAccount(
+          provider.connection,
+          FEE_OWNER_KEY,
+          quoteToken.publicKey,
+          payer
+        );
+        badExerciseFeeKey = tokenAccount.publicKey;
+      });
+      it("should error", async () => {
+        try {
+          await exerciseOptionTx(
+            program,
+            size,
+            optionMarketKey,
+            optionToken.publicKey,
+            exerciser,
+            exerciserOptionAcct.publicKey,
+            underlyingAssetPoolAccount.publicKey,
+            exerciserUnderlyingAcct.publicKey,
+            quoteAssetPoolAccount.publicKey,
+            exerciserQuoteAcct.publicKey,
+            [
+              {
+                pubkey: badExerciseFeeKey,
+                isWritable: true,
+                isSigner: false,
+              },
+            ]
+          );
+          assert.ok(false);
+        } catch (err) {
+          const errMsg =
+            "exerciseFee key does not match the value on the OptionMarket";
+          assert.equal(err.toString(), errMsg);
+        }
       });
     });
   });

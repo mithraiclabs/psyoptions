@@ -33,5 +33,7 @@ pub enum PsyOptionsError {
   #[msg("MintFee key does not match the value on the OptionMarket")]
   MintFeeKeyDoesNotMatchOptionMarket,
   #[msg("The size argument must be > 0")]
-  SizeCantBeLessThanEqZero
+  SizeCantBeLessThanEqZero,
+  #[msg("exerciseFee key does not match the value on the OptionMarket")]
+  ExerciseFeeKeyDoesNotMatchOptionMarket,
 }
