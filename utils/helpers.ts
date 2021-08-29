@@ -517,6 +517,8 @@ export const initSetup = async (
  * @param exerciserOptionTokenSrc - The publickey for the exerciser's OptionToken account for optionMarket
  * @param underlyingAssetPoolKey - The publickey for the OptionMarket's underlying asset pool
  * @param underlyingAssetDestKey - The publickey of the exerciser's underlying asset account
+ * @param quoteAssetPoolKey - The publickey of the OptionMarket's quote asset pool
+ * @param quoteAssetSrcKey - The publickey of the exerciser's quote asset account
  * @param remainingAccounts
  */
 export const exerciseOptionTx = async (
@@ -528,6 +530,8 @@ export const exerciseOptionTx = async (
   exerciserOptionTokenSrc: PublicKey,
   underlyingAssetPoolKey: PublicKey,
   underlyingAssetDestKey: PublicKey,
+  quoteAssetPoolKey: PublicKey,
+  quoteAssetSrcKey: PublicKey,
   remainingAccounts: AccountMeta[]
 ) => {
   await program.rpc.exerciseOption(size, {
@@ -538,6 +542,8 @@ export const exerciseOptionTx = async (
       exerciserOptionTokenSrc: exerciserOptionTokenSrc,
       underlyingAssetPool: underlyingAssetPoolKey,
       underlyingAssetDest: underlyingAssetDestKey,
+      quoteAssetPool: quoteAssetPoolKey,
+      quoteAssetSrc: quoteAssetSrcKey,
       tokenProgram: TOKEN_PROGRAM_ID,
     },
     remainingAccounts: remainingAccounts,

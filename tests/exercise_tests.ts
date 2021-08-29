@@ -245,6 +245,9 @@ describe("exerciseOption", () => {
       const underlyingPoolBefore = await underlyingToken.getAccountInfo(
         underlyingAssetPoolAccount.publicKey
       );
+      const quotePoolBefore = await quoteToken.getAccountInfo(
+        quoteAssetPoolAccount.publicKey
+      );
       try {
         await exerciseOptionTx(
           program,
@@ -255,6 +258,8 @@ describe("exerciseOption", () => {
           exerciserOptionAcct.publicKey,
           underlyingAssetPoolAccount.publicKey,
           exerciserUnderlyingAcct.publicKey,
+          quoteAssetPoolAccount.publicKey,
+          exerciserQuoteAcct.publicKey,
           []
         );
       } catch (err) {
@@ -276,6 +281,15 @@ describe("exerciseOption", () => {
       assert.equal(
         underlyingPoolDiff.toString(),
         size.mul(underlyingAmountPerContract).neg().toString()
+      );
+
+      const quotePoolAfter = await quoteToken.getAccountInfo(
+        quoteAssetPoolAccount.publicKey
+      );
+      const quotePoolDiff = quotePoolAfter.amount.sub(quotePoolBefore.amount);
+      assert.equal(
+        quotePoolDiff.toString(),
+        size.mul(quoteAmountPerContract).toString()
       );
     });
   });

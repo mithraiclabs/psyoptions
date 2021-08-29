@@ -158,7 +158,16 @@ pub mod psy_american {
         );
         token::burn(cpi_ctx, size)?;
 
-        // TODO: Transfer the quote assets to the pool
+        // Transfer the quote assets to the pool
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.quote_asset_src.to_account_info(),
+            to: ctx.accounts.quote_asset_pool.to_account_info(),
+            authority: ctx.accounts.user_authority.to_account_info(),
+        };
+        let cpi_token_program = ctx.accounts.token_program.clone();
+        let cpi_ctx = CpiContext::new(cpi_token_program, cpi_accounts);
+        let quote_transfer_amount = option_market.quote_amount_per_contract.checked_mul(size).unwrap();
+        token::transfer(cpi_ctx, quote_transfer_amount)?;
 
         // Transfer the underlying assets from the pool to the exerciser
         let cpi_accounts = Transfer {
@@ -399,6 +408,10 @@ pub struct ExerciseOption<'info> {
     underlying_asset_pool: CpiAccount<'info, TokenAccount>,
     #[account(mut)]
     underlying_asset_dest: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    quote_asset_pool: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    quote_asset_src: CpiAccount<'info, TokenAccount>,
 
     token_program: AccountInfo<'info>,
 }
