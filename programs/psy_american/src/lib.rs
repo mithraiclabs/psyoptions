@@ -64,7 +64,6 @@ pub mod psy_american {
 
         // Take a mint fee
         let mint_fee_amount = fees::fee_amount(option_market.underlying_amount_per_contract);
-        msg!("mint_fee_amount {:?}", mint_fee_amount);
         if mint_fee_amount > 0 {
             match mint_fee_account {
                 Some(account) => {
@@ -180,7 +179,34 @@ pub mod psy_american {
         let underlying_transfer_amount = option_market.underlying_amount_per_contract.checked_mul(size).unwrap();
         token::transfer(cpi_ctx, underlying_transfer_amount)?;
     
-        // TODO: Transfer an exercise fee
+        // Transfer an exercise fee
+        let exercise_fee_account = validate_exercise_fee_acct(&ctx.accounts.option_market, ctx.remaining_accounts)?;
+        let exercise_fee_amount = fees::fee_amount(option_market.quote_amount_per_contract);
+        if exercise_fee_amount > 0 {
+            match exercise_fee_account {
+                Some(account) => {
+                    let cpi_accounts = Transfer {
+                        from: ctx.accounts.quote_asset_src.to_account_info(),
+                        to: account.clone(),
+                        authority: ctx.accounts.user_authority.clone(),
+                    };
+                    let cpi_token_program = ctx.accounts.token_program.clone();
+                    let cpi_ctx = CpiContext::new(cpi_token_program, cpi_accounts);
+                    token::transfer(cpi_ctx, exercise_fee_amount)?;
+                },
+                None => {}
+            }
+        } // else {
+        //     // Handle NFT case with SOL fee
+        //     invoke(
+        //         &system_instruction::transfer(&ctx.accounts.user_authority.key, &fees::fee_owner_key::ID, fees::NFT_MINT_LAMPORTS),
+        //     &[
+        //         ctx.accounts.user_authority.clone(),
+        //         ctx.accounts.fee_owner.clone(),
+        //         ctx.accounts.system_program.clone(),
+        //     ],
+        //     )?;
+        // }
         Ok(())
     }
 }
@@ -277,6 +303,38 @@ fn validate_mint_fee_acct<'c, 'info>(
     }
     Ok(acct)
 }
+
+fn validate_exercise_fee_acct<'c, 'info>(
+    option_market: &ProgramAccount<OptionMarket>,
+    remaining_accounts: &'c [AccountInfo<'info>]
+) -> Result<Option<&'c AccountInfo<'info>>, ProgramError> {
+    let account_info_iter = &mut remaining_accounts.iter();
+    let acct;
+    if fees::fee_amount(option_market.quote_amount_per_contract) > 0 {
+        let exercise_fee_recipient = next_account_info(account_info_iter)?;
+        if exercise_fee_recipient.owner != &spl_token::ID {
+            return Err(errors::PsyOptionsError::ExpectedSPLTokenProgramId.into())
+        }
+        let exercise_fee_account = SPLTokenAccount::unpack_from_slice(&exercise_fee_recipient.try_borrow_data()?)?;
+        if exercise_fee_account.owner != fees::fee_owner_key::ID {
+            return Err(errors::PsyOptionsError::ExerciseFeeMustBeOwnedByFeeOwner.into()) 
+        }
+        // check that the mint fee recipient account's mint is also the underlying mint
+        if exercise_fee_account.mint != option_market.quote_asset_mint {
+            return Err(errors::PsyOptionsError::ExerciseFeeTokenMustMatchQuoteAsset.into())
+        }
+        // TODO: Check the exercise fee account matches the one on the OptionMarket
+        // if *exercise_fee_recipient.key != option_market.exercise_fee_account {
+        //     return Err(errors::PsyOptionsError::ExerciseFeeKeyDoesNotMatchOptionMarket.into())
+        // }
+        acct = Some(exercise_fee_recipient);
+    } else {
+        acct = None;
+    }
+    Ok(acct)
+}
+
+
 #[derive(Accounts)]
 #[instruction(
     underlying_amount_per_contract: u64,

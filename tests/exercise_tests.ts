@@ -248,6 +248,9 @@ describe("exerciseOption", () => {
       const quotePoolBefore = await quoteToken.getAccountInfo(
         quoteAssetPoolAccount.publicKey
       );
+      const exerciserQuoteBefore = await quoteToken.getAccountInfo(
+        exerciserQuoteAcct.publicKey
+      );
       try {
         await exerciseOptionTx(
           program,
@@ -260,7 +263,13 @@ describe("exerciseOption", () => {
           exerciserUnderlyingAcct.publicKey,
           quoteAssetPoolAccount.publicKey,
           exerciserQuoteAcct.publicKey,
-          []
+          [
+            {
+              pubkey: exerciseFeeKey,
+              isWritable: true,
+              isSigner: false,
+            },
+          ]
         );
       } catch (err) {
         console.error(err.toString());
@@ -290,6 +299,18 @@ describe("exerciseOption", () => {
       assert.equal(
         quotePoolDiff.toString(),
         size.mul(quoteAmountPerContract).toString()
+      );
+
+      const exerciserQuoteAfter = await quoteToken.getAccountInfo(
+        exerciserQuoteAcct.publicKey
+      );
+      const exerciserQuoteDiff = exerciserQuoteAfter.amount.sub(
+        exerciserQuoteBefore.amount
+      );
+      const exerciseFee = feeAmount(quoteAmountPerContract);
+      assert.equal(
+        exerciserQuoteDiff.neg().toString(),
+        exerciseFee.add(size.mul(quoteAmountPerContract)).toString()
       );
     });
   });
