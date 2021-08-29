@@ -133,6 +133,7 @@ describe("exerciseOption", () => {
       signers: [minter],
     });
   };
+
   before(async () => {
     // airdrop SOL to the payer and minter
     await provider.connection.confirmTransaction(
@@ -156,101 +157,252 @@ describe("exerciseOption", () => {
       ),
       "confirmed"
     );
-    // Initialize a new OptionMarket
-    ({
-      quoteToken,
-      underlyingToken,
-      underlyingAmountPerContract,
-      quoteAmountPerContract,
-      expiration,
-      optionMarketKey,
-      bumpSeed,
-      mintFeeKey,
-      exerciseFeeKey,
-      optionMintAccount,
-      writerTokenMintAccount,
-      underlyingAssetPoolAccount,
-      quoteAssetPoolAccount,
-      remainingAccounts,
-      instructions,
-    } = await initSetup(provider, payer, mintAuthority, program));
-    await initOptionMarket();
-    // Create a new minter
-    const {
-      optionAccount: minterOptionAcct,
-      underlyingAccount: minterUnderlyingAccount,
-      writerTokenAccount: minterWriterAcct,
-    } = await createMinter(
-      provider.connection,
-      minter,
-      mintAuthority,
-      underlyingToken,
-      new anchor.BN(100).mul(underlyingAmountPerContract).muln(2).toNumber(),
-      optionMintAccount.publicKey,
-      writerTokenMintAccount.publicKey
-    );
-    // Mint a bunch of contracts to the minter
-    await mintOptionsTx(
-      minter,
-      minterOptionAcct,
-      minterWriterAcct,
-      minterUnderlyingAccount,
-      { size: new anchor.BN(10) }
-    );
-    // Create an exerciser
-    ({
-      optionAccount: exerciserOptionAcct,
-      quoteAccount: exerciserQuoteAcct,
-      underlyingAccount: exerciserUnderlyingAcct,
-    } = await createExerciser(
-      provider.connection,
-      exerciser,
-      mintAuthority,
-      quoteToken,
-      new anchor.BN(100).mul(quoteAmountPerContract).muln(2).toNumber(),
-      optionMintAccount.publicKey,
-      underlyingToken.publicKey
-    ));
-
-    // Transfer a options to the exerciser
-    optionToken = new Token(
-      provider.connection,
-      optionMintAccount.publicKey,
-      TOKEN_PROGRAM_ID,
-      payer
-    );
-    await optionToken.transfer(
-      minterOptionAcct.publicKey,
-      exerciserOptionAcct.publicKey,
-      minter,
-      [],
-      new u64(1)
-    );
-  });
-  beforeEach(async () => {
-    size = new u64(1);
   });
 
-  it("should be properly setup", async () => {
-    const exerciserOption = await optionToken.getAccountInfo(
-      exerciserOptionAcct.publicKey
-    );
-    assert.equal(exerciserOption.amount.toString(), new u64(1).toString());
-  });
+  describe("Non-nft OptionMarket", () => {
+    before(async () => {
+      // Initialize a new OptionMarket
+      ({
+        quoteToken,
+        underlyingToken,
+        underlyingAmountPerContract,
+        quoteAmountPerContract,
+        expiration,
+        optionMarketKey,
+        bumpSeed,
+        mintFeeKey,
+        exerciseFeeKey,
+        optionMintAccount,
+        writerTokenMintAccount,
+        underlyingAssetPoolAccount,
+        quoteAssetPoolAccount,
+        remainingAccounts,
+        instructions,
+      } = await initSetup(provider, payer, mintAuthority, program));
+      await initOptionMarket();
+      // Create a new minter
+      const {
+        optionAccount: minterOptionAcct,
+        underlyingAccount: minterUnderlyingAccount,
+        writerTokenAccount: minterWriterAcct,
+      } = await createMinter(
+        provider.connection,
+        minter,
+        mintAuthority,
+        underlyingToken,
+        new anchor.BN(100).mul(underlyingAmountPerContract).muln(2).toNumber(),
+        optionMintAccount.publicKey,
+        writerTokenMintAccount.publicKey
+      );
+      // Mint a bunch of contracts to the minter
+      await mintOptionsTx(
+        minter,
+        minterOptionAcct,
+        minterWriterAcct,
+        minterUnderlyingAccount,
+        { size: new anchor.BN(10) }
+      );
+      // Create an exerciser
+      ({
+        optionAccount: exerciserOptionAcct,
+        quoteAccount: exerciserQuoteAcct,
+        underlyingAccount: exerciserUnderlyingAcct,
+      } = await createExerciser(
+        provider.connection,
+        exerciser,
+        mintAuthority,
+        quoteToken,
+        new anchor.BN(100).mul(quoteAmountPerContract).muln(2).toNumber(),
+        optionMintAccount.publicKey,
+        underlyingToken.publicKey
+      ));
 
-  describe("proper exercise", () => {
-    beforeEach(async () => {});
-    it("should burn the option token, swap the quote and underlying assets", async () => {
-      const optionTokenBefore = await optionToken.getMintInfo();
-      const underlyingPoolBefore = await underlyingToken.getAccountInfo(
-        underlyingAssetPoolAccount.publicKey
+      // Transfer a options to the exerciser
+      optionToken = new Token(
+        provider.connection,
+        optionMintAccount.publicKey,
+        TOKEN_PROGRAM_ID,
+        payer
       );
-      const quotePoolBefore = await quoteToken.getAccountInfo(
-        quoteAssetPoolAccount.publicKey
+      await optionToken.transfer(
+        minterOptionAcct.publicKey,
+        exerciserOptionAcct.publicKey,
+        minter,
+        [],
+        new u64(1)
       );
-      const exerciserQuoteBefore = await quoteToken.getAccountInfo(
-        exerciserQuoteAcct.publicKey
+    });
+    beforeEach(async () => {
+      size = new u64(1);
+    });
+
+    it("should be properly setup", async () => {
+      const exerciserOption = await optionToken.getAccountInfo(
+        exerciserOptionAcct.publicKey
       );
+      assert.equal(exerciserOption.amount.toString(), new u64(1).toString());
+    });
+
+    describe("proper exercise", () => {
+      beforeEach(async () => {});
+      it("should burn the option token, swap the quote and underlying assets", async () => {
+        const optionTokenBefore = await optionToken.getMintInfo();
+        const underlyingPoolBefore = await underlyingToken.getAccountInfo(
+          underlyingAssetPoolAccount.publicKey
+        );
+        const quotePoolBefore = await quoteToken.getAccountInfo(
+          quoteAssetPoolAccount.publicKey
+        );
+        const exerciserQuoteBefore = await quoteToken.getAccountInfo(
+          exerciserQuoteAcct.publicKey
+        );
+        try {
+          await exerciseOptionTx(
+            program,
+            size,
+            optionMarketKey,
+            optionToken.publicKey,
+            exerciser,
+            exerciserOptionAcct.publicKey,
+            underlyingAssetPoolAccount.publicKey,
+            exerciserUnderlyingAcct.publicKey,
+            quoteAssetPoolAccount.publicKey,
+            exerciserQuoteAcct.publicKey,
+            [
+              {
+                pubkey: exerciseFeeKey,
+                isWritable: true,
+                isSigner: false,
+              },
+            ]
+          );
+        } catch (err) {
+          console.error(err.toString());
+          throw err;
+        }
+        const optionTokenAfter = await optionToken.getMintInfo();
+        const optionTokenDiff = optionTokenAfter.supply.sub(
+          optionTokenBefore.supply
+        );
+        assert.equal(optionTokenDiff.toString(), size.neg().toString());
+
+        const underlyingPoolAfter = await underlyingToken.getAccountInfo(
+          underlyingAssetPoolAccount.publicKey
+        );
+        const underlyingPoolDiff = underlyingPoolAfter.amount.sub(
+          underlyingPoolBefore.amount
+        );
+        assert.equal(
+          underlyingPoolDiff.toString(),
+          size.mul(underlyingAmountPerContract).neg().toString()
+        );
+
+        const quotePoolAfter = await quoteToken.getAccountInfo(
+          quoteAssetPoolAccount.publicKey
+        );
+        const quotePoolDiff = quotePoolAfter.amount.sub(quotePoolBefore.amount);
+        assert.equal(
+          quotePoolDiff.toString(),
+          size.mul(quoteAmountPerContract).toString()
+        );
+
+        const exerciserQuoteAfter = await quoteToken.getAccountInfo(
+          exerciserQuoteAcct.publicKey
+        );
+        const exerciserQuoteDiff = exerciserQuoteAfter.amount.sub(
+          exerciserQuoteBefore.amount
+        );
+        const exerciseFee = feeAmount(quoteAmountPerContract);
+        assert.equal(
+          exerciserQuoteDiff.neg().toString(),
+          exerciseFee.add(size.mul(quoteAmountPerContract)).toString()
+        );
+      });
+    });
+  });
+  describe("OptionMarket is for NFT", () => {
+    before(async () => {
+      // Initialize a new OptionMarket
+      ({
+        quoteToken,
+        underlyingToken,
+        underlyingAmountPerContract,
+        quoteAmountPerContract,
+        expiration,
+        optionMarketKey,
+        bumpSeed,
+        mintFeeKey,
+        exerciseFeeKey,
+        optionMintAccount,
+        writerTokenMintAccount,
+        underlyingAssetPoolAccount,
+        quoteAssetPoolAccount,
+        remainingAccounts,
+        instructions,
+      } = await initSetup(provider, payer, mintAuthority, program, {
+        quoteAmountPerContract: new anchor.BN(1),
+      }));
+      await initOptionMarket();
+      // Create a new minter
+      const {
+        optionAccount: minterOptionAcct,
+        underlyingAccount: minterUnderlyingAccount,
+        writerTokenAccount: minterWriterAcct,
+      } = await createMinter(
+        provider.connection,
+        minter,
+        mintAuthority,
+        underlyingToken,
+        new anchor.BN(100).mul(underlyingAmountPerContract).muln(2).toNumber(),
+        optionMintAccount.publicKey,
+        writerTokenMintAccount.publicKey
+      );
+      // Mint a bunch of contracts to the minter
+      await mintOptionsTx(
+        minter,
+        minterOptionAcct,
+        minterWriterAcct,
+        minterUnderlyingAccount,
+        { size: new anchor.BN(10) }
+      );
+      // Create an exerciser
+      ({
+        optionAccount: exerciserOptionAcct,
+        quoteAccount: exerciserQuoteAcct,
+        underlyingAccount: exerciserUnderlyingAcct,
+      } = await createExerciser(
+        provider.connection,
+        exerciser,
+        mintAuthority,
+        quoteToken,
+        new anchor.BN(100).mul(quoteAmountPerContract).muln(2).toNumber(),
+        optionMintAccount.publicKey,
+        underlyingToken.publicKey
+      ));
+
+      // Transfer a options to the exerciser
+      optionToken = new Token(
+        provider.connection,
+        optionMintAccount.publicKey,
+        TOKEN_PROGRAM_ID,
+        payer
+      );
+      await optionToken.transfer(
+        minterOptionAcct.publicKey,
+        exerciserOptionAcct.publicKey,
+        minter,
+        [],
+        new u64(1)
+      );
+      size = new u64(1);
+    });
+    it("should transfer enough lamports as required by the fee", async () => {
+      const exerciserBefore = await provider.connection.getAccountInfo(
+        exerciser.publicKey
+      );
+      const feeOwnerBefore =
+        (await provider.connection.getAccountInfo(FEE_OWNER_KEY))?.lamports ||
+        0;
       try {
         await exerciseOptionTx(
           program,
@@ -275,43 +427,20 @@ describe("exerciseOption", () => {
         console.error(err.toString());
         throw err;
       }
-      const optionTokenAfter = await optionToken.getMintInfo();
-      const optionTokenDiff = optionTokenAfter.supply.sub(
-        optionTokenBefore.supply
+      const exerciserAfter = await provider.connection.getAccountInfo(
+        exerciser.publicKey
       );
-      assert.equal(optionTokenDiff.toString(), size.neg().toString());
-
-      const underlyingPoolAfter = await underlyingToken.getAccountInfo(
-        underlyingAssetPoolAccount.publicKey
-      );
-      const underlyingPoolDiff = underlyingPoolAfter.amount.sub(
-        underlyingPoolBefore.amount
-      );
-      assert.equal(
-        underlyingPoolDiff.toString(),
-        size.mul(underlyingAmountPerContract).neg().toString()
-      );
-
-      const quotePoolAfter = await quoteToken.getAccountInfo(
-        quoteAssetPoolAccount.publicKey
-      );
-      const quotePoolDiff = quotePoolAfter.amount.sub(quotePoolBefore.amount);
-      assert.equal(
-        quotePoolDiff.toString(),
-        size.mul(quoteAmountPerContract).toString()
-      );
-
-      const exerciserQuoteAfter = await quoteToken.getAccountInfo(
-        exerciserQuoteAcct.publicKey
-      );
-      const exerciserQuoteDiff = exerciserQuoteAfter.amount.sub(
-        exerciserQuoteBefore.amount
-      );
-      const exerciseFee = feeAmount(quoteAmountPerContract);
-      assert.equal(
-        exerciserQuoteDiff.neg().toString(),
-        exerciseFee.add(size.mul(quoteAmountPerContract)).toString()
-      );
+      const feeOwnerAfter =
+        (await provider.connection.getAccountInfo(FEE_OWNER_KEY))?.lamports ||
+        0;
+      if (!exerciserAfter?.lamports || !exerciserBefore?.lamports) {
+        throw new Error("minter has no lamports");
+      }
+      const exerciserDiff =
+        exerciserAfter?.lamports - exerciserBefore?.lamports;
+      const feeOwnerDiff = feeOwnerAfter - feeOwnerBefore;
+      assert.equal(-exerciserDiff, NFT_MINT_LAMPORTS);
+      assert.equal(feeOwnerDiff, NFT_MINT_LAMPORTS);
     });
   });
 });

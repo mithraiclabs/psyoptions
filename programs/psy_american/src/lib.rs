@@ -196,17 +196,17 @@ pub mod psy_american {
                 },
                 None => {}
             }
-        } // else {
-        //     // Handle NFT case with SOL fee
-        //     invoke(
-        //         &system_instruction::transfer(&ctx.accounts.user_authority.key, &fees::fee_owner_key::ID, fees::NFT_MINT_LAMPORTS),
-        //     &[
-        //         ctx.accounts.user_authority.clone(),
-        //         ctx.accounts.fee_owner.clone(),
-        //         ctx.accounts.system_program.clone(),
-        //     ],
-        //     )?;
-        // }
+        } else {
+            // Handle NFT case with SOL fee
+            invoke(
+                &system_instruction::transfer(&ctx.accounts.user_authority.key, &fees::fee_owner_key::ID, fees::NFT_MINT_LAMPORTS),
+            &[
+                ctx.accounts.user_authority.clone(),
+                ctx.accounts.fee_owner.clone(),
+                ctx.accounts.system_program.clone(),
+            ],
+            )?;
+        }
         Ok(())
     }
 }
@@ -455,7 +455,7 @@ impl<'info> MintOption<'info> {
 
 #[derive(Accounts)]
 pub struct ExerciseOption<'info> {
-    #[account(signer)]
+    #[account(mut, signer)]
     user_authority: AccountInfo<'info>,
     option_market: ProgramAccount<'info, OptionMarket>,
     #[account(mut)]
@@ -470,8 +470,11 @@ pub struct ExerciseOption<'info> {
     quote_asset_pool: CpiAccount<'info, TokenAccount>,
     #[account(mut)]
     quote_asset_src: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    fee_owner: AccountInfo<'info>,
 
     token_program: AccountInfo<'info>,
+    system_program: AccountInfo<'info>,
 }
 
 #[account]
