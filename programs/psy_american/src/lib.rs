@@ -208,6 +208,44 @@ pub mod psy_american {
         }
         Ok(())
     }
+
+    #[access_control(ClosePostExp::accounts(&ctx) ClosePostExp::expired_market(&ctx))]
+    pub fn close_post_expiration(ctx: Context<ClosePostExp>, size: u64) -> ProgramResult {
+        let option_market = &ctx.accounts.option_market;
+        let seeds = &[
+            option_market.underlying_asset_mint.as_ref(),
+            option_market.quote_asset_mint.as_ref(),
+            &option_market.underlying_amount_per_contract.to_le_bytes(),
+            &option_market.quote_amount_per_contract.to_le_bytes(),
+            &option_market.expiration_unix_timestamp.to_le_bytes(),
+            &[option_market.bump_seed]
+        ];
+        let signer = &[&seeds[..]];
+
+        // Burn the size of WriterTokens
+        let cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_program.clone(),
+            token::Burn {
+                mint: ctx.accounts.writer_token_mint.to_account_info(),
+                to: ctx.accounts.writer_token_src.to_account_info(),
+                authority: ctx.accounts.user_authority.to_account_info(),
+            },
+            signer,
+        );
+        token::burn(cpi_ctx, size)?;
+
+        // Transfer the underlying from the pool to the user
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.underlying_asset_pool.to_account_info(),
+            to: ctx.accounts.underlying_asset_dest.to_account_info(),
+            authority: ctx.accounts.option_market.to_account_info(),
+        };
+        let cpi_token_program = ctx.accounts.token_program.clone();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
+        let underlying_transfer_amount = option_market.underlying_amount_per_contract.checked_mul(size).unwrap();
+        token::transfer(cpi_ctx, underlying_transfer_amount)?;
+        Ok(())
+    }
 }
 
 struct FeeAccounts {
@@ -518,6 +556,51 @@ impl<'info> ExerciseOption<'info> {
         // Validate the market is not expired
         if ctx.accounts.option_market.expiration_unix_timestamp < ctx.accounts.clock.unix_timestamp {
             return Err(errors::PsyOptionsError::OptionMarketExpiredCantExercise.into())
+        }
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct ClosePostExp<'info> {
+    #[account(signer)]
+    user_authority: AccountInfo<'info>,
+    option_market: ProgramAccount<'info, OptionMarket>,
+    #[account(mut)]
+    writer_token_mint: CpiAccount<'info, Mint>,
+    #[account(mut)]
+    writer_token_src: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    underlying_asset_pool: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    underlying_asset_dest: CpiAccount<'info, TokenAccount>,
+
+    token_program: AccountInfo<'info>,
+    clock: Sysvar<'info, Clock>,
+}
+impl<'info> ClosePostExp<'info> {
+    fn accounts(ctx: &Context<ClosePostExp>) -> Result<(), ProgramError> {
+        // Validate the underlying asset pool is the same as on the OptionMarket
+        if *ctx.accounts.underlying_asset_pool.to_account_info().key != ctx.accounts.option_market.underlying_asset_pool {
+            return Err(errors::PsyOptionsError::UnderlyingPoolAccountDoesNotMatchMarket.into())
+        }
+
+        // Validate the writer mint is the same as on the OptionMarket
+        if *ctx.accounts.writer_token_mint.to_account_info().key != ctx.accounts.option_market.writer_token_mint {
+            return Err(errors::PsyOptionsError::WriterTokenMintDoesNotMatchMarket.into())
+        }
+
+        // Validate the underlying destination has the same mint as the option underlying
+        if ctx.accounts.underlying_asset_dest.mint != ctx.accounts.option_market.underlying_asset_mint {
+            return Err(errors::PsyOptionsError::UnderlyingDestMintDoesNotMatchUnderlyingAsset.into())
+        }
+
+        Ok(())
+    }
+    fn expired_market(ctx: &Context<ClosePostExp>) -> Result<(), ProgramError> {
+        // Validate the market is expired
+        if ctx.accounts.option_market.expiration_unix_timestamp >= ctx.accounts.clock.unix_timestamp {
+            return Err(errors::PsyOptionsError::OptionMarketNotExpiredCantClose.into())
         }
         Ok(())
     }

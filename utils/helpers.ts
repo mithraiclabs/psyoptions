@@ -556,3 +556,28 @@ export const exerciseOptionTx = async (
     signers: [exerciser],
   });
 };
+
+export const closePostExpiration = async (
+  program: anchor.Program,
+  optionHolder: Keypair,
+  size: anchor.BN,
+  optionMarket: PublicKey,
+  writerTokenMint: PublicKey,
+  writerTokenSrc: PublicKey,
+  underlyingAssetPool: PublicKey,
+  underlyingAssetDest: PublicKey
+) => {
+  await program.rpc.closePostExpiration(size, {
+    accounts: {
+      userAuthority: optionHolder.publicKey,
+      optionMarket,
+      writerTokenMint,
+      writerTokenSrc,
+      underlyingAssetPool,
+      underlyingAssetDest,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      clock: SYSVAR_CLOCK_PUBKEY,
+    },
+    signers: [optionHolder],
+  });
+};

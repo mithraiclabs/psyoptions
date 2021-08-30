@@ -30,11 +30,6 @@ import {
   initSetup,
   wait,
 } from "../utils/helpers";
-import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
-
-// TODO: Create an exerciser
-// TODO: Transfer an option to the exerciser
-// TODO: Actually implement the exercise RPC call
 
 describe("exerciseOption", () => {
   const provider = anchor.Provider.env();
