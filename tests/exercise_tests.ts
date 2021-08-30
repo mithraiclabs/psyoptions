@@ -441,6 +441,47 @@ describe("exerciseOption", () => {
         }
       });
     });
+    describe("Underlying destination mint is not the same as the underlying asset", () => {
+      let badUnderlyingDest: Keypair;
+      beforeEach(async () => {
+        // Create a new token account and set it as the mintFeeKey
+        const { tokenAccount } = await initNewTokenAccount(
+          provider.connection,
+          FEE_OWNER_KEY,
+          quoteToken.publicKey,
+          payer
+        );
+        badUnderlyingDest = tokenAccount;
+      });
+      it("should error", async () => {
+        try {
+          await exerciseOptionTx(
+            program,
+            size,
+            optionMarketKey,
+            optionToken.publicKey,
+            exerciser,
+            exerciserOptionAcct.publicKey,
+            underlyingAssetPoolAccount.publicKey,
+            badUnderlyingDest.publicKey,
+            quoteAssetPoolAccount.publicKey,
+            exerciserQuoteAcct.publicKey,
+            [
+              {
+                pubkey: exerciseFeeKey,
+                isWritable: true,
+                isSigner: false,
+              },
+            ]
+          );
+          assert.ok(false);
+        } catch (err) {
+          const errMsg =
+            "Underlying destination mint must match underlying asset mint address";
+          assert.equal(err.toString(), errMsg);
+        }
+      });
+    });
     describe("OptionToken Mint is not the same as the OptionMarket", () => {
       let badOptionToken: Token;
       beforeEach(async () => {

@@ -1,7 +1,7 @@
 pub mod errors;
 pub mod fees;
 
-use anchor_lang::prelude::*;
+use anchor_lang::{Key, prelude::*};
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
 use spl_token::state::Account as SPLTokenAccount;
 use solana_program::{program::invoke, program_error::ProgramError, program_pack::Pack, system_instruction, system_program};
@@ -496,7 +496,10 @@ impl<'info> ExerciseOption<'info> {
             return Err(errors::PsyOptionsError::OptionTokenMintDoesNotMatchMarket.into())
         }
 
-        // TODO: Validate the underlying destination has the same mint as the pool
+        // Validate the underlying destination has the same mint as the pool
+        if ctx.accounts.underlying_asset_dest.key() != ctx.accounts.option_market.underlying_asset_mint {
+            return Err(errors::PsyOptionsError::UnderlyingDestMintDoesNotMatchUnderlyingAsset.into())
+        }
 
         // TODO: Validate the fee owner is correct
 

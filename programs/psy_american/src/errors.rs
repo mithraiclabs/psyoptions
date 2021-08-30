@@ -38,4 +38,6 @@ pub enum PsyOptionsError {
   ExerciseFeeKeyDoesNotMatchOptionMarket,
   #[msg("Quote pool account does not match the value on the OptionMarket")]
   QuotePoolAccountDoesNotMatchMarket,
+  #[msg("Underlying destination mint must match underlying asset mint address")]
+  UnderlyingDestMintDoesNotMatchUnderlyingAsset,
 }
