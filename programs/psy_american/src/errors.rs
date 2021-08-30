@@ -44,4 +44,6 @@ pub enum PsyOptionsError {
   FeeOwnerDoesNotMatchProgram,
   #[msg("OptionMarket is expired, can't exercise")]
   OptionMarketExpiredCantExercise,
+  #[msg("OptionMarket has not expired, can't close")]
+  OptionMarketNotExpiredCantClose,
 }
