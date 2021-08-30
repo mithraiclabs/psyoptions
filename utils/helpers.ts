@@ -556,3 +556,16 @@ export const exerciseOptionTx = async (
     signers: [exerciser],
   });
 };
+
+export const closePostExpiration = async (
+  program: anchor.Program,
+  optionHolder: Keypair,
+  size: anchor.BN
+) => {
+  await program.rpc.closePostExpiration(size, {
+    accounts: {
+      userAuthority: optionHolder.publicKey,
+    },
+    signers: [optionHolder],
+  });
+};

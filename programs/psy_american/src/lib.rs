@@ -208,6 +208,10 @@ pub mod psy_american {
         }
         Ok(())
     }
+
+    pub fn close_post_expiration(_ctx: Context<ClosePostExp>, _size: u64) -> ProgramResult {
+        Ok(())
+    }
 }
 
 struct FeeAccounts {
@@ -521,6 +525,12 @@ impl<'info> ExerciseOption<'info> {
         }
         Ok(())
     }
+}
+
+#[derive(Accounts)]
+pub struct ClosePostExp<'info> {
+    #[account(signer)]
+    user_authority: AccountInfo<'info>,
 }
 
 #[account]
