@@ -519,6 +519,7 @@ export const initSetup = async (
  * @param underlyingAssetDestKey - The publickey of the exerciser's underlying asset account
  * @param quoteAssetPoolKey - The publickey of the OptionMarket's quote asset pool
  * @param quoteAssetSrcKey - The publickey of the exerciser's quote asset account
+ * @param opts - override options, usually used for testing
  * @param remainingAccounts
  */
 export const exerciseOptionTx = async (
@@ -532,7 +533,8 @@ export const exerciseOptionTx = async (
   underlyingAssetDestKey: PublicKey,
   quoteAssetPoolKey: PublicKey,
   quoteAssetSrcKey: PublicKey,
-  remainingAccounts: AccountMeta[]
+  remainingAccounts: AccountMeta[],
+  opts: { feeOwner?: PublicKey } = {}
 ) => {
   await program.rpc.exerciseOption(size, {
     accounts: {
@@ -544,7 +546,7 @@ export const exerciseOptionTx = async (
       underlyingAssetDest: underlyingAssetDestKey,
       quoteAssetPool: quoteAssetPoolKey,
       quoteAssetSrc: quoteAssetSrcKey,
-      feeOwner: FEE_OWNER_KEY,
+      feeOwner: opts.feeOwner || FEE_OWNER_KEY,
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
     },

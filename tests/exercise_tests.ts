@@ -527,6 +527,40 @@ describe("exerciseOption", () => {
         }
       });
     });
+    describe("Fee Owner does not match the program's fee owner", () => {
+      let badFeeOwner: Keypair;
+      beforeEach(async () => {
+        badFeeOwner = new Keypair();
+      });
+      it("should error", async () => {
+        try {
+          await exerciseOptionTx(
+            program,
+            size,
+            optionMarketKey,
+            optionToken.publicKey,
+            exerciser,
+            exerciserOptionAcct.publicKey,
+            underlyingAssetPoolAccount.publicKey,
+            exerciserUnderlyingAcct.publicKey,
+            quoteAssetPoolAccount.publicKey,
+            exerciserQuoteAcct.publicKey,
+            [
+              {
+                pubkey: exerciseFeeKey,
+                isWritable: true,
+                isSigner: false,
+              },
+            ],
+            { feeOwner: badFeeOwner.publicKey }
+          );
+          assert.ok(false);
+        } catch (err) {
+          const errMsg = "Fee owner does not match the program's fee owner";
+          assert.equal(err.toString(), errMsg);
+        }
+      });
+    });
   });
   describe("OptionMarket is for NFT", () => {
     before(async () => {

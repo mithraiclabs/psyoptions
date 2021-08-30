@@ -497,11 +497,14 @@ impl<'info> ExerciseOption<'info> {
         }
 
         // Validate the underlying destination has the same mint as the pool
-        if ctx.accounts.underlying_asset_dest.key() != ctx.accounts.option_market.underlying_asset_mint {
+        if ctx.accounts.underlying_asset_dest.mint != ctx.accounts.option_market.underlying_asset_mint {
             return Err(errors::PsyOptionsError::UnderlyingDestMintDoesNotMatchUnderlyingAsset.into())
         }
 
         // TODO: Validate the fee owner is correct
+        if *ctx.accounts.fee_owner.key != fees::fee_owner_key::ID {
+            return Err(errors::PsyOptionsError::FeeOwnerDoesNotMatchProgram.into())
+        }
 
         // Validate the system program account passed in is correct
         if !system_program::check_id(ctx.accounts.system_program.key) {
