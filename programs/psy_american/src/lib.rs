@@ -438,6 +438,8 @@ impl<'info> MintOption<'info> {
             return Err(errors::PsyOptionsError::WriterTokenMintDoesNotMatchMarket.into())
         }
 
+        // TODO: Validate the fee owner is correct
+
         // Validate the system program account passed in is correct
         if !system_program::check_id(ctx.accounts.system_program.key) {
             return Err(ProgramError::InvalidAccountData);
@@ -484,15 +486,24 @@ impl<'info> ExerciseOption<'info> {
             return Err(errors::PsyOptionsError::QuotePoolAccountDoesNotMatchMarket.into())
         }
 
+        // Validate the underlying asset pool is the same as on the OptionMarket
+        if *ctx.accounts.underlying_asset_pool.to_account_info().key != ctx.accounts.option_market.underlying_asset_pool {
+            return Err(errors::PsyOptionsError::UnderlyingPoolAccountDoesNotMatchMarket.into())
+        }
+
         // Validate the option mint is the same as on the OptionMarket
         if *ctx.accounts.option_mint.to_account_info().key != ctx.accounts.option_market.option_mint {
             return Err(errors::PsyOptionsError::OptionTokenMintDoesNotMatchMarket.into())
         }
 
-        // TODO: Validate the system program account passed in is correct
-        // if !system_program::check_id(ctx.accounts.system_program.key) {
-        //     return Err(ProgramError::InvalidAccountData);
-        // }
+        // TODO: Validate the underlying destination has the same mint as the pool
+
+        // TODO: Validate the fee owner is correct
+
+        // Validate the system program account passed in is correct
+        if !system_program::check_id(ctx.accounts.system_program.key) {
+            return Err(ProgramError::InvalidAccountData);
+        }
 
         Ok(())
     }
