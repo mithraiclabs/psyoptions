@@ -15,6 +15,7 @@ import {
   PublicKey,
   sendAndConfirmTransaction,
   SystemProgram,
+  SYSVAR_CLOCK_PUBKEY,
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
@@ -284,6 +285,96 @@ export const createMinter = async (
   return { optionAccount, underlyingAccount, writerTokenAccount };
 };
 
+export const createExerciser = async (
+  connection: Connection,
+  exerciser: Keypair,
+  mintAuthority: Keypair,
+  quoteToken: Token,
+  quoteAmount: number,
+  optionMint: PublicKey,
+  underlyingTokenMint: PublicKey
+) => {
+  const transaction = new Transaction();
+
+  const quoteAccount = new Keypair();
+  const assetPoolRentBalance =
+    await connection.getMinimumBalanceForRentExemption(AccountLayout.span);
+  transaction.add(
+    SystemProgram.createAccount({
+      fromPubkey: exerciser.publicKey,
+      newAccountPubkey: quoteAccount.publicKey,
+      lamports: assetPoolRentBalance,
+      space: AccountLayout.span,
+      programId: TOKEN_PROGRAM_ID,
+    })
+  );
+  transaction.add(
+    Token.createInitAccountInstruction(
+      TOKEN_PROGRAM_ID,
+      quoteToken.publicKey,
+      quoteAccount.publicKey,
+      exerciser.publicKey
+    )
+  );
+
+  // create an associated token account to hold the options
+  const optionAccount = new Keypair();
+  transaction.add(
+    SystemProgram.createAccount({
+      fromPubkey: exerciser.publicKey,
+      newAccountPubkey: optionAccount.publicKey,
+      lamports: assetPoolRentBalance,
+      space: AccountLayout.span,
+      programId: TOKEN_PROGRAM_ID,
+    })
+  );
+  transaction.add(
+    Token.createInitAccountInstruction(
+      TOKEN_PROGRAM_ID,
+      optionMint,
+      optionAccount.publicKey,
+      exerciser.publicKey
+    )
+  );
+
+  // create an associated token account to hold the underlying tokens
+  const underlyingAccount = new Keypair();
+  transaction.add(
+    SystemProgram.createAccount({
+      fromPubkey: exerciser.publicKey,
+      newAccountPubkey: underlyingAccount.publicKey,
+      lamports: assetPoolRentBalance,
+      space: AccountLayout.span,
+      programId: TOKEN_PROGRAM_ID,
+    })
+  );
+  transaction.add(
+    Token.createInitAccountInstruction(
+      TOKEN_PROGRAM_ID,
+      underlyingTokenMint,
+      underlyingAccount.publicKey,
+      exerciser.publicKey
+    )
+  );
+  await sendAndConfirmTransaction(
+    connection,
+    transaction,
+    [exerciser, quoteAccount, optionAccount, underlyingAccount],
+    {
+      commitment: "confirmed",
+    }
+  );
+
+  // mint underlying tokens to the minter's account
+  await quoteToken.mintTo(
+    quoteAccount.publicKey,
+    mintAuthority,
+    [],
+    quoteAmount
+  );
+  return { optionAccount, quoteAccount, underlyingAccount };
+};
+
 export const initSetup = async (
   provider: anchor.Provider,
   payer: Keypair,
@@ -416,4 +507,52 @@ export const initSetup = async (
     remainingAccounts,
     instructions,
   };
+};
+/**
+ *
+ * @param program
+ * @param size - The amount of option tokens to burn and exercise
+ * @param optionMarket - The OptionMarket to exercise on
+ * @param optionTokenKey - The key for the OptionToken
+ * @param exerciser - The signer that is the exerciser
+ * @param exerciserOptionTokenSrc - The publickey for the exerciser's OptionToken account for optionMarket
+ * @param underlyingAssetPoolKey - The publickey for the OptionMarket's underlying asset pool
+ * @param underlyingAssetDestKey - The publickey of the exerciser's underlying asset account
+ * @param quoteAssetPoolKey - The publickey of the OptionMarket's quote asset pool
+ * @param quoteAssetSrcKey - The publickey of the exerciser's quote asset account
+ * @param opts - override options, usually used for testing
+ * @param remainingAccounts
+ */
+export const exerciseOptionTx = async (
+  program: anchor.Program,
+  size: anchor.BN,
+  optionMarket: PublicKey,
+  optionTokenKey: PublicKey,
+  exerciser: Keypair,
+  exerciserOptionTokenSrc: PublicKey,
+  underlyingAssetPoolKey: PublicKey,
+  underlyingAssetDestKey: PublicKey,
+  quoteAssetPoolKey: PublicKey,
+  quoteAssetSrcKey: PublicKey,
+  remainingAccounts: AccountMeta[],
+  opts: { feeOwner?: PublicKey } = {}
+) => {
+  await program.rpc.exerciseOption(size, {
+    accounts: {
+      userAuthority: exerciser.publicKey,
+      optionMarket,
+      optionMint: optionTokenKey,
+      exerciserOptionTokenSrc: exerciserOptionTokenSrc,
+      underlyingAssetPool: underlyingAssetPoolKey,
+      underlyingAssetDest: underlyingAssetDestKey,
+      quoteAssetPool: quoteAssetPoolKey,
+      quoteAssetSrc: quoteAssetSrcKey,
+      feeOwner: opts.feeOwner || FEE_OWNER_KEY,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
+      clock: SYSVAR_CLOCK_PUBKEY,
+    },
+    remainingAccounts: remainingAccounts,
+    signers: [exerciser],
+  });
 };
