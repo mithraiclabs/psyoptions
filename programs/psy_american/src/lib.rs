@@ -484,10 +484,10 @@ impl<'info> ExerciseOption<'info> {
             return Err(errors::PsyOptionsError::QuotePoolAccountDoesNotMatchMarket.into())
         }
 
-        // TODO: Validate the option mint is the same as on the OptionMarket
-        // if *ctx.accounts.option_mint.to_account_info().key != ctx.accounts.option_market.option_mint {
-        //     return Err(errors::PsyOptionsError::OptionTokenMintDoesNotMatchMarket.into())
-        // }
+        // Validate the option mint is the same as on the OptionMarket
+        if *ctx.accounts.option_mint.to_account_info().key != ctx.accounts.option_market.option_mint {
+            return Err(errors::PsyOptionsError::OptionTokenMintDoesNotMatchMarket.into())
+        }
 
         // TODO: Validate the system program account passed in is correct
         // if !system_program::check_id(ctx.accounts.system_program.key) {

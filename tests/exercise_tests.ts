@@ -360,6 +360,7 @@ describe("exerciseOption", () => {
       });
     });
     describe("quote asset pool is not the same as the OptionMarket", () => {
+      let badQuoteAssetPoolAcct: Keypair;
       beforeEach(async () => {
         // Create a new token account and set it as the mintFeeKey
         const { tokenAccount } = await initNewTokenAccount(
@@ -368,7 +369,7 @@ describe("exerciseOption", () => {
           quoteToken.publicKey,
           payer
         );
-        quoteAssetPoolAccount = tokenAccount;
+        badQuoteAssetPoolAcct = tokenAccount;
       });
       it("should error", async () => {
         try {
@@ -377,6 +378,51 @@ describe("exerciseOption", () => {
             size,
             optionMarketKey,
             optionToken.publicKey,
+            exerciser,
+            exerciserOptionAcct.publicKey,
+            underlyingAssetPoolAccount.publicKey,
+            exerciserUnderlyingAcct.publicKey,
+            badQuoteAssetPoolAcct.publicKey,
+            exerciserQuoteAcct.publicKey,
+            [
+              {
+                pubkey: exerciseFeeKey,
+                isWritable: true,
+                isSigner: false,
+              },
+            ]
+          );
+          assert.ok(false);
+        } catch (err) {
+          const errMsg =
+            "Quote pool account does not match the value on the OptionMarket";
+          assert.equal(err.toString(), errMsg);
+        }
+      });
+    });
+    describe("OptionToken Mint is not the same as the OptionMarket", () => {
+      let badOptionToken: Token;
+      beforeEach(async () => {
+        // Create a new token account and set it as the mintFeeKey
+        const { mintAccount } = await initNewTokenMint(
+          provider.connection,
+          FEE_OWNER_KEY,
+          payer
+        );
+        badOptionToken = new Token(
+          provider.connection,
+          mintAccount.publicKey,
+          TOKEN_PROGRAM_ID,
+          payer
+        );
+      });
+      it("should error", async () => {
+        try {
+          await exerciseOptionTx(
+            program,
+            size,
+            optionMarketKey,
+            badOptionToken.publicKey,
             exerciser,
             exerciserOptionAcct.publicKey,
             underlyingAssetPoolAccount.publicKey,
@@ -394,7 +440,7 @@ describe("exerciseOption", () => {
           assert.ok(false);
         } catch (err) {
           const errMsg =
-            "Quote pool account does not match the value on the OptionMarket";
+            "OptionToken mint does not match the value on the OptionMarket";
           assert.equal(err.toString(), errMsg);
         }
       });
