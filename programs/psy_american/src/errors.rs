@@ -33,5 +33,15 @@ pub enum PsyOptionsError {
   #[msg("MintFee key does not match the value on the OptionMarket")]
   MintFeeKeyDoesNotMatchOptionMarket,
   #[msg("The size argument must be > 0")]
-  SizeCantBeLessThanEqZero
+  SizeCantBeLessThanEqZero,
+  #[msg("exerciseFee key does not match the value on the OptionMarket")]
+  ExerciseFeeKeyDoesNotMatchOptionMarket,
+  #[msg("Quote pool account does not match the value on the OptionMarket")]
+  QuotePoolAccountDoesNotMatchMarket,
+  #[msg("Underlying destination mint must match underlying asset mint address")]
+  UnderlyingDestMintDoesNotMatchUnderlyingAsset,
+  #[msg("Fee owner does not match the program's fee owner")]
+  FeeOwnerDoesNotMatchProgram,
+  #[msg("OptionMarket is expired, can't exercise")]
+  OptionMarketExpiredCantExercise,
 }

@@ -105,6 +105,7 @@ describe("mintOption", () => {
     opts: {
       underlyingAssetPoolAccount?: Keypair;
       remainingAccounts?: AccountMeta[];
+      feeOwner?: PublicKey;
     } = {}
   ) => {
     await program.rpc.mintOption(size, {
@@ -120,7 +121,7 @@ describe("mintOption", () => {
         writerTokenMint: writerTokenMintAccount.publicKey,
         mintedWriterTokenDest: writerTokenAccount.publicKey,
         optionMarket: optionMarketKey,
-        feeOwner: FEE_OWNER_KEY,
+        feeOwner: opts.feeOwner || FEE_OWNER_KEY,
         tokenProgram: TOKEN_PROGRAM_ID,
         associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
         clock: SYSVAR_CLOCK_PUBKEY,
@@ -550,6 +551,49 @@ describe("mintOption", () => {
         assert.ok(false);
       } catch (err) {
         const errMsg = "The size argument must be > 0";
+        assert.equal(err.toString(), errMsg);
+      }
+    });
+  });
+  describe("Fee owner is incorrect", () => {
+    beforeEach(async () => {
+      ({
+        quoteToken,
+        underlyingToken,
+        underlyingAmountPerContract,
+        quoteAmountPerContract,
+        expiration,
+        optionMarketKey,
+        bumpSeed,
+        mintFeeKey,
+        exerciseFeeKey,
+        optionMintAccount,
+        writerTokenMintAccount,
+        underlyingAssetPoolAccount,
+        quoteAssetPoolAccount,
+        remainingAccounts,
+        instructions,
+      } = await initSetup(provider, payer, mintAuthority, program));
+      await initOptionMarket();
+      ({ optionAccount, underlyingAccount, writerTokenAccount } =
+        await createMinter(
+          provider.connection,
+          minter,
+          mintAuthority,
+          underlyingToken,
+          underlyingAmountPerContract.muln(2).toNumber(),
+          optionMintAccount.publicKey,
+          writerTokenMintAccount.publicKey
+        ));
+    });
+    it("should error", async () => {
+      try {
+        await mintOptionsTx({
+          feeOwner: new Keypair().publicKey,
+        });
+        assert.ok(false);
+      } catch (err) {
+        const errMsg = "Fee owner does not match the program's fee owner";
         assert.equal(err.toString(), errMsg);
       }
     });
