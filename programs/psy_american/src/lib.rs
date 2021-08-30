@@ -585,6 +585,16 @@ impl<'info> ClosePostExp<'info> {
             return Err(errors::PsyOptionsError::UnderlyingPoolAccountDoesNotMatchMarket.into())
         }
 
+        // Validate the writer mint is the same as on the OptionMarket
+        if *ctx.accounts.writer_token_mint.to_account_info().key != ctx.accounts.option_market.writer_token_mint {
+            return Err(errors::PsyOptionsError::WriterTokenMintDoesNotMatchMarket.into())
+        }
+
+        // // TODO: Validate the underlying destination has the same mint as the pool
+        // if ctx.accounts.underlying_asset_dest.mint != ctx.accounts.option_market.underlying_asset_mint {
+        //     return Err(errors::PsyOptionsError::UnderlyingDestMintDoesNotMatchUnderlyingAsset.into())
+        // }
+
         Ok(())
     }
     fn expired_market(ctx: &Context<ClosePostExp>) -> Result<(), ProgramError> {

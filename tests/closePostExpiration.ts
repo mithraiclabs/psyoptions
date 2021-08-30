@@ -22,6 +22,7 @@ import {
   createExerciser,
   createMinter,
   initNewTokenAccount,
+  initNewTokenMint,
   initSetup,
   wait,
 } from "../utils/helpers";
@@ -306,6 +307,36 @@ describe("closePostExpiration", () => {
         } catch (err) {
           const errorMsg =
             "Underlying pool account does not match the value on the OptionMarket";
+          assert.equal(err.toString(), errorMsg);
+        }
+      });
+    });
+    describe("Validate the writer mint is the same as the OptionMarket", () => {
+      let badWriterMint: Keypair;
+      before(async () => {
+        const { mintAccount } = await initNewTokenMint(
+          provider.connection,
+          payer.publicKey,
+          payer
+        );
+        badWriterMint = mintAccount;
+      });
+      it("should error", async () => {
+        try {
+          await closePostExpiration(
+            program,
+            minter,
+            size,
+            optionMarketKey,
+            badWriterMint.publicKey,
+            minterWriterAcct.publicKey,
+            underlyingAssetPoolAccount.publicKey,
+            minterUnderlyingAccount.publicKey
+          );
+          assert.ok(false);
+        } catch (err) {
+          const errorMsg =
+            "WriterToken mint does not match the value on the OptionMarket";
           assert.equal(err.toString(), errorMsg);
         }
       });
