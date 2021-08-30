@@ -234,7 +234,7 @@ describe("closePostExpiration", () => {
     });
 
     describe("proper close post expiration", () => {
-      it("should burn the WriteToken", async () => {
+      it("should burn the WriteToken and transfer the underlying", async () => {
         const writerToken = new Token(
           provider.connection,
           writerTokenMintAccount.publicKey,
@@ -242,6 +242,9 @@ describe("closePostExpiration", () => {
           payer
         );
         const writerMintBefore = await writerToken.getMintInfo();
+        const minterUnderlyingBefore = await underlyingToken.getAccountInfo(
+          minterUnderlyingAccount.publicKey
+        );
         try {
           await closePostExpiration(
             program,
@@ -249,7 +252,9 @@ describe("closePostExpiration", () => {
             size,
             optionMarketKey,
             writerTokenMintAccount.publicKey,
-            minterWriterAcct.publicKey
+            minterWriterAcct.publicKey,
+            underlyingAssetPoolAccount.publicKey,
+            minterUnderlyingAccount.publicKey
           );
         } catch (err) {
           console.error(err.toString());
@@ -260,6 +265,17 @@ describe("closePostExpiration", () => {
           writerMintBefore.supply
         );
         assert.equal(writerMintDiff.toString(), size.neg().toString());
+
+        const minterUnderlyingAfter = await underlyingToken.getAccountInfo(
+          minterUnderlyingAccount.publicKey
+        );
+        const minterUnderlyingDiff = minterUnderlyingAfter.amount.sub(
+          minterUnderlyingBefore.amount
+        );
+        assert.equal(
+          minterUnderlyingDiff.toString(),
+          size.mul(underlyingAmountPerContract).toString()
+        );
       });
     });
   });

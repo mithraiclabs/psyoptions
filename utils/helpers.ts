@@ -563,7 +563,9 @@ export const closePostExpiration = async (
   size: anchor.BN,
   optionMarket: PublicKey,
   writerTokenMint: PublicKey,
-  writerTokenSrc: PublicKey
+  writerTokenSrc: PublicKey,
+  underlyingAssetPool: PublicKey,
+  underlyingAssetDest: PublicKey
 ) => {
   await program.rpc.closePostExpiration(size, {
     accounts: {
@@ -571,6 +573,8 @@ export const closePostExpiration = async (
       optionMarket,
       writerTokenMint,
       writerTokenSrc,
+      underlyingAssetPool,
+      underlyingAssetDest,
       tokenProgram: TOKEN_PROGRAM_ID,
     },
     signers: [optionHolder],

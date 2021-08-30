@@ -210,6 +210,8 @@ pub mod psy_american {
     }
 
     pub fn close_post_expiration(ctx: Context<ClosePostExp>, size: u64) -> ProgramResult {
+        // TODO: validate the market has expired
+
         let option_market = &ctx.accounts.option_market;
         let seeds = &[
             option_market.underlying_asset_mint.as_ref(),
@@ -232,6 +234,17 @@ pub mod psy_american {
             signer,
         );
         token::burn(cpi_ctx, size)?;
+
+        // Transfer the underlying from the pool to the user
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.underlying_asset_pool.to_account_info(),
+            to: ctx.accounts.underlying_asset_dest.to_account_info(),
+            authority: ctx.accounts.option_market.to_account_info(),
+        };
+        let cpi_token_program = ctx.accounts.token_program.clone();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
+        let underlying_transfer_amount = option_market.underlying_amount_per_contract.checked_mul(size).unwrap();
+        token::transfer(cpi_ctx, underlying_transfer_amount)?;
         Ok(())
     }
 }
@@ -558,6 +571,10 @@ pub struct ClosePostExp<'info> {
     writer_token_mint: CpiAccount<'info, Mint>,
     #[account(mut)]
     writer_token_src: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    underlying_asset_pool: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    underlying_asset_dest: CpiAccount<'info, TokenAccount>,
 
     token_program: AccountInfo<'info>,
 }
