@@ -21,6 +21,7 @@ import {
   closePostExpiration,
   createExerciser,
   createMinter,
+  initNewTokenAccount,
   initSetup,
   wait,
 } from "../utils/helpers";
@@ -276,6 +277,37 @@ describe("closePostExpiration", () => {
           minterUnderlyingDiff.toString(),
           size.mul(underlyingAmountPerContract).toString()
         );
+      });
+    });
+    describe("underlying asset pool does not match the OptionMarket", () => {
+      let badUnderlyingPool: Keypair;
+      before(async () => {
+        const { tokenAccount } = await initNewTokenAccount(
+          provider.connection,
+          payer.publicKey,
+          underlyingToken.publicKey,
+          payer
+        );
+        badUnderlyingPool = tokenAccount;
+      });
+      it("should error", async () => {
+        try {
+          await closePostExpiration(
+            program,
+            minter,
+            size,
+            optionMarketKey,
+            writerTokenMintAccount.publicKey,
+            minterWriterAcct.publicKey,
+            badUnderlyingPool.publicKey,
+            minterUnderlyingAccount.publicKey
+          );
+          assert.ok(false);
+        } catch (err) {
+          const errorMsg =
+            "Underlying pool account does not match the value on the OptionMarket";
+          assert.equal(err.toString(), errorMsg);
+        }
       });
     });
   });

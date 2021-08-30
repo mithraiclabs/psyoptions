@@ -579,21 +579,11 @@ pub struct ClosePostExp<'info> {
     clock: Sysvar<'info, Clock>,
 }
 impl<'info> ClosePostExp<'info> {
-    fn accounts(_ctx: &Context<ClosePostExp>) -> Result<(), ProgramError> {
-        // // Validate the underlying asset pool is the same as on the OptionMarket
-        // if *ctx.accounts.underlying_asset_pool.to_account_info().key != ctx.accounts.option_market.underlying_asset_pool {
-        //     return Err(errors::PsyOptionsError::UnderlyingPoolAccountDoesNotMatchMarket.into())
-        // }
-
-        // // Validate the option mint is the same as on the OptionMarket
-        // if *ctx.accounts.option_mint.to_account_info().key != ctx.accounts.option_market.option_mint {
-        //     return Err(errors::PsyOptionsError::OptionTokenMintDoesNotMatchMarket.into())
-        // }
-
-        // // Validate the underlying destination has the same mint as the pool
-        // if ctx.accounts.underlying_asset_dest.mint != ctx.accounts.option_market.underlying_asset_mint {
-        //     return Err(errors::PsyOptionsError::UnderlyingDestMintDoesNotMatchUnderlyingAsset.into())
-        // }
+    fn accounts(ctx: &Context<ClosePostExp>) -> Result<(), ProgramError> {
+        // Validate the underlying asset pool is the same as on the OptionMarket
+        if *ctx.accounts.underlying_asset_pool.to_account_info().key != ctx.accounts.option_market.underlying_asset_pool {
+            return Err(errors::PsyOptionsError::UnderlyingPoolAccountDoesNotMatchMarket.into())
+        }
 
         Ok(())
     }
