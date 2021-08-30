@@ -15,6 +15,7 @@ import {
   PublicKey,
   sendAndConfirmTransaction,
   SystemProgram,
+  SYSVAR_CLOCK_PUBKEY,
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
@@ -549,6 +550,7 @@ export const exerciseOptionTx = async (
       feeOwner: opts.feeOwner || FEE_OWNER_KEY,
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
+      clock: SYSVAR_CLOCK_PUBKEY,
     },
     remainingAccounts: remainingAccounts,
     signers: [exerciser],

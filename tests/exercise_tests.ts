@@ -562,6 +562,115 @@ describe("exerciseOption", () => {
       });
     });
   });
+
+  describe("Expired option market", () => {
+    before(async () => {
+      // Initialize a new OptionMarket
+      ({
+        quoteToken,
+        underlyingToken,
+        underlyingAmountPerContract,
+        quoteAmountPerContract,
+        expiration,
+        optionMarketKey,
+        bumpSeed,
+        mintFeeKey,
+        exerciseFeeKey,
+        optionMintAccount,
+        writerTokenMintAccount,
+        underlyingAssetPoolAccount,
+        quoteAssetPoolAccount,
+        remainingAccounts,
+        instructions,
+      } = await initSetup(provider, payer, mintAuthority, program, {
+        // set expiration to 2 seconds from now
+        expiration: new anchor.BN(new Date().getTime() / 1000 + 4),
+      }));
+      await initOptionMarket();
+      // Create a new minter
+      const {
+        optionAccount: minterOptionAcct,
+        underlyingAccount: minterUnderlyingAccount,
+        writerTokenAccount: minterWriterAcct,
+      } = await createMinter(
+        provider.connection,
+        minter,
+        mintAuthority,
+        underlyingToken,
+        new anchor.BN(100).mul(underlyingAmountPerContract).muln(2).toNumber(),
+        optionMintAccount.publicKey,
+        writerTokenMintAccount.publicKey
+      );
+      // Mint a bunch of contracts to the minter
+      await mintOptionsTx(
+        minter,
+        minterOptionAcct,
+        minterWriterAcct,
+        minterUnderlyingAccount,
+        { size: new anchor.BN(100) }
+      );
+      // Create an exerciser
+      ({
+        optionAccount: exerciserOptionAcct,
+        quoteAccount: exerciserQuoteAcct,
+        underlyingAccount: exerciserUnderlyingAcct,
+      } = await createExerciser(
+        provider.connection,
+        exerciser,
+        mintAuthority,
+        quoteToken,
+        new anchor.BN(100).mul(quoteAmountPerContract).muln(2).toNumber(),
+        optionMintAccount.publicKey,
+        underlyingToken.publicKey
+      ));
+
+      // Transfer a options to the exerciser
+      optionToken = new Token(
+        provider.connection,
+        optionMintAccount.publicKey,
+        TOKEN_PROGRAM_ID,
+        payer
+      );
+      await optionToken.transfer(
+        minterOptionAcct.publicKey,
+        exerciserOptionAcct.publicKey,
+        minter,
+        [],
+        new u64(100)
+      );
+    });
+    beforeEach(async () => {
+      size = new u64(1);
+    });
+    it("should error", async () => {
+      try {
+        await wait(3000);
+        await exerciseOptionTx(
+          program,
+          size,
+          optionMarketKey,
+          optionToken.publicKey,
+          exerciser,
+          exerciserOptionAcct.publicKey,
+          underlyingAssetPoolAccount.publicKey,
+          exerciserUnderlyingAcct.publicKey,
+          quoteAssetPoolAccount.publicKey,
+          exerciserQuoteAcct.publicKey,
+          [
+            {
+              pubkey: exerciseFeeKey,
+              isWritable: true,
+              isSigner: false,
+            },
+          ]
+        );
+        assert.ok(false);
+      } catch (err) {
+        const errMsg = "OptionMarket is expired, can't exercise";
+        assert.equal(err.toString(), errMsg);
+      }
+    });
+  });
   describe("OptionMarket is for NFT", () => {
     before(async () => {
       // Initialize a new OptionMarket

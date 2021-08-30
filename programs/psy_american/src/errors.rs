@@ -41,5 +41,7 @@ pub enum PsyOptionsError {
   #[msg("Underlying destination mint must match underlying asset mint address")]
   UnderlyingDestMintDoesNotMatchUnderlyingAsset,
   #[msg("Fee owner does not match the program's fee owner")]
-  FeeOwnerDoesNotMatchProgram
+  FeeOwnerDoesNotMatchProgram,
+  #[msg("OptionMarket is expired, can't exercise")]
+  OptionMarketExpiredCantExercise,
 }

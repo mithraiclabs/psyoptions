@@ -1,7 +1,7 @@
 pub mod errors;
 pub mod fees;
 
-use anchor_lang::{Key, prelude::*};
+use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
 use spl_token::state::Account as SPLTokenAccount;
 use solana_program::{program::invoke, program_error::ProgramError, program_pack::Pack, system_instruction, system_program};
@@ -132,7 +132,7 @@ pub mod psy_american {
         Ok(())
     }
 
-    #[access_control(ExerciseOption::accounts(&ctx))]
+    #[access_control(ExerciseOption::accounts(&ctx) ExerciseOption::unexpired_market(&ctx))]
     pub fn exercise_option<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, ExerciseOption<'info>>, size: u64) -> ProgramResult {
         // TODO: Validate the OptionMarket has not expired
 
@@ -478,9 +478,10 @@ pub struct ExerciseOption<'info> {
 
     token_program: AccountInfo<'info>,
     system_program: AccountInfo<'info>,
+    clock: Sysvar<'info, Clock>,
 }
 impl<'info> ExerciseOption<'info> {
-    fn accounts(ctx: &Context<ExerciseOption<'info>>) -> Result<(), ProgramError> {
+    fn accounts(ctx: &Context<ExerciseOption>) -> Result<(), ProgramError> {
         // Validate the quote asset pool is the same as on the OptionMarket
         if *ctx.accounts.quote_asset_pool.to_account_info().key != ctx.accounts.option_market.quote_asset_pool {
             return Err(errors::PsyOptionsError::QuotePoolAccountDoesNotMatchMarket.into())
@@ -513,11 +514,11 @@ impl<'info> ExerciseOption<'info> {
 
         Ok(())
     }
-    fn unexpired_market(ctx: &Context<MintOption<'info>>) -> Result<(), ProgramError> {
-        // TODO: Validate the market is not expired
-        // if ctx.accounts.option_market.expiration_unix_timestamp < ctx.accounts.clock.unix_timestamp {
-        //     return Err(errors::PsyOptionsError::OptionMarketExpiredCantMint.into())
-        // }
+    fn unexpired_market(ctx: &Context<ExerciseOption>) -> Result<(), ProgramError> {
+        // Validate the market is not expired
+        if ctx.accounts.option_market.expiration_unix_timestamp < ctx.accounts.clock.unix_timestamp {
+            return Err(errors::PsyOptionsError::OptionMarketExpiredCantExercise.into())
+        }
         Ok(())
     }
 }
