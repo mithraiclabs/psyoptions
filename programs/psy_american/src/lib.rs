@@ -134,8 +134,6 @@ pub mod psy_american {
 
     #[access_control(ExerciseOption::accounts(&ctx) ExerciseOption::unexpired_market(&ctx))]
     pub fn exercise_option<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, ExerciseOption<'info>>, size: u64) -> ProgramResult {
-        // TODO: Validate the OptionMarket has not expired
-
         let option_market = &ctx.accounts.option_market;
         let seeds = &[
             option_market.underlying_asset_mint.as_ref(),
@@ -335,7 +333,6 @@ fn validate_exercise_fee_acct<'c, 'info>(
     Ok(acct)
 }
 
-
 #[derive(Accounts)]
 #[instruction(
     underlying_amount_per_contract: u64,
@@ -438,7 +435,10 @@ impl<'info> MintOption<'info> {
             return Err(errors::PsyOptionsError::WriterTokenMintDoesNotMatchMarket.into())
         }
 
-        // TODO: Validate the fee owner is correct
+        // Validate the fee owner is correct
+        if *ctx.accounts.fee_owner.key != fees::fee_owner_key::ID {
+            return Err(errors::PsyOptionsError::FeeOwnerDoesNotMatchProgram.into())
+        }
 
         // Validate the system program account passed in is correct
         if !system_program::check_id(ctx.accounts.system_program.key) {
@@ -502,7 +502,7 @@ impl<'info> ExerciseOption<'info> {
             return Err(errors::PsyOptionsError::UnderlyingDestMintDoesNotMatchUnderlyingAsset.into())
         }
 
-        // TODO: Validate the fee owner is correct
+        // Validate the fee owner is correct
         if *ctx.accounts.fee_owner.key != fees::fee_owner_key::ID {
             return Err(errors::PsyOptionsError::FeeOwnerDoesNotMatchProgram.into())
         }
