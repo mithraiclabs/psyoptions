@@ -209,9 +209,8 @@ pub mod psy_american {
         Ok(())
     }
 
+    #[access_control(ClosePostExp::accounts(&ctx) ClosePostExp::expired_market(&ctx))]
     pub fn close_post_expiration(ctx: Context<ClosePostExp>, size: u64) -> ProgramResult {
-        // TODO: validate the market has expired
-
         let option_market = &ctx.accounts.option_market;
         let seeds = &[
             option_market.underlying_asset_mint.as_ref(),
@@ -577,6 +576,34 @@ pub struct ClosePostExp<'info> {
     underlying_asset_dest: CpiAccount<'info, TokenAccount>,
 
     token_program: AccountInfo<'info>,
+    clock: Sysvar<'info, Clock>,
+}
+impl<'info> ClosePostExp<'info> {
+    fn accounts(_ctx: &Context<ClosePostExp>) -> Result<(), ProgramError> {
+        // // Validate the underlying asset pool is the same as on the OptionMarket
+        // if *ctx.accounts.underlying_asset_pool.to_account_info().key != ctx.accounts.option_market.underlying_asset_pool {
+        //     return Err(errors::PsyOptionsError::UnderlyingPoolAccountDoesNotMatchMarket.into())
+        // }
+
+        // // Validate the option mint is the same as on the OptionMarket
+        // if *ctx.accounts.option_mint.to_account_info().key != ctx.accounts.option_market.option_mint {
+        //     return Err(errors::PsyOptionsError::OptionTokenMintDoesNotMatchMarket.into())
+        // }
+
+        // // Validate the underlying destination has the same mint as the pool
+        // if ctx.accounts.underlying_asset_dest.mint != ctx.accounts.option_market.underlying_asset_mint {
+        //     return Err(errors::PsyOptionsError::UnderlyingDestMintDoesNotMatchUnderlyingAsset.into())
+        // }
+
+        Ok(())
+    }
+    fn expired_market(ctx: &Context<ClosePostExp>) -> Result<(), ProgramError> {
+        // Validate the market is expired
+        if ctx.accounts.option_market.expiration_unix_timestamp >= ctx.accounts.clock.unix_timestamp {
+            return Err(errors::PsyOptionsError::OptionMarketNotExpiredCantClose.into())
+        }
+        Ok(())
+    }
 }
 
 #[account]

@@ -576,6 +576,7 @@ export const closePostExpiration = async (
       underlyingAssetPool,
       underlyingAssetDest,
       tokenProgram: TOKEN_PROGRAM_ID,
+      clock: SYSVAR_CLOCK_PUBKEY,
     },
     signers: [optionHolder],
   });
