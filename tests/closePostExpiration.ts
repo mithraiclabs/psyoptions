@@ -341,6 +341,37 @@ describe("closePostExpiration", () => {
         }
       });
     });
+    describe("Validate the underlying destination is the same as the OptionMarket", () => {
+      let badUnderlyingDest: Keypair;
+      before(async () => {
+        const { tokenAccount } = await initNewTokenAccount(
+          provider.connection,
+          payer.publicKey,
+          quoteToken.publicKey,
+          payer
+        );
+        badUnderlyingDest = tokenAccount;
+      });
+      it("should error", async () => {
+        try {
+          await closePostExpiration(
+            program,
+            minter,
+            size,
+            optionMarketKey,
+            writerTokenMintAccount.publicKey,
+            minterWriterAcct.publicKey,
+            underlyingAssetPoolAccount.publicKey,
+            badUnderlyingDest.publicKey
+          );
+          assert.ok(false);
+        } catch (err) {
+          const errorMsg =
+            "Underlying destination mint must match underlying asset mint address";
+          assert.equal(err.toString(), errorMsg);
+        }
+      });
+    });
   });
   describe("Unexpired OptionMarket", () => {
     before(async () => {

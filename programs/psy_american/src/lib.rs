@@ -590,10 +590,10 @@ impl<'info> ClosePostExp<'info> {
             return Err(errors::PsyOptionsError::WriterTokenMintDoesNotMatchMarket.into())
         }
 
-        // // TODO: Validate the underlying destination has the same mint as the pool
-        // if ctx.accounts.underlying_asset_dest.mint != ctx.accounts.option_market.underlying_asset_mint {
-        //     return Err(errors::PsyOptionsError::UnderlyingDestMintDoesNotMatchUnderlyingAsset.into())
-        // }
+        // Validate the underlying destination has the same mint as the option underlying
+        if ctx.accounts.underlying_asset_dest.mint != ctx.accounts.option_market.underlying_asset_mint {
+            return Err(errors::PsyOptionsError::UnderlyingDestMintDoesNotMatchUnderlyingAsset.into())
+        }
 
         Ok(())
     }
