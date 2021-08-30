@@ -209,7 +209,29 @@ pub mod psy_american {
         Ok(())
     }
 
-    pub fn close_post_expiration(_ctx: Context<ClosePostExp>, _size: u64) -> ProgramResult {
+    pub fn close_post_expiration(ctx: Context<ClosePostExp>, size: u64) -> ProgramResult {
+        let option_market = &ctx.accounts.option_market;
+        let seeds = &[
+            option_market.underlying_asset_mint.as_ref(),
+            option_market.quote_asset_mint.as_ref(),
+            &option_market.underlying_amount_per_contract.to_le_bytes(),
+            &option_market.quote_amount_per_contract.to_le_bytes(),
+            &option_market.expiration_unix_timestamp.to_le_bytes(),
+            &[option_market.bump_seed]
+        ];
+        let signer = &[&seeds[..]];
+
+        // Burn the size of WriterTokens
+        let cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_program.clone(),
+            token::Burn {
+                mint: ctx.accounts.writer_token_mint.to_account_info(),
+                to: ctx.accounts.writer_token_src.to_account_info(),
+                authority: ctx.accounts.user_authority.to_account_info(),
+            },
+            signer,
+        );
+        token::burn(cpi_ctx, size)?;
         Ok(())
     }
 }
@@ -531,6 +553,13 @@ impl<'info> ExerciseOption<'info> {
 pub struct ClosePostExp<'info> {
     #[account(signer)]
     user_authority: AccountInfo<'info>,
+    option_market: ProgramAccount<'info, OptionMarket>,
+    #[account(mut)]
+    writer_token_mint: CpiAccount<'info, Mint>,
+    #[account(mut)]
+    writer_token_src: CpiAccount<'info, TokenAccount>,
+
+    token_program: AccountInfo<'info>,
 }
 
 #[account]

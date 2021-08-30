@@ -55,6 +55,9 @@ describe("closePostExpiration", () => {
   let instructions: TransactionInstruction[] = [];
 
   let optionToken: Token;
+  let minterWriterAcct: Keypair;
+  let minterOptionAcct: Keypair;
+  let minterUnderlyingAccount: Keypair;
   let size = new u64(1);
 
   const initOptionMarket = async () => {
@@ -169,11 +172,11 @@ describe("closePostExpiration", () => {
         instructions,
       } = await initSetup(provider, payer, mintAuthority, program, {
         // set expiration to 2 seconds from now
-        expiration: new anchor.BN(new Date().getTime() / 1000 + 2),
+        expiration: new anchor.BN(new Date().getTime() / 1000 + 3),
       }));
       await initOptionMarket();
       // Create a new minter
-      const {
+      ({
         optionAccount: minterOptionAcct,
         underlyingAccount: minterUnderlyingAccount,
         writerTokenAccount: minterWriterAcct,
@@ -185,7 +188,7 @@ describe("closePostExpiration", () => {
         new anchor.BN(100).mul(underlyingAmountPerContract).muln(2).toNumber(),
         optionMintAccount.publicKey,
         writerTokenMintAccount.publicKey
-      );
+      ));
       // Mint a bunch of contracts to the minter
       await mintOptionsTx(
         minter,
@@ -224,21 +227,39 @@ describe("closePostExpiration", () => {
         new u64(100)
       );
       // Wait so the market is expired
+      await wait(3000);
     });
     beforeEach(async () => {
       size = new u64(1);
-      await wait(2000);
     });
 
     describe("proper close post expiration", () => {
       it("should burn the WriteToken", async () => {
+        const writerToken = new Token(
+          provider.connection,
+          writerTokenMintAccount.publicKey,
+          TOKEN_PROGRAM_ID,
+          payer
+        );
+        const writerMintBefore = await writerToken.getMintInfo();
         try {
-          await closePostExpiration(program, minter, size);
+          await closePostExpiration(
+            program,
+            minter,
+            size,
+            optionMarketKey,
+            writerTokenMintAccount.publicKey,
+            minterWriterAcct.publicKey
+          );
         } catch (err) {
           console.error(err.toString());
           throw err;
         }
-        assert.ok(true);
+        const writerMintAfter = await writerToken.getMintInfo();
+        const writerMintDiff = writerMintAfter.supply.sub(
+          writerMintBefore.supply
+        );
+        assert.equal(writerMintDiff.toString(), size.neg().toString());
       });
     });
   });
