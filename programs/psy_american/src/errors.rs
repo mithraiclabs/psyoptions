@@ -36,4 +36,6 @@ pub enum PsyOptionsError {
   SizeCantBeLessThanEqZero,
   #[msg("exerciseFee key does not match the value on the OptionMarket")]
   ExerciseFeeKeyDoesNotMatchOptionMarket,
+  #[msg("Quote pool account does not match the value on the OptionMarket")]
+  QuotePoolAccountDoesNotMatchMarket,
 }

@@ -132,6 +132,7 @@ pub mod psy_american {
         Ok(())
     }
 
+    #[access_control(ExerciseOption::accounts(&ctx))]
     pub fn exercise_option<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, ExerciseOption<'info>>, size: u64) -> ProgramResult {
         // TODO: Validate the OptionMarket has not expired
 
@@ -475,6 +476,33 @@ pub struct ExerciseOption<'info> {
 
     token_program: AccountInfo<'info>,
     system_program: AccountInfo<'info>,
+}
+impl<'info> ExerciseOption<'info> {
+    fn accounts(ctx: &Context<ExerciseOption<'info>>) -> Result<(), ProgramError> {
+        // Validate the quote asset pool is the same as on the OptionMarket
+        if *ctx.accounts.quote_asset_pool.to_account_info().key != ctx.accounts.option_market.quote_asset_pool {
+            return Err(errors::PsyOptionsError::QuotePoolAccountDoesNotMatchMarket.into())
+        }
+
+        // TODO: Validate the option mint is the same as on the OptionMarket
+        // if *ctx.accounts.option_mint.to_account_info().key != ctx.accounts.option_market.option_mint {
+        //     return Err(errors::PsyOptionsError::OptionTokenMintDoesNotMatchMarket.into())
+        // }
+
+        // TODO: Validate the system program account passed in is correct
+        // if !system_program::check_id(ctx.accounts.system_program.key) {
+        //     return Err(ProgramError::InvalidAccountData);
+        // }
+
+        Ok(())
+    }
+    fn unexpired_market(ctx: &Context<MintOption<'info>>) -> Result<(), ProgramError> {
+        // TODO: Validate the market is not expired
+        // if ctx.accounts.option_market.expiration_unix_timestamp < ctx.accounts.clock.unix_timestamp {
+        //     return Err(errors::PsyOptionsError::OptionMarketExpiredCantMint.into())
+        // }
+        Ok(())
+    }
 }
 
 #[account]

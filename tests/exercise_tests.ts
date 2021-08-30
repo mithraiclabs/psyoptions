@@ -359,6 +359,46 @@ describe("exerciseOption", () => {
         }
       });
     });
+    describe("quote asset pool is not the same as the OptionMarket", () => {
+      beforeEach(async () => {
+        // Create a new token account and set it as the mintFeeKey
+        const { tokenAccount } = await initNewTokenAccount(
+          provider.connection,
+          FEE_OWNER_KEY,
+          quoteToken.publicKey,
+          payer
+        );
+        quoteAssetPoolAccount = tokenAccount;
+      });
+      it("should error", async () => {
+        try {
+          await exerciseOptionTx(
+            program,
+            size,
+            optionMarketKey,
+            optionToken.publicKey,
+            exerciser,
+            exerciserOptionAcct.publicKey,
+            underlyingAssetPoolAccount.publicKey,
+            exerciserUnderlyingAcct.publicKey,
+            quoteAssetPoolAccount.publicKey,
+            exerciserQuoteAcct.publicKey,
+            [
+              {
+                pubkey: exerciseFeeKey,
+                isWritable: true,
+                isSigner: false,
+              },
+            ]
+          );
+          assert.ok(false);
+        } catch (err) {
+          const errMsg =
+            "Quote pool account does not match the value on the OptionMarket";
+          assert.equal(err.toString(), errMsg);
+        }
+      });
+    });
   });
   describe("OptionMarket is for NFT", () => {
     before(async () => {
