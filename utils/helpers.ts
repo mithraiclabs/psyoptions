@@ -588,7 +588,9 @@ export const closeOptionPosition = async (
   size: anchor.BN,
   optionMarket: PublicKey,
   writerTokenMint: PublicKey,
-  writerTokenSrc: PublicKey
+  writerTokenSrc: PublicKey,
+  underlyingAssetPool: PublicKey,
+  underlyingAssetDest: PublicKey
 ) => {
   await program.rpc.closeOptionPosition(size, {
     accounts: {
@@ -596,6 +598,8 @@ export const closeOptionPosition = async (
       optionMarket,
       writerTokenMint,
       writerTokenSrc,
+      underlyingAssetPool,
+      underlyingAssetDest,
       tokenProgram: TOKEN_PROGRAM_ID,
     },
     signers: [minter],

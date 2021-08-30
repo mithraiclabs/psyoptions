@@ -273,7 +273,16 @@ pub mod psy_american {
 
         // TODO: Burn the Optiontokens
 
-        // TODO: Transfer the underlying assets from the pool to the destination
+        // Transfer the underlying assets from the pool to the destination
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.underlying_asset_pool.to_account_info(),
+            to: ctx.accounts.underlying_asset_dest.to_account_info(),
+            authority: ctx.accounts.option_market.to_account_info(),
+        };
+        let cpi_token_program = ctx.accounts.token_program.clone();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
+        let underlying_transfer_amount = option_market.underlying_amount_per_contract.checked_mul(size).unwrap();
+        token::transfer(cpi_ctx, underlying_transfer_amount)?;
         Ok(())
     }
 }
@@ -646,6 +655,10 @@ pub struct CloseOptionPosition<'info> {
     writer_token_mint: CpiAccount<'info, Mint>,
     #[account(mut)]
     writer_token_src: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    underlying_asset_pool: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    underlying_asset_dest: CpiAccount<'info, TokenAccount>,
 
     token_program: AccountInfo<'info>,
 }

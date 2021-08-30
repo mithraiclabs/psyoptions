@@ -221,7 +221,9 @@ describe("closeOptionPosition", () => {
             size,
             optionMarketKey,
             writerToken.publicKey,
-            minterWriterAcct.publicKey
+            minterWriterAcct.publicKey,
+            underlyingAssetPoolAccount.publicKey,
+            minterUnderlyingAccount.publicKey
           );
         } catch (err) {
           console.error(err.toString());
