@@ -589,6 +589,8 @@ export const closeOptionPosition = async (
   optionMarket: PublicKey,
   writerTokenMint: PublicKey,
   writerTokenSrc: PublicKey,
+  optionTokenMint: PublicKey,
+  optionTokenSrc: PublicKey,
   underlyingAssetPool: PublicKey,
   underlyingAssetDest: PublicKey
 ) => {
@@ -598,6 +600,8 @@ export const closeOptionPosition = async (
       optionMarket,
       writerTokenMint,
       writerTokenSrc,
+      optionTokenMint,
+      optionTokenSrc,
       underlyingAssetPool,
       underlyingAssetDest,
       tokenProgram: TOKEN_PROGRAM_ID,

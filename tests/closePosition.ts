@@ -54,7 +54,6 @@ describe("closeOptionPosition", () => {
   let remainingAccounts: AccountMeta[] = [];
   let instructions: TransactionInstruction[] = [];
 
-  let optionToken: Token;
   let minterWriterAcct: Keypair;
   let minterOptionAcct: Keypair;
   let minterUnderlyingAccount: Keypair;
@@ -210,7 +209,14 @@ describe("closeOptionPosition", () => {
           TOKEN_PROGRAM_ID,
           payer
         );
+        const optionToken = new Token(
+          provider.connection,
+          optionMintAccount.publicKey,
+          TOKEN_PROGRAM_ID,
+          payer
+        );
         const writerMintBefore = await writerToken.getMintInfo();
+        const optionMintBefore = await optionToken.getMintInfo();
         const minterUnderlyingBefore = await underlyingToken.getAccountInfo(
           minterUnderlyingAccount.publicKey
         );
@@ -222,6 +228,8 @@ describe("closeOptionPosition", () => {
             optionMarketKey,
             writerToken.publicKey,
             minterWriterAcct.publicKey,
+            optionToken.publicKey,
+            minterOptionAcct.publicKey,
             underlyingAssetPoolAccount.publicKey,
             minterUnderlyingAccount.publicKey
           );
@@ -234,6 +242,12 @@ describe("closeOptionPosition", () => {
           writerMintBefore.supply
         );
         assert.equal(writerMintDiff.toString(), size.neg().toString());
+
+        const optionMintAfter = await optionToken.getMintInfo();
+        const optionMintDiff = optionMintAfter.supply.sub(
+          optionMintBefore.supply
+        );
+        assert.equal(optionMintDiff.neg().toString(), size.toString());
 
         const minterUnderlyingAfter = await underlyingToken.getAccountInfo(
           minterUnderlyingAccount.publicKey
