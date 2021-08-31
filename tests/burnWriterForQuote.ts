@@ -215,6 +215,26 @@ describe("burnWriterForQuote", () => {
       size = new u64(1);
     });
 
+    describe("No quotes in pool", () => {
+      it("should error", async () => {
+        try {
+          await burnWriterForQuote(
+            program,
+            minter,
+            size,
+            optionMarketKey,
+            writerToken.publicKey,
+            minterWriterAcct.publicKey,
+            quoteAssetPoolAccount.publicKey,
+            minterQuoteAccount.publicKey
+          );
+          assert.ok(false);
+        } catch (err) {
+          const errMsg = "Not enough assets in the quote asset pool";
+          assert.equal(err.toString(), errMsg);
+        }
+      });
+    });
     describe("someone has exercised", () => {
       before(async () => {
         const optionToken = new Token(
@@ -365,26 +385,6 @@ describe("burnWriterForQuote", () => {
             assert.equal(err.toString(), errMsg);
           }
         });
-      });
-    });
-    describe("No quotes in pool", () => {
-      it("should error", async () => {
-        try {
-          await burnWriterForQuote(
-            program,
-            minter,
-            size,
-            optionMarketKey,
-            writerToken.publicKey,
-            minterWriterAcct.publicKey,
-            quoteAssetPoolAccount.publicKey,
-            minterQuoteAccount.publicKey
-          );
-          assert.ok(false);
-        } catch (err) {
-          const errMsg = "Not enough assets in the quote asset pool";
-          assert.equal(err.toString(), errMsg);
-        }
       });
     });
   });
