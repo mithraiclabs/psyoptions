@@ -19,8 +19,6 @@ import {
 import { FEE_OWNER_KEY } from "../packages/psyoptions-ts/src/fees";
 import {
   closeOptionPosition,
-  closePostExpiration,
-  createExerciser,
   createMinter,
   initNewTokenAccount,
   initNewTokenMint,

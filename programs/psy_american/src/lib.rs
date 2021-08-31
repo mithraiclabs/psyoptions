@@ -1,7 +1,7 @@
 pub mod errors;
 pub mod fees;
 
-use anchor_lang::prelude::*;
+use anchor_lang::{Key, prelude::*};
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
 use spl_token::state::Account as SPLTokenAccount;
 use solana_program::{program::invoke, program_error::ProgramError, program_pack::Pack, system_instruction, system_program};
@@ -298,6 +298,7 @@ pub mod psy_american {
         Ok(())
     }
 
+    #[access_control(BurnWriterForQuote::accounts(&ctx))]
     pub fn burn_writer_for_quote(ctx: Context<BurnWriterForQuote>, size: u64)  -> ProgramResult {
         let option_market = &ctx.accounts.option_market;
         let seeds = &[
@@ -755,6 +756,21 @@ pub struct BurnWriterForQuote<'info> {
 
     token_program: AccountInfo<'info>,
 }
+impl<'info> BurnWriterForQuote<'info> {
+    fn accounts(ctx: &Context<BurnWriterForQuote>) -> ProgramResult{
+        // Validate the Quote asset pool matches the OptionMarket
+        if ctx.accounts.quote_asset_pool.key() != ctx.accounts.option_market.quote_asset_pool {
+            return Err(errors::PsyOptionsError::QuotePoolAccountDoesNotMatchMarket.into())
+        }
+
+        // TODO: Validate WriteToken mint matches the OptionMarket
+
+        Ok(())
+    }
+
+    // TODO validate there is enough quote assets in the pool
+}
+
 #[account]
 #[derive(Default)]
 /// Data structure that contains all the information needed to maintain an open

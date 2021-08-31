@@ -44,6 +44,7 @@ describe("burnWriterForQuote", () => {
 
   let quoteToken: Token;
   let underlyingToken: Token;
+  let writerToken: Token;
   let underlyingAmountPerContract: anchor.BN;
   let quoteAmountPerContract: anchor.BN;
   let expiration: anchor.BN;
@@ -178,6 +179,12 @@ describe("burnWriterForQuote", () => {
         // set expiration to 2 seconds from now
         expiration: new anchor.BN(new Date().getTime() / 1000 + 600),
       }));
+      writerToken = new Token(
+        provider.connection,
+        writerTokenMintAccount.publicKey,
+        TOKEN_PROGRAM_ID,
+        payer
+      );
       await initOptionMarket();
       // Create a new minter
       ({
@@ -261,12 +268,6 @@ describe("burnWriterForQuote", () => {
       });
       describe("proper burn writer for quote", () => {
         it("should burn the WriteToken and transfer the quote assets", async () => {
-          const writerToken = new Token(
-            provider.connection,
-            writerTokenMintAccount.publicKey,
-            TOKEN_PROGRAM_ID,
-            payer
-          );
           const writerMintBefore = await writerToken.getMintInfo();
           const writerQuoteBefore = await quoteToken.getAccountInfo(
             minterQuoteAccount.publicKey
@@ -302,6 +303,37 @@ describe("burnWriterForQuote", () => {
             writerQuoteDiff.toString(),
             size.mul(quoteAmountPerContract).toString()
           );
+        });
+      });
+      describe("Quote pool does not match OptionMarket", () => {
+        let badQuotePool: Keypair;
+        before(async () => {
+          const { tokenAccount } = await initNewTokenAccount(
+            provider.connection,
+            payer.publicKey,
+            underlyingToken.publicKey,
+            payer
+          );
+          badQuotePool = tokenAccount;
+        });
+        it("should error", async () => {
+          try {
+            await burnWriterForQuote(
+              program,
+              minter,
+              size,
+              optionMarketKey,
+              writerToken.publicKey,
+              minterWriterAcct.publicKey,
+              badQuotePool.publicKey,
+              minterQuoteAccount.publicKey
+            );
+            assert.ok(false);
+          } catch (err) {
+            const errMsg =
+              "Quote pool account does not match the value on the OptionMarket";
+            assert.equal(err.toString(), errMsg);
+          }
         });
       });
     });
