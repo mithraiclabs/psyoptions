@@ -261,5 +261,38 @@ describe("closeOptionPosition", () => {
         );
       });
     });
+
+    describe("WriterToken mint does not match OptionMarket", () => {
+      let badWriterMint: Keypair;
+      before(async () => {
+        const { mintAccount } = await initNewTokenMint(
+          provider.connection,
+          payer.publicKey,
+          payer
+        );
+        badWriterMint = mintAccount;
+      });
+      it("should error", async () => {
+        try {
+          await closeOptionPosition(
+            program,
+            minter,
+            size,
+            optionMarketKey,
+            badWriterMint.publicKey,
+            minterWriterAcct.publicKey,
+            optionMintAccount.publicKey,
+            minterOptionAcct.publicKey,
+            underlyingAssetPoolAccount.publicKey,
+            minterUnderlyingAccount.publicKey
+          );
+          assert.ok(false);
+        } catch (err) {
+          const errorMsg =
+            "WriterToken mint does not match the value on the OptionMarket";
+          assert.equal(err.toString(), errorMsg);
+        }
+      });
+    });
   });
 });

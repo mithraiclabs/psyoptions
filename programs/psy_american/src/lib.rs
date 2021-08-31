@@ -247,6 +247,7 @@ pub mod psy_american {
         Ok(())
     }
 
+    #[access_control(CloseOptionPosition::accounts(&ctx))]
     pub fn close_option_position(ctx: Context<CloseOptionPosition>, size: u64) -> ProgramResult {
         let option_market = &ctx.accounts.option_market;
         let seeds = &[
@@ -677,6 +678,21 @@ pub struct CloseOptionPosition<'info> {
 
     token_program: AccountInfo<'info>,
 }
+impl<'info> CloseOptionPosition<'info> {
+    fn accounts(ctx: &Context<CloseOptionPosition>) -> ProgramResult {
+        // TODO: Validate the WriterToken mint is the same as the OptionMarket
+        if *ctx.accounts.writer_token_mint.to_account_info().key != ctx.accounts.option_market.writer_token_mint {
+            return Err(errors::PsyOptionsError::WriterTokenMintDoesNotMatchMarket.into())
+        }
+
+        // TODO: Validate the OptionToken mint is the same as the OptionMarket
+
+        // TODO: Validate the underlying asset pool is the same as the OptionMarket
+
+        Ok(())
+    }
+}
+
 #[account]
 #[derive(Default)]
 /// Data structure that contains all the information needed to maintain an open
