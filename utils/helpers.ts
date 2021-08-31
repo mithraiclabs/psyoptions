@@ -609,3 +609,23 @@ export const closeOptionPosition = async (
     signers: [minter],
   });
 };
+
+export const burnWriterForQuote = async (
+  program: anchor.Program,
+  writer: Keypair,
+  size: anchor.BN,
+  optionMarket: PublicKey,
+  writerTokenMint: PublicKey,
+  writerTokenSrc: PublicKey
+) => {
+  await program.rpc.burnWriterForQuote(size, {
+    accounts: {
+      userAuthority: writer.publicKey,
+      optionMarket,
+      writerTokenMint,
+      writerTokenSrc,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    },
+    signers: [writer],
+  });
+};
