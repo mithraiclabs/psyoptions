@@ -322,6 +322,18 @@ pub mod psy_american {
         );
         token::burn(cpi_ctx, size)?;
 
+        // Transfer the quote assets to the writer's account
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.quote_asset_pool.to_account_info(),
+            to: ctx.accounts.writer_quote_dest.to_account_info(),
+            authority: ctx.accounts.option_market.to_account_info(),
+        };
+        let cpi_token_program = ctx.accounts.token_program.clone();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
+        let quote_transfer_amount = option_market.quote_amount_per_contract.checked_mul(size).unwrap();
+        token::transfer(cpi_ctx, quote_transfer_amount)?;
+        
+
         Ok(())
     }
 }
@@ -736,6 +748,10 @@ pub struct BurnWriterForQuote<'info> {
     writer_token_mint: CpiAccount<'info, Mint>,
     #[account(mut)]
     writer_token_src: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    quote_asset_pool: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    writer_quote_dest: CpiAccount<'info, TokenAccount>,
 
     token_program: AccountInfo<'info>,
 }

@@ -202,7 +202,8 @@ export const createMinter = async (
   underlyingToken: Token,
   underlyingAmount: number,
   optionMint: PublicKey,
-  writerTokenMint: PublicKey
+  writerTokenMint: PublicKey,
+  quoteToken: Token
 ) => {
   const transaction = new Transaction();
 
@@ -223,6 +224,25 @@ export const createMinter = async (
       TOKEN_PROGRAM_ID,
       underlyingToken.publicKey,
       underlyingAccount.publicKey,
+      minter.publicKey
+    )
+  );
+
+  const quoteAccount = new Keypair();
+  transaction.add(
+    SystemProgram.createAccount({
+      fromPubkey: minter.publicKey,
+      newAccountPubkey: quoteAccount.publicKey,
+      lamports: assetPoolRentBalance,
+      space: AccountLayout.span,
+      programId: TOKEN_PROGRAM_ID,
+    })
+  );
+  transaction.add(
+    Token.createInitAccountInstruction(
+      TOKEN_PROGRAM_ID,
+      quoteToken.publicKey,
+      quoteAccount.publicKey,
       minter.publicKey
     )
   );
@@ -269,7 +289,13 @@ export const createMinter = async (
   await sendAndConfirmTransaction(
     connection,
     transaction,
-    [minter, underlyingAccount, optionAccount, writerTokenAccount],
+    [
+      minter,
+      underlyingAccount,
+      quoteAccount,
+      optionAccount,
+      writerTokenAccount,
+    ],
     {
       commitment: "confirmed",
     }
@@ -282,7 +308,7 @@ export const createMinter = async (
     [],
     underlyingAmount
   );
-  return { optionAccount, underlyingAccount, writerTokenAccount };
+  return { optionAccount, quoteAccount, underlyingAccount, writerTokenAccount };
 };
 
 export const createExerciser = async (
@@ -616,7 +642,9 @@ export const burnWriterForQuote = async (
   size: anchor.BN,
   optionMarket: PublicKey,
   writerTokenMint: PublicKey,
-  writerTokenSrc: PublicKey
+  writerTokenSrc: PublicKey,
+  quoteAssetPool: PublicKey,
+  writerQuoteDest: PublicKey
 ) => {
   await program.rpc.burnWriterForQuote(size, {
     accounts: {
@@ -624,6 +652,8 @@ export const burnWriterForQuote = async (
       optionMarket,
       writerTokenMint,
       writerTokenSrc,
+      quoteAssetPool,
+      writerQuoteDest,
       tokenProgram: TOKEN_PROGRAM_ID,
     },
     signers: [writer],

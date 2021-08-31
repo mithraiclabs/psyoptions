@@ -61,6 +61,7 @@ describe("burnWriterForQuote", () => {
   let minterWriterAcct: Keypair;
   let minterOptionAcct: Keypair;
   let minterUnderlyingAccount: Keypair;
+  let minterQuoteAccount: Keypair;
   let size = new u64(1);
 
   const initOptionMarket = async () => {
@@ -183,6 +184,7 @@ describe("burnWriterForQuote", () => {
         optionAccount: minterOptionAcct,
         underlyingAccount: minterUnderlyingAccount,
         writerTokenAccount: minterWriterAcct,
+        quoteAccount: minterQuoteAccount,
       } = await createMinter(
         provider.connection,
         minter,
@@ -190,7 +192,8 @@ describe("burnWriterForQuote", () => {
         underlyingToken,
         new anchor.BN(100).mul(underlyingAmountPerContract).muln(2).toNumber(),
         optionMintAccount.publicKey,
-        writerTokenMintAccount.publicKey
+        writerTokenMintAccount.publicKey,
+        quoteToken
       ));
       // Mint a bunch of contracts to the minter
       await mintOptionsTx(
@@ -227,6 +230,14 @@ describe("burnWriterForQuote", () => {
           optionMintAccount.publicKey,
           underlyingToken.publicKey
         );
+        // Transfer options to the exerciser
+        await optionToken.transfer(
+          minterOptionAcct.publicKey,
+          exerciserOptionAcct.publicKey,
+          minter,
+          [],
+          new u64(100)
+        );
         // exercise 100 options so there's plenty of quote assets in the pool
         await exerciseOptionTx(
           program,
@@ -248,35 +259,50 @@ describe("burnWriterForQuote", () => {
           ]
         );
       });
-    });
-
-    describe("proper burn writer for quote", () => {
-      it("should burn the WriteToken and transfer the quote assets", async () => {
-        const writerToken = new Token(
-          provider.connection,
-          writerTokenMintAccount.publicKey,
-          TOKEN_PROGRAM_ID,
-          payer
-        );
-        const writerMintBefore = await writerToken.getMintInfo();
-        try {
-          await burnWriterForQuote(
-            program,
-            minter,
-            size,
-            optionMarketKey,
-            writerToken.publicKey,
-            minterWriterAcct.publicKey
+      describe("proper burn writer for quote", () => {
+        it("should burn the WriteToken and transfer the quote assets", async () => {
+          const writerToken = new Token(
+            provider.connection,
+            writerTokenMintAccount.publicKey,
+            TOKEN_PROGRAM_ID,
+            payer
           );
-        } catch (err) {
-          console.error(err.toString());
-          throw err;
-        }
-        const writerMintAfter = await writerToken.getMintInfo();
-        const writerMintDiff = writerMintAfter.supply.sub(
-          writerMintBefore.supply
-        );
-        assert.equal(writerMintDiff.toString(), size.neg().toString());
+          const writerMintBefore = await writerToken.getMintInfo();
+          const writerQuoteBefore = await quoteToken.getAccountInfo(
+            minterQuoteAccount.publicKey
+          );
+          try {
+            await burnWriterForQuote(
+              program,
+              minter,
+              size,
+              optionMarketKey,
+              writerToken.publicKey,
+              minterWriterAcct.publicKey,
+              quoteAssetPoolAccount.publicKey,
+              minterQuoteAccount.publicKey
+            );
+          } catch (err) {
+            console.error(err.toString());
+            throw err;
+          }
+          const writerMintAfter = await writerToken.getMintInfo();
+          const writerMintDiff = writerMintAfter.supply.sub(
+            writerMintBefore.supply
+          );
+          assert.equal(writerMintDiff.toString(), size.neg().toString());
+
+          const writerQuoteAfter = await quoteToken.getAccountInfo(
+            minterQuoteAccount.publicKey
+          );
+          const writerQuoteDiff = writerQuoteAfter.amount.sub(
+            writerQuoteBefore.amount
+          );
+          assert.equal(
+            writerQuoteDiff.toString(),
+            size.mul(quoteAmountPerContract).toString()
+          );
+        });
       });
     });
   });
