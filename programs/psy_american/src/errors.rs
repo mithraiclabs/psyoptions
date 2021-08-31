@@ -46,4 +46,6 @@ pub enum PsyOptionsError {
   OptionMarketExpiredCantExercise,
   #[msg("OptionMarket has not expired, can't close")]
   OptionMarketNotExpiredCantClose,
+  #[msg("Not enough assets in the quote asset pool")]
+  NotEnoughQuoteAssetsInPool,
 }
