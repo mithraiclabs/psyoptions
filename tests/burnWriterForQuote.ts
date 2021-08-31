@@ -367,5 +367,25 @@ describe("burnWriterForQuote", () => {
         });
       });
     });
+    describe("No quotes in pool", () => {
+      it("should error", async () => {
+        try {
+          await burnWriterForQuote(
+            program,
+            minter,
+            size,
+            optionMarketKey,
+            writerToken.publicKey,
+            minterWriterAcct.publicKey,
+            quoteAssetPoolAccount.publicKey,
+            minterQuoteAccount.publicKey
+          );
+          assert.ok(false);
+        } catch (err) {
+          const errMsg = "Not enough assets in the quote asset pool";
+          assert.equal(err.toString(), errMsg);
+        }
+      });
+    });
   });
 });

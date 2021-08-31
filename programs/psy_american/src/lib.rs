@@ -298,7 +298,7 @@ pub mod psy_american {
         Ok(())
     }
 
-    #[access_control(BurnWriterForQuote::accounts(&ctx))]
+    #[access_control(BurnWriterForQuote::accounts(&ctx) BurnWriterForQuote::quotes_in_pool(&ctx, size))]
     pub fn burn_writer_for_quote(ctx: Context<BurnWriterForQuote>, size: u64)  -> ProgramResult {
         let option_market = &ctx.accounts.option_market;
         let seeds = &[
@@ -771,7 +771,13 @@ impl<'info> BurnWriterForQuote<'info> {
         Ok(())
     }
 
-    // TODO validate there is enough quote assets in the pool
+    // Validate there is enough quote assets in the pool
+    fn quotes_in_pool(ctx: &Context<BurnWriterForQuote>, size: u64) -> ProgramResult {
+        if ctx.accounts.quote_asset_pool.amount < size.checked_mul(ctx.accounts.option_market.quote_amount_per_contract).unwrap() {
+            return Err(errors::PsyOptionsError::NotEnoughQuoteAssetsInPool.into())
+        }
+        Ok(())
+    }
 }
 
 #[account]
