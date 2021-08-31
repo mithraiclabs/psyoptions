@@ -1,7 +1,7 @@
 pub mod errors;
 pub mod fees;
 
-use anchor_lang::prelude::*;
+use anchor_lang::{Key, prelude::*};
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
 use spl_token::state::Account as SPLTokenAccount;
 use solana_program::{program::invoke, program_error::ProgramError, program_pack::Pack, system_instruction, system_program};
@@ -295,6 +295,46 @@ pub mod psy_american {
         let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
         let underlying_transfer_amount = option_market.underlying_amount_per_contract.checked_mul(size).unwrap();
         token::transfer(cpi_ctx, underlying_transfer_amount)?;
+        Ok(())
+    }
+
+    #[access_control(BurnWriterForQuote::accounts(&ctx) BurnWriterForQuote::quotes_in_pool(&ctx, size))]
+    pub fn burn_writer_for_quote(ctx: Context<BurnWriterForQuote>, size: u64)  -> ProgramResult {
+        let option_market = &ctx.accounts.option_market;
+        let seeds = &[
+            option_market.underlying_asset_mint.as_ref(),
+            option_market.quote_asset_mint.as_ref(),
+            &option_market.underlying_amount_per_contract.to_le_bytes(),
+            &option_market.quote_amount_per_contract.to_le_bytes(),
+            &option_market.expiration_unix_timestamp.to_le_bytes(),
+            &[option_market.bump_seed]
+        ];
+        let signer = &[&seeds[..]];
+
+        // Burn the size of WriterTokens
+        let cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_program.clone(),
+            token::Burn {
+                mint: ctx.accounts.writer_token_mint.to_account_info(),
+                to: ctx.accounts.writer_token_src.to_account_info(),
+                authority: ctx.accounts.user_authority.to_account_info(),
+            },
+            signer,
+        );
+        token::burn(cpi_ctx, size)?;
+
+        // Transfer the quote assets to the writer's account
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.quote_asset_pool.to_account_info(),
+            to: ctx.accounts.writer_quote_dest.to_account_info(),
+            authority: ctx.accounts.option_market.to_account_info(),
+        };
+        let cpi_token_program = ctx.accounts.token_program.clone();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
+        let quote_transfer_amount = option_market.quote_amount_per_contract.checked_mul(size).unwrap();
+        token::transfer(cpi_ctx, quote_transfer_amount)?;
+        
+
         Ok(())
     }
 }
@@ -695,6 +735,47 @@ impl<'info> CloseOptionPosition<'info> {
             return Err(errors::PsyOptionsError::UnderlyingPoolAccountDoesNotMatchMarket.into())
         }
 
+        Ok(())
+    }
+}
+
+
+#[derive(Accounts)]
+pub struct BurnWriterForQuote<'info> {
+    #[account(signer)]
+    user_authority: AccountInfo<'info>,
+    option_market: ProgramAccount<'info, OptionMarket>,
+    #[account(mut)]
+    writer_token_mint: CpiAccount<'info, Mint>,
+    #[account(mut)]
+    writer_token_src: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    quote_asset_pool: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    writer_quote_dest: CpiAccount<'info, TokenAccount>,
+
+    token_program: AccountInfo<'info>,
+}
+impl<'info> BurnWriterForQuote<'info> {
+    fn accounts(ctx: &Context<BurnWriterForQuote>) -> ProgramResult{
+        // Validate the Quote asset pool matches the OptionMarket
+        if ctx.accounts.quote_asset_pool.key() != ctx.accounts.option_market.quote_asset_pool {
+            return Err(errors::PsyOptionsError::QuotePoolAccountDoesNotMatchMarket.into())
+        }
+
+        // Validate WriteToken mint matches the OptionMarket
+        if ctx.accounts.writer_token_mint.key() != ctx.accounts.option_market.writer_token_mint {
+            return Err(errors::PsyOptionsError::WriterTokenMintDoesNotMatchMarket.into())
+        }
+
+        Ok(())
+    }
+
+    // Validate there is enough quote assets in the pool
+    fn quotes_in_pool(ctx: &Context<BurnWriterForQuote>, size: u64) -> ProgramResult {
+        if ctx.accounts.quote_asset_pool.amount < size.checked_mul(ctx.accounts.option_market.quote_amount_per_contract).unwrap() {
+            return Err(errors::PsyOptionsError::NotEnoughQuoteAssetsInPool.into())
+        }
         Ok(())
     }
 }

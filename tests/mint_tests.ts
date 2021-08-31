@@ -163,7 +163,8 @@ describe("mintOption", () => {
           underlyingToken,
           size.mul(underlyingAmountPerContract).muln(2).toNumber(),
           optionMintAccount.publicKey,
-          writerTokenMintAccount.publicKey
+          writerTokenMintAccount.publicKey,
+          quoteToken
         ));
     });
     it("should mint size OptionTokens", async () => {
@@ -284,7 +285,8 @@ describe("mintOption", () => {
           underlyingToken,
           underlyingAmountPerContract.muln(2).toNumber(),
           optionMintAccount.publicKey,
-          writerTokenMintAccount.publicKey
+          writerTokenMintAccount.publicKey,
+          quoteToken
         ));
     });
     it("should error", async () => {
@@ -327,7 +329,8 @@ describe("mintOption", () => {
           underlyingToken,
           underlyingAmountPerContract.muln(2).toNumber(),
           optionMintAccount.publicKey,
-          writerTokenMintAccount.publicKey
+          writerTokenMintAccount.publicKey,
+          quoteToken
         ));
       // Create a new token account and set it as the underlyingAssetPoolAccount
       const { tokenAccount } = await initNewTokenAccount(
@@ -385,7 +388,8 @@ describe("mintOption", () => {
           underlyingToken,
           underlyingAmountPerContract.muln(2).toNumber(),
           optionMintAccount.publicKey,
-          writerTokenMintAccount.publicKey
+          writerTokenMintAccount.publicKey,
+          quoteToken
         ));
     });
     it("should error", async () => {
@@ -435,7 +439,8 @@ describe("mintOption", () => {
           underlyingToken,
           underlyingAmountPerContract.muln(2).toNumber(),
           optionMintAccount.publicKey,
-          writerTokenMintAccount.publicKey
+          writerTokenMintAccount.publicKey,
+          quoteToken
         ));
     });
     it("should error", async () => {
@@ -488,7 +493,8 @@ describe("mintOption", () => {
           underlyingToken,
           underlyingAmountPerContract.muln(2).toNumber(),
           optionMintAccount.publicKey,
-          writerTokenMintAccount.publicKey
+          writerTokenMintAccount.publicKey,
+          quoteToken
         ));
     });
     it("should error", async () => {
@@ -539,7 +545,8 @@ describe("mintOption", () => {
           underlyingToken,
           underlyingAmountPerContract.muln(2).toNumber(),
           optionMintAccount.publicKey,
-          writerTokenMintAccount.publicKey
+          writerTokenMintAccount.publicKey,
+          quoteToken
         ));
 
       // Set the size to 0 to trigger an error
@@ -583,7 +590,8 @@ describe("mintOption", () => {
           underlyingToken,
           underlyingAmountPerContract.muln(2).toNumber(),
           optionMintAccount.publicKey,
-          writerTokenMintAccount.publicKey
+          writerTokenMintAccount.publicKey,
+          quoteToken
         ));
     });
     it("should error", async () => {
@@ -628,7 +636,8 @@ describe("mintOption", () => {
           underlyingToken,
           underlyingAmountPerContract.muln(2).toNumber(),
           optionMintAccount.publicKey,
-          writerTokenMintAccount.publicKey
+          writerTokenMintAccount.publicKey,
+          quoteToken
         ));
     });
     it("should transfer enough lamports as required by the fee", async () => {

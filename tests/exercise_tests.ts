@@ -187,7 +187,8 @@ describe("exerciseOption", () => {
         underlyingToken,
         new anchor.BN(100).mul(underlyingAmountPerContract).muln(2).toNumber(),
         optionMintAccount.publicKey,
-        writerTokenMintAccount.publicKey
+        writerTokenMintAccount.publicKey,
+        quoteToken
       );
       // Mint a bunch of contracts to the minter
       await mintOptionsTx(
@@ -594,7 +595,8 @@ describe("exerciseOption", () => {
         underlyingToken,
         new anchor.BN(100).mul(underlyingAmountPerContract).muln(2).toNumber(),
         optionMintAccount.publicKey,
-        writerTokenMintAccount.publicKey
+        writerTokenMintAccount.publicKey,
+        quoteToken
       );
       // Mint a bunch of contracts to the minter
       await mintOptionsTx(
@@ -701,7 +703,8 @@ describe("exerciseOption", () => {
         underlyingToken,
         new anchor.BN(100).mul(underlyingAmountPerContract).muln(2).toNumber(),
         optionMintAccount.publicKey,
-        writerTokenMintAccount.publicKey
+        writerTokenMintAccount.publicKey,
+        quoteToken
       );
       // Mint a bunch of contracts to the minter
       await mintOptionsTx(
