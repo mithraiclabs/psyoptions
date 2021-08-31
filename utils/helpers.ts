@@ -581,3 +581,31 @@ export const closePostExpiration = async (
     signers: [optionHolder],
   });
 };
+
+export const closeOptionPosition = async (
+  program: anchor.Program,
+  minter: Keypair,
+  size: anchor.BN,
+  optionMarket: PublicKey,
+  writerTokenMint: PublicKey,
+  writerTokenSrc: PublicKey,
+  optionTokenMint: PublicKey,
+  optionTokenSrc: PublicKey,
+  underlyingAssetPool: PublicKey,
+  underlyingAssetDest: PublicKey
+) => {
+  await program.rpc.closeOptionPosition(size, {
+    accounts: {
+      userAuthority: minter.publicKey,
+      optionMarket,
+      writerTokenMint,
+      writerTokenSrc,
+      optionTokenMint,
+      optionTokenSrc,
+      underlyingAssetPool,
+      underlyingAssetDest,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    },
+    signers: [minter],
+  });
+};
