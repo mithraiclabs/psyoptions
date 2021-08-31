@@ -171,7 +171,7 @@ describe("closeOptionPosition", () => {
         instructions,
       } = await initSetup(provider, payer, mintAuthority, program, {
         // set expiration to 2 seconds from now
-        expiration: new anchor.BN(new Date().getTime() / 1000 + 3),
+        expiration: new anchor.BN(new Date().getTime() / 1000 + 600),
       }));
       await initOptionMarket();
       // Create a new minter
@@ -325,6 +325,154 @@ describe("closeOptionPosition", () => {
             "OptionToken mint does not match the value on the OptionMarket";
           assert.equal(err.toString(), errorMsg);
         }
+      });
+    });
+
+    describe("Underlying asset pool does not match OptionMarket", () => {
+      let badUnderlyingPool: Keypair;
+      before(async () => {
+        const { tokenAccount } = await initNewTokenAccount(
+          provider.connection,
+          payer.publicKey,
+          underlyingToken.publicKey,
+          payer
+        );
+        badUnderlyingPool = tokenAccount;
+      });
+      it("should error", async () => {
+        try {
+          await closeOptionPosition(
+            program,
+            minter,
+            size,
+            optionMarketKey,
+            writerTokenMintAccount.publicKey,
+            minterWriterAcct.publicKey,
+            optionMintAccount.publicKey,
+            minterOptionAcct.publicKey,
+            badUnderlyingPool.publicKey,
+            minterUnderlyingAccount.publicKey
+          );
+          assert.ok(false);
+        } catch (err) {
+          const errorMsg =
+            "Underlying pool account does not match the value on the OptionMarket";
+          assert.equal(err.toString(), errorMsg);
+        }
+      });
+    });
+  });
+  describe("Expired OptionMarket", () => {
+    before(async () => {
+      // Initialize a new OptionMarket
+      ({
+        quoteToken,
+        underlyingToken,
+        underlyingAmountPerContract,
+        quoteAmountPerContract,
+        expiration,
+        optionMarketKey,
+        bumpSeed,
+        mintFeeKey,
+        exerciseFeeKey,
+        optionMintAccount,
+        writerTokenMintAccount,
+        underlyingAssetPoolAccount,
+        quoteAssetPoolAccount,
+        remainingAccounts,
+        instructions,
+      } = await initSetup(provider, payer, mintAuthority, program, {
+        // set expiration to 2 seconds from now
+        expiration: new anchor.BN(new Date().getTime() / 1000 + 3),
+      }));
+      await initOptionMarket();
+      // Create a new minter
+      ({
+        optionAccount: minterOptionAcct,
+        underlyingAccount: minterUnderlyingAccount,
+        writerTokenAccount: minterWriterAcct,
+      } = await createMinter(
+        provider.connection,
+        minter,
+        mintAuthority,
+        underlyingToken,
+        new anchor.BN(100).mul(underlyingAmountPerContract).muln(2).toNumber(),
+        optionMintAccount.publicKey,
+        writerTokenMintAccount.publicKey
+      ));
+      // Mint a bunch of contracts to the minter
+      await mintOptionsTx(
+        minter,
+        minterOptionAcct,
+        minterWriterAcct,
+        minterUnderlyingAccount,
+        { size: new anchor.BN(100) }
+      );
+      // Wait till the market is expired
+      await wait(3000);
+    });
+    beforeEach(async () => {
+      size = new u64(1);
+    });
+
+    describe("proper close position", () => {
+      it("should burn the WriteToken + OptionToken and transfer the underlying", async () => {
+        const writerToken = new Token(
+          provider.connection,
+          writerTokenMintAccount.publicKey,
+          TOKEN_PROGRAM_ID,
+          payer
+        );
+        const optionToken = new Token(
+          provider.connection,
+          optionMintAccount.publicKey,
+          TOKEN_PROGRAM_ID,
+          payer
+        );
+        const writerMintBefore = await writerToken.getMintInfo();
+        const optionMintBefore = await optionToken.getMintInfo();
+        const minterUnderlyingBefore = await underlyingToken.getAccountInfo(
+          minterUnderlyingAccount.publicKey
+        );
+        try {
+          await closeOptionPosition(
+            program,
+            minter,
+            size,
+            optionMarketKey,
+            writerToken.publicKey,
+            minterWriterAcct.publicKey,
+            optionToken.publicKey,
+            minterOptionAcct.publicKey,
+            underlyingAssetPoolAccount.publicKey,
+            minterUnderlyingAccount.publicKey
+          );
+        } catch (err) {
+          console.error(err.toString());
+          throw err;
+        }
+        const writerMintAfter = await writerToken.getMintInfo();
+        const writerMintDiff = writerMintAfter.supply.sub(
+          writerMintBefore.supply
+        );
+        assert.equal(writerMintDiff.toString(), size.neg().toString());
+
+        const optionMintAfter = await optionToken.getMintInfo();
+        const optionMintDiff = optionMintAfter.supply.sub(
+          optionMintBefore.supply
+        );
+        assert.equal(optionMintDiff.neg().toString(), size.toString());
+
+        const minterUnderlyingAfter = await underlyingToken.getAccountInfo(
+          minterUnderlyingAccount.publicKey
+        );
+        const minterUnderlyingDiff = minterUnderlyingAfter.amount.sub(
+          minterUnderlyingBefore.amount
+        );
+        assert.equal(
+          minterUnderlyingDiff.toString(),
+          size.mul(underlyingAmountPerContract).toString()
+        );
       });
     });
   });

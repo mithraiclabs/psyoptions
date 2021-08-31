@@ -690,7 +690,10 @@ impl<'info> CloseOptionPosition<'info> {
             return Err(errors::PsyOptionsError::OptionTokenMintDoesNotMatchMarket.into())
         }
 
-        // TODO: Validate the underlying asset pool is the same as the OptionMarket
+        // Validate the underlying asset pool is the same as the OptionMarket
+        if *ctx.accounts.underlying_asset_pool.to_account_info().key != ctx.accounts.option_market.underlying_asset_pool {
+            return Err(errors::PsyOptionsError::UnderlyingPoolAccountDoesNotMatchMarket.into())
+        }
 
         Ok(())
     }
