@@ -680,12 +680,15 @@ pub struct CloseOptionPosition<'info> {
 }
 impl<'info> CloseOptionPosition<'info> {
     fn accounts(ctx: &Context<CloseOptionPosition>) -> ProgramResult {
-        // TODO: Validate the WriterToken mint is the same as the OptionMarket
+        // Validate the WriterToken mint is the same as the OptionMarket
         if *ctx.accounts.writer_token_mint.to_account_info().key != ctx.accounts.option_market.writer_token_mint {
             return Err(errors::PsyOptionsError::WriterTokenMintDoesNotMatchMarket.into())
         }
 
-        // TODO: Validate the OptionToken mint is the same as the OptionMarket
+        // Validate the OptionToken mint is the same as the OptionMarket
+        if *ctx.accounts.option_token_mint.to_account_info().key != ctx.accounts.option_market.option_mint {
+            return Err(errors::PsyOptionsError::OptionTokenMintDoesNotMatchMarket.into())
+        }
 
         // TODO: Validate the underlying asset pool is the same as the OptionMarket
 
