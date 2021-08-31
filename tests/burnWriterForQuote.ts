@@ -336,6 +336,36 @@ describe("burnWriterForQuote", () => {
           }
         });
       });
+      describe("WriterToken mint does not match OptionMarket", () => {
+        let badWriterMint: Keypair;
+        before(async () => {
+          const { mintAccount } = await initNewTokenMint(
+            provider.connection,
+            payer.publicKey,
+            payer
+          );
+          badWriterMint = mintAccount;
+        });
+        it("should error", async () => {
+          try {
+            await burnWriterForQuote(
+              program,
+              minter,
+              size,
+              optionMarketKey,
+              badWriterMint.publicKey,
+              minterWriterAcct.publicKey,
+              quoteAssetPoolAccount.publicKey,
+              minterQuoteAccount.publicKey
+            );
+            assert.ok(false);
+          } catch (err) {
+            const errMsg =
+              "WriterToken mint does not match the value on the OptionMarket";
+            assert.equal(err.toString(), errMsg);
+          }
+        });
+      });
     });
   });
 });

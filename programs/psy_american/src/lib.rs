@@ -763,7 +763,10 @@ impl<'info> BurnWriterForQuote<'info> {
             return Err(errors::PsyOptionsError::QuotePoolAccountDoesNotMatchMarket.into())
         }
 
-        // TODO: Validate WriteToken mint matches the OptionMarket
+        // Validate WriteToken mint matches the OptionMarket
+        if ctx.accounts.writer_token_mint.key() != ctx.accounts.option_market.writer_token_mint {
+            return Err(errors::PsyOptionsError::WriterTokenMintDoesNotMatchMarket.into())
+        }
 
         Ok(())
     }
