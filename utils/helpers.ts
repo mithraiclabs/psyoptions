@@ -16,6 +16,7 @@ import {
   sendAndConfirmTransaction,
   SystemProgram,
   SYSVAR_CLOCK_PUBKEY,
+  SYSVAR_RENT_PUBKEY,
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
@@ -24,6 +25,7 @@ import {
   initializeAccountsForMarket,
 } from "../packages/psyoptions-ts/src";
 import { feeAmount, FEE_OWNER_KEY } from "../packages/psyoptions-ts/src/fees";
+import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
 
 export const wait = (delayMS: number) =>
   new Promise((resolve) => setTimeout(resolve, delayMS));
@@ -516,6 +518,22 @@ export const initSetup = async (
     console.error(err);
     throw err;
   }
+  const optionMarket: OptionMarketV2 = {
+    key: optionMarketKey,
+    optionMint: optionMintAccount.publicKey,
+    writerTokenMint: writerTokenMintAccount.publicKey,
+    underlyingAssetMint: underlyingToken.publicKey,
+    quoteAssetMint: quoteToken.publicKey,
+    underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
+    quoteAssetPool: quoteAssetPoolAccount.publicKey,
+    mintFeeAccount: mintFeeKey,
+    exerciseFeeAccount: exerciseFeeKey,
+    underlyingAmountPerContract: underlyingAmountPerContract,
+    quoteAmountPerContract: quoteAmountPerContract,
+    expirationUnixTimestamp: expiration,
+    bumpSeed,
+  };
+
   return {
     quoteToken,
     underlyingToken,
@@ -530,9 +548,45 @@ export const initSetup = async (
     writerTokenMintAccount,
     underlyingAssetPoolAccount,
     quoteAssetPoolAccount,
+    optionMarket,
     remainingAccounts,
     instructions,
   };
+};
+
+export const initOptionMarket = async (
+  program: anchor.Program,
+  payer: Keypair,
+  optionMarket: OptionMarketV2,
+  remainingAccounts: AccountMeta[],
+  instructions: TransactionInstruction[]
+) => {
+  await program.rpc.initializeMarket(
+    optionMarket.underlyingAmountPerContract,
+    optionMarket.quoteAmountPerContract,
+    optionMarket.expirationUnixTimestamp,
+    optionMarket.bumpSeed,
+    {
+      accounts: {
+        authority: payer.publicKey,
+        underlyingAssetMint: optionMarket.underlyingAssetMint,
+        quoteAssetMint: optionMarket.quoteAssetMint,
+        optionMint: optionMarket.optionMint,
+        writerTokenMint: optionMarket.writerTokenMint,
+        quoteAssetPool: optionMarket.quoteAssetPool,
+        underlyingAssetPool: optionMarket.underlyingAssetPool,
+        optionMarket: optionMarket.key,
+        feeOwner: FEE_OWNER_KEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        rent: SYSVAR_RENT_PUBKEY,
+        systemProgram: SystemProgram.programId,
+      },
+      remainingAccounts,
+      signers: [payer],
+      instructions,
+    }
+  );
 };
 /**
  *

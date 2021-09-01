@@ -12,6 +12,7 @@ export type SolanaRpcResponse = {
 };
 
 export type OptionMarketV2 = {
+  key: PublicKey;
   optionMint: PublicKey;
   writerTokenMint: PublicKey;
   underlyingAssetMint: PublicKey;

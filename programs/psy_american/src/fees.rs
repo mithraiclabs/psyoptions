@@ -20,11 +20,6 @@ struct U64F64(u128);
 
 impl U64F64 {
   #[inline(always)]
-  const fn add(self, other: U64F64) -> U64F64 {
-      U64F64(self.0 + other.0)
-  }
-
-  #[inline(always)]
   const fn mul_u64(self, other: u64) -> U64F64 {
     U64F64(self.0 * other as u128)
   }
