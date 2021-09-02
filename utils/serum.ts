@@ -389,7 +389,58 @@ const listMarket = async ({
   return [market.publicKey, vaultOwner];
 };
 
-const getVaultOwnerAndNonce = async (
+export const createFirstSetOfAccounts = async ({
+  connection,
+  wallet,
+  dexProgramId,
+}: {
+  connection: Connection;
+  wallet: anchor.Wallet;
+  dexProgramId: PublicKey;
+}) => {
+  const eventQueue = new Keypair();
+  const bids = new Keypair();
+  const asks = new Keypair();
+
+  const tx2 = new Transaction();
+  tx2.add(
+    SystemProgram.createAccount({
+      fromPubkey: wallet.publicKey,
+      newAccountPubkey: eventQueue.publicKey,
+      lamports: await connection.getMinimumBalanceForRentExemption(262144 + 12),
+      space: 262144 + 12,
+      programId: dexProgramId,
+    }),
+    SystemProgram.createAccount({
+      fromPubkey: wallet.publicKey,
+      newAccountPubkey: bids.publicKey,
+      lamports: await connection.getMinimumBalanceForRentExemption(65536 + 12),
+      space: 65536 + 12,
+      programId: dexProgramId,
+    }),
+    SystemProgram.createAccount({
+      fromPubkey: wallet.publicKey,
+      newAccountPubkey: asks.publicKey,
+      lamports: await connection.getMinimumBalanceForRentExemption(65536 + 12),
+      space: 65536 + 12,
+      programId: dexProgramId,
+    })
+  );
+
+  const transactions = [
+    {
+      transaction: tx2,
+      signers: [eventQueue, bids, asks],
+    },
+  ];
+  for (let tx of transactions) {
+    await anchor.getProvider().send(tx.transaction, tx.signers);
+  }
+
+  return { eventQueue, bids, asks };
+};
+
+export const getVaultOwnerAndNonce = async (
   marketPublicKey: PublicKey,
   dexProgramId = DEX_PID
 ) => {
