@@ -1,8 +1,8 @@
 pub mod errors;
 pub mod fees;
 
-use anchor_lang::{Key, prelude::*};
-use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
+use anchor_lang::{AccountsExit, Key, prelude::*};
+use anchor_spl::token::{self, Burn, Mint, MintTo, TokenAccount, Transfer};
 use spl_token::state::Account as SPLTokenAccount;
 use solana_program::{program::invoke, program_error::ProgramError, program_pack::Pack, system_instruction, system_program};
 
@@ -147,7 +147,7 @@ pub mod psy_american {
         // Burn the size of option tokens
         let cpi_ctx = CpiContext::new_with_signer(
             ctx.accounts.token_program.clone(),
-            token::Burn {
+            Burn {
                 mint: ctx.accounts.option_mint.to_account_info(),
                 to: ctx.accounts.exerciser_option_token_src.to_account_info(),
                 authority: ctx.accounts.option_authority.to_account_info(),
@@ -225,7 +225,7 @@ pub mod psy_american {
         // Burn the size of WriterTokens
         let cpi_ctx = CpiContext::new_with_signer(
             ctx.accounts.token_program.clone(),
-            token::Burn {
+            Burn {
                 mint: ctx.accounts.writer_token_mint.to_account_info(),
                 to: ctx.accounts.writer_token_src.to_account_info(),
                 authority: ctx.accounts.user_authority.to_account_info(),
@@ -275,7 +275,7 @@ pub mod psy_american {
         // Burn the Optiontokens
         let cpi_ctx = CpiContext::new_with_signer(
             ctx.accounts.token_program.clone(),
-            token::Burn {
+            Burn {
                 mint: ctx.accounts.option_token_mint.to_account_info(),
                 to: ctx.accounts.option_token_src.to_account_info(),
                 authority: ctx.accounts.user_authority.to_account_info(),
@@ -314,7 +314,7 @@ pub mod psy_american {
         // Burn the size of WriterTokens
         let cpi_ctx = CpiContext::new_with_signer(
             ctx.accounts.token_program.clone(),
-            token::Burn {
+            Burn {
                 mint: ctx.accounts.writer_token_mint.to_account_info(),
                 to: ctx.accounts.writer_token_src.to_account_info(),
                 authority: ctx.accounts.user_authority.to_account_info(),
@@ -335,6 +335,10 @@ pub mod psy_american {
         token::transfer(cpi_ctx, quote_transfer_amount)?;
         
 
+        Ok(())
+    }
+
+    pub fn init_serum_market(_ctx: Context<InitSerumMarket>, _market_space: u64, _vault_signer_nonce: u64) -> ProgramResult {
         Ok(())
     }
 }
@@ -781,6 +785,65 @@ impl<'info> BurnWriterForQuote<'info> {
         }
         Ok(())
     }
+}
+
+
+#[derive(Accounts)]
+#[instruction(market_space: u64, vault_signer_nonce: u64)]
+pub struct InitSerumMarket<'info> {
+    #[account(mut, signer)]
+    pub user_authority: AccountInfo<'info>,
+    // General market accounts
+    pub option_market: ProgramAccount<'info, OptionMarket>,
+    // TODO check that serum market has the right mints on it
+    #[account(init,
+        seeds = [&option_market.key().to_bytes()[..], b"serumMarket"],
+        bump,
+        space = market_space as usize,
+        payer = user_authority,
+        owner = dex_program.key
+    )]
+    pub serum_market: AccountInfo<'info>,
+    // system accounts
+    pub system_program: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+    pub dex_program: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub usdc_mint: CpiAccount<'info, Mint>,
+    pub option_mint: CpiAccount<'info, Mint>,
+    // INIT SERUM MARKET ACCOUNTS
+    // #[account(init,
+    //     seeds = [&option_market.key().to_bytes()[..], b"requestQueue"],
+    //     bump,
+    //     space = 5120 + 12,
+    //     payer = user_authority,
+    //     owner = dex_program.key
+    // )]
+    // request_queue: AccountInfo<'info>,
+    #[account(mut)]
+    pub event_queue: AccountInfo<'info>,
+    #[account(mut)]
+    pub bids: AccountInfo<'info>,
+    #[account(mut)]
+    pub asks: AccountInfo<'info>,
+    // #[account(init,
+    //     seeds = [&option_market.key().to_bytes()[..], b"coinVault"],
+    //     bump,
+    //     payer = user_authority,    
+    //     token::mint = option_mint,
+    //     token::authority = vault_signer,
+    // )]
+    // pub coin_vault: CpiAccount<'info, TokenAccount>,
+    // #[account(init,
+    //     seeds = [&option_market.key().to_bytes()[..], b"pcVault"],
+    //     bump,
+    //     payer = user_authority,
+    //     token::mint = usdc_mint,
+    //     token::authority = vault_signer,
+    // )]
+    // pub pc_vault: CpiAccount<'info, TokenAccount>,
+    // Is it possible to add a seeds check for DEX PDA?
+    pub vault_signer: AccountInfo<'info>,
 }
 
 #[account]
