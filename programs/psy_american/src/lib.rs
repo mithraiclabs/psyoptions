@@ -809,36 +809,36 @@ pub struct InitSerumMarket<'info> {
     pub usdc_mint: CpiAccount<'info, Mint>,
     pub option_mint: CpiAccount<'info, Mint>,
     // INIT SERUM MARKET ACCOUNTS
-    // #[account(init,
-    //     seeds = [&option_market.key().to_bytes()[..], b"requestQueue"],
-    //     bump,
-    //     space = 5120 + 12,
-    //     payer = user_authority,
-    //     owner = dex_program.key
-    // )]
-    // request_queue: AccountInfo<'info>,
+    #[account(init,
+        seeds = [&option_market.key().to_bytes()[..], b"requestQueue"],
+        bump,
+        space = 5120 + 12,
+        payer = user_authority,
+        owner = dex_program.key
+    )]
+    request_queue: AccountInfo<'info>,
     #[account(mut)]
     pub event_queue: AccountInfo<'info>,
     #[account(mut)]
     pub bids: AccountInfo<'info>,
     #[account(mut)]
     pub asks: AccountInfo<'info>,
-    // #[account(init,
-    //     seeds = [&option_market.key().to_bytes()[..], b"coinVault"],
-    //     bump,
-    //     payer = user_authority,    
-    //     token::mint = option_mint,
-    //     token::authority = vault_signer,
-    // )]
-    // pub coin_vault: CpiAccount<'info, TokenAccount>,
-    // #[account(init,
-    //     seeds = [&option_market.key().to_bytes()[..], b"pcVault"],
-    //     bump,
-    //     payer = user_authority,
-    //     token::mint = usdc_mint,
-    //     token::authority = vault_signer,
-    // )]
-    // pub pc_vault: CpiAccount<'info, TokenAccount>,
+    #[account(init,
+        seeds = [&option_market.key().to_bytes()[..], b"coinVault"],
+        bump,
+        payer = user_authority,    
+        token::mint = option_mint,
+        token::authority = vault_signer,
+    )]
+    pub coin_vault: CpiAccount<'info, TokenAccount>,
+    #[account(init,
+        seeds = [&option_market.key().to_bytes()[..], b"pcVault"],
+        bump,
+        payer = user_authority,
+        token::mint = usdc_mint,
+        token::authority = vault_signer,
+    )]
+    pub pc_vault: CpiAccount<'info, TokenAccount>,
     // Is it possible to add a seeds check for DEX PDA?
     pub vault_signer: AccountInfo<'info>,
 }
