@@ -19,6 +19,7 @@ import {
 } from "@solana/web3.js";
 import * as serumCmn from "@project-serum/common";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
 
 const MARKET_MAKER = new Keypair();
 export const DEX_PID = new PublicKey(
@@ -457,4 +458,68 @@ export const getVaultOwnerAndNonce = async (
     }
   }
   throw new Error("Unable to find nonce");
+};
+
+export const initSerum = async (
+  provider: anchor.Provider,
+  program: anchor.Program,
+  optionMarket: OptionMarketV2,
+  pcMint: PublicKey,
+  eventQueue: PublicKey,
+  bids: PublicKey,
+  asks: PublicKey
+) => {
+  const textEncoder = new TextEncoder();
+  const [serumMarketKey, _serumMarketBump] = await PublicKey.findProgramAddress(
+    [optionMarket.key.toBuffer(), textEncoder.encode("serumMarket")],
+    program.programId
+  );
+  const [requestQueue, _requestQueueBump] = await PublicKey.findProgramAddress(
+    [optionMarket.key.toBuffer(), textEncoder.encode("requestQueue")],
+    program.programId
+  );
+  const [coinVault, _coinVaultBump] = await PublicKey.findProgramAddress(
+    [optionMarket.key.toBuffer(), textEncoder.encode("coinVault")],
+    program.programId
+  );
+  const [pcVault, _pcVaultBump] = await PublicKey.findProgramAddress(
+    [optionMarket.key.toBuffer(), textEncoder.encode("pcVault")],
+    program.programId
+  );
+  const [vaultOwner, vaultSignerNonce] = await getVaultOwnerAndNonce(
+    serumMarketKey,
+    DEX_PID
+  );
+  const coinLotSize = new anchor.BN(100000);
+  const pcLotSize = new anchor.BN(100);
+  const pcDustThreshold = new anchor.BN(100);
+  await program.rpc.initSerumMarket(
+    new anchor.BN(MARKET_STATE_LAYOUT_V3.span),
+    vaultSignerNonce,
+    coinLotSize,
+    pcLotSize,
+    pcDustThreshold,
+    {
+      accounts: {
+        userAuthority: (provider.wallet as anchor.Wallet).payer.publicKey,
+        optionMarket: optionMarket.key,
+        serumMarket: serumMarketKey,
+        dexProgram: DEX_PID,
+        pcMint,
+        optionMint: optionMarket.optionMint,
+        requestQueue,
+        eventQueue,
+        bids,
+        asks,
+        coinVault,
+        pcVault,
+        vaultSigner: vaultOwner,
+        rent: SYSVAR_RENT_PUBKEY,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      },
+      signers: [(provider.wallet as anchor.Wallet).payer],
+    }
+  );
+  return { serumMarketKey };
 };

@@ -344,6 +344,8 @@ pub mod psy_american {
     pub fn init_serum_market(ctx: Context<InitSerumMarket>, _market_space: u64, vault_signer_nonce: u64, coin_lot_size: u64, pc_lot_size: u64, pc_dust_threshold: u64) -> ProgramResult {
         // TODO: Validate that the OptionMarket does not have a serum_market on it
 
+        // TODO: Validate the coin_mint is the same as the OptionMarket.option_mint
+
         let ix = init_serum_market_instruction(
             ctx.accounts.serum_market.key,
             ctx.accounts.dex_program.key,
@@ -838,7 +840,6 @@ pub struct InitSerumMarket<'info> {
     // General market accounts
     #[account(mut)]
     pub option_market: ProgramAccount<'info, OptionMarket>,
-    // TODO check that serum market has the right mints on it
     #[account(init,
         seeds = [&option_market.key().to_bytes()[..], b"serumMarket"],
         bump,
