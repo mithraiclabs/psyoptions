@@ -18,6 +18,7 @@ import {
   createFirstSetOfAccounts,
   DEX_PID,
   getVaultOwnerAndNonce,
+  initSerum,
 } from "../../utils/serum";
 
 describe("permissioned-markets", () => {
@@ -37,18 +38,16 @@ describe("permissioned-markets", () => {
   // Global PsyOptions accounts
   let optionMarket: OptionMarketV2;
   const mintAuthority = anchor.web3.Keypair.generate();
+  before(async () => {
+    const { mintAccount } = await initNewTokenMint(
+      provider.connection,
+      (provider.wallet as anchor.Wallet).payer.publicKey,
+      (provider.wallet as anchor.Wallet).payer
+    );
+    usdcMint = mintAccount;
+  });
   describe("OptionMarket is initialized", () => {
     let bids: Keypair, asks: Keypair, eventQueue: Keypair;
-
-    before(async () => {
-      const { mintAccount } = await initNewTokenMint(
-        provider.connection,
-        (provider.wallet as anchor.Wallet).payer.publicKey,
-        (provider.wallet as anchor.Wallet).payer
-      );
-      usdcMint = mintAccount;
-    });
-
     beforeEach(async () => {
       // Set up and initialize a new OptionMarket
       const {
@@ -76,107 +75,16 @@ describe("permissioned-markets", () => {
       }));
     });
 
-    // it("Initializes an orderbook", async () => {
-    //   const marketLoader = async (market: PublicKey) => {
-    //     return new MarketProxyBuilder()
-    //       .middleware(
-    //         new OpenOrdersPda({
-    //           proxyProgramId: program.programId,
-    //           dexProgramId: DEX_PID,
-    //         })
-    //       )
-    //       .middleware(new ReferralFees())
-    //       .middleware(new Identity())
-    //       .middleware(new Logger())
-    //       .load({
-    //         connection: provider.connection,
-    //         market,
-    //         dexProgramId: DEX_PID,
-    //         proxyProgramId: program.programId,
-    //         options: { commitment: "recent" },
-    //       });
-    //   };
-    //   const { marketA, godA, godUsdc, usdc } = await initMarket(
-    //     provider,
-    //     optionMarket.key,
-    //     program.programId,
-    //     marketLoader
-    //   );
-    //   marketProxy = marketA;
-    //   usdcAccount = godUsdc;
-    //   tokenAccount = godA;
-
-    //   usdcClient = new Token(
-    //     provider.connection,
-    //     usdc,
-    //     TOKEN_PROGRAM_ID,
-    //     (provider.wallet as anchor.Wallet).payer
-    //   );
-
-    //   const referral = await usdcClient.createAccount(REFERRAL_AUTHORITY);
-    //   assert.ok(true);
-    // });
-
     it("Initializes new Serum market for OptionMarket", async () => {
-      const textEncoder = new TextEncoder();
-      const [serumMarketKey, _serumMarketBump] =
-        await PublicKey.findProgramAddress(
-          [optionMarket.key.toBuffer(), textEncoder.encode("serumMarket")],
-          program.programId
-        );
-      const [requestQueue, _requestQueueBump] =
-        await PublicKey.findProgramAddress(
-          [optionMarket.key.toBuffer(), textEncoder.encode("requestQueue")],
-          program.programId
-        );
-      const [coinVault, _coinVaultBump] = await PublicKey.findProgramAddress(
-        [optionMarket.key.toBuffer(), textEncoder.encode("coinVault")],
-        program.programId
+      const { serumMarketKey } = await initSerum(
+        provider,
+        program,
+        optionMarket,
+        usdcMint.publicKey,
+        eventQueue.publicKey,
+        bids.publicKey,
+        asks.publicKey
       );
-      const [pcVault, _pcVaultBump] = await PublicKey.findProgramAddress(
-        [optionMarket.key.toBuffer(), textEncoder.encode("pcVault")],
-        program.programId
-      );
-      const [vaultOwner, vaultSignerNonce] = await getVaultOwnerAndNonce(
-        serumMarketKey,
-        DEX_PID
-      );
-      const coinLotSize = new anchor.BN(100000);
-      const pcLotSize = new anchor.BN(100);
-      const pcDustThreshold = new anchor.BN(100);
-      try {
-        await program.rpc.initSerumMarket(
-          new anchor.BN(MARKET_STATE_LAYOUT_V3.span),
-          vaultSignerNonce,
-          coinLotSize,
-          pcLotSize,
-          pcDustThreshold,
-          {
-            accounts: {
-              userAuthority: (provider.wallet as anchor.Wallet).payer.publicKey,
-              optionMarket: optionMarket.key,
-              serumMarket: serumMarketKey,
-              dexProgram: DEX_PID,
-              pcMint: usdcMint.publicKey,
-              optionMint: optionMarket.optionMint,
-              requestQueue,
-              eventQueue: eventQueue.publicKey,
-              bids: bids.publicKey,
-              asks: asks.publicKey,
-              coinVault,
-              pcVault,
-              vaultSigner: vaultOwner,
-              rent: SYSVAR_RENT_PUBKEY,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              systemProgram: SystemProgram.programId,
-            },
-            signers: [(provider.wallet as anchor.Wallet).payer],
-          }
-        );
-      } catch (err) {
-        console.error(err.toString());
-        throw err;
-      }
       // Test that a Serum market is created with the proper authority
       const accounts = await provider.connection.getProgramAccounts(DEX_PID, {
         filters: [
@@ -191,7 +99,7 @@ describe("permissioned-markets", () => {
         ],
       });
       assert.equal(accounts.length, 1);
-      // TODO: Validate the OptionMarket updates with the Serum Market
+      // Validate the OptionMarket updates with the Serum Market
       const optionMarketAcct = (await program.account.optionMarket.fetch(
         optionMarket.key
       )) as OptionMarketV2;
