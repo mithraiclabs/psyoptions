@@ -9,6 +9,8 @@ use serum_dex::instruction::{initialize_market as init_serum_market_instruction}
 
 #[program]
 pub mod psy_american {
+    use std::{option, panic};
+
     use super::*;
 
     #[access_control(InitializeMarket::accounts(&ctx))]
@@ -340,6 +342,7 @@ pub mod psy_american {
     }
 
     pub fn init_serum_market(ctx: Context<InitSerumMarket>, _market_space: u64, vault_signer_nonce: u64, coin_lot_size: u64, pc_lot_size: u64, pc_dust_threshold: u64) -> ProgramResult {
+        // TODO: Validate that the OptionMarket does not have a serum_market on it
 
         let ix = init_serum_market_instruction(
             ctx.accounts.serum_market.key,
@@ -373,6 +376,11 @@ pub mod psy_american {
             ctx.accounts.event_queue.to_account_info(),
             ctx.accounts.rent.to_account_info(),
         ])?;
+
+        // Set the OptionMarket serum_market
+        let option_market = &mut ctx.accounts.option_market;
+        option_market.serum_market = *ctx.accounts.serum_market.key;
+
         Ok(())
     }
 }
@@ -828,6 +836,7 @@ pub struct InitSerumMarket<'info> {
     #[account(mut, signer)]
     pub user_authority: AccountInfo<'info>,
     // General market accounts
+    #[account(mut)]
     pub option_market: ProgramAccount<'info, OptionMarket>,
     // TODO check that serum market has the right mints on it
     #[account(init,
@@ -910,6 +919,8 @@ pub struct OptionMarket {
     /// The SPL Token account (from the Associated Token Program) that collects
     /// fees on exercise.
     pub exercise_fee_account: Pubkey,
+    /// A permissioned Serum market for this OptionMarket
+    pub serum_market: Pubkey,
     /// Bump seed for program derived addresses
     pub bump_seed: u8,
 }
