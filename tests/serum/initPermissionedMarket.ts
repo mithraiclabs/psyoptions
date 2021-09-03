@@ -118,33 +118,33 @@ describe("permissioned-markets", () => {
     // });
 
     it("Initializes new Serum market for OptionMarket", async () => {
+      const textEncoder = new TextEncoder();
+      const [serumMarketKey, _serumMarketBump] =
+        await PublicKey.findProgramAddress(
+          [optionMarket.key.toBuffer(), textEncoder.encode("serumMarket")],
+          program.programId
+        );
+      const [requestQueue, _requestQueueBump] =
+        await PublicKey.findProgramAddress(
+          [optionMarket.key.toBuffer(), textEncoder.encode("requestQueue")],
+          program.programId
+        );
+      const [coinVault, _coinVaultBump] = await PublicKey.findProgramAddress(
+        [optionMarket.key.toBuffer(), textEncoder.encode("coinVault")],
+        program.programId
+      );
+      const [pcVault, _pcVaultBump] = await PublicKey.findProgramAddress(
+        [optionMarket.key.toBuffer(), textEncoder.encode("pcVault")],
+        program.programId
+      );
+      const [vaultOwner, vaultSignerNonce] = await getVaultOwnerAndNonce(
+        serumMarketKey,
+        DEX_PID
+      );
+      const coinLotSize = new anchor.BN(100000);
+      const pcLotSize = new anchor.BN(100);
+      const pcDustThreshold = new anchor.BN(100);
       try {
-        const textEncoder = new TextEncoder();
-        const [serumMarketKey, _serumMarketBump] =
-          await PublicKey.findProgramAddress(
-            [optionMarket.key.toBuffer(), textEncoder.encode("serumMarket")],
-            program.programId
-          );
-        const [requestQueue, _requestQueueBump] =
-          await PublicKey.findProgramAddress(
-            [optionMarket.key.toBuffer(), textEncoder.encode("requestQueue")],
-            program.programId
-          );
-        const [coinVault, _coinVaultBump] = await PublicKey.findProgramAddress(
-          [optionMarket.key.toBuffer(), textEncoder.encode("coinVault")],
-          program.programId
-        );
-        const [pcVault, _pcVaultBump] = await PublicKey.findProgramAddress(
-          [optionMarket.key.toBuffer(), textEncoder.encode("pcVault")],
-          program.programId
-        );
-        const [vaultOwner, vaultSignerNonce] = await getVaultOwnerAndNonce(
-          serumMarketKey,
-          DEX_PID
-        );
-        const coinLotSize = new anchor.BN(100000);
-        const pcLotSize = new anchor.BN(100);
-        const pcDustThreshold = new anchor.BN(100);
         await program.rpc.initSerumMarket(
           new anchor.BN(MARKET_STATE_LAYOUT_V3.span),
           vaultSignerNonce,
@@ -191,6 +191,14 @@ describe("permissioned-markets", () => {
         ],
       });
       assert.equal(accounts.length, 1);
+      // TODO: Validate the OptionMarket updates with the Serum Market
+      const optionMarketAcct = (await program.account.optionMarket.fetch(
+        optionMarket.key
+      )) as OptionMarketV2;
+      assert.equal(
+        optionMarketAcct.serumMarket?.toString(),
+        serumMarketKey.toString()
+      );
     });
   });
 });
