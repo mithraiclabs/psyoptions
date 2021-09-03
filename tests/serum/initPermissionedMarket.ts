@@ -142,16 +142,22 @@ describe("permissioned-markets", () => {
           serumMarketKey,
           DEX_PID
         );
+        const coinLotSize = new anchor.BN(100000);
+        const pcLotSize = new anchor.BN(100);
+        const pcDustThreshold = new anchor.BN(100);
         await program.rpc.initSerumMarket(
           new anchor.BN(MARKET_STATE_LAYOUT_V3.span),
           vaultSignerNonce,
+          coinLotSize,
+          pcLotSize,
+          pcDustThreshold,
           {
             accounts: {
               userAuthority: (provider.wallet as anchor.Wallet).payer.publicKey,
               optionMarket: optionMarket.key,
               serumMarket: serumMarketKey,
               dexProgram: DEX_PID,
-              usdcMint: usdcMint.publicKey,
+              pcMint: usdcMint.publicKey,
               optionMint: optionMarket.optionMint,
               requestQueue,
               eventQueue: eventQueue.publicKey,
