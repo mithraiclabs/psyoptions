@@ -5,6 +5,7 @@ use anchor_lang::{AccountsExit, Key, prelude::*};
 use anchor_spl::token::{self, Burn, Mint, MintTo, TokenAccount, Transfer};
 use spl_token::state::Account as SPLTokenAccount;
 use solana_program::{program::invoke, program_error::ProgramError, program_pack::Pack, system_instruction, system_program};
+use serum_dex::instruction::{initialize_market as init_serum_market_instruction};
 
 #[program]
 pub mod psy_american {
@@ -338,7 +339,40 @@ pub mod psy_american {
         Ok(())
     }
 
-    pub fn init_serum_market(_ctx: Context<InitSerumMarket>, _market_space: u64, _vault_signer_nonce: u64) -> ProgramResult {
+    pub fn init_serum_market(ctx: Context<InitSerumMarket>, _market_space: u64, vault_signer_nonce: u64, coin_lot_size: u64, pc_lot_size: u64, pc_dust_threshold: u64) -> ProgramResult {
+
+        let ix = init_serum_market_instruction(
+            ctx.accounts.serum_market.key,
+            ctx.accounts.dex_program.key,
+            &ctx.accounts.option_mint.key(),
+            &ctx.accounts.pc_mint.key(),
+            &ctx.accounts.coin_vault.key(),
+            &ctx.accounts.pc_vault.key(),
+            Some(&ctx.accounts.option_market.key()),
+            None,
+            ctx.accounts.bids.key,
+            ctx.accounts.asks.key,
+            ctx.accounts.request_queue.key,
+            ctx.accounts.event_queue.key,
+            coin_lot_size,
+            pc_lot_size,
+            vault_signer_nonce,
+            pc_dust_threshold
+        )?;
+        invoke(&ix, &[
+            ctx.accounts.serum_market.to_account_info(),
+            ctx.accounts.dex_program.to_account_info(),
+            ctx.accounts.option_mint.to_account_info(),
+            ctx.accounts.pc_mint.to_account_info(),
+            ctx.accounts.coin_vault.to_account_info(),
+            ctx.accounts.pc_vault.to_account_info(),
+            ctx.accounts.option_market.to_account_info(),
+            ctx.accounts.bids.to_account_info(),
+            ctx.accounts.asks.to_account_info(),
+            ctx.accounts.request_queue.to_account_info(),
+            ctx.accounts.event_queue.to_account_info(),
+            ctx.accounts.rent.to_account_info(),
+        ])?;
         Ok(())
     }
 }
@@ -786,7 +820,7 @@ impl<'info> BurnWriterForQuote<'info> {
 
 
 #[derive(Accounts)]
-#[instruction(market_space: u64, vault_signer_nonce: u64)]
+#[instruction(market_space: u64, vault_signer_nonce: u64, coin_lot_size: u64, pc_lot_size: u64, pc_dust_threshold: u64)]
 pub struct InitSerumMarket<'info> {
     #[account(mut, signer)]
     pub user_authority: AccountInfo<'info>,
@@ -806,7 +840,7 @@ pub struct InitSerumMarket<'info> {
     pub token_program: AccountInfo<'info>,
     pub dex_program: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
-    pub usdc_mint: CpiAccount<'info, Mint>,
+    pub pc_mint: CpiAccount<'info, Mint>,
     pub option_mint: CpiAccount<'info, Mint>,
     // INIT SERUM MARKET ACCOUNTS
     #[account(init,
@@ -835,7 +869,7 @@ pub struct InitSerumMarket<'info> {
         seeds = [&option_market.key().to_bytes()[..], b"pcVault"],
         bump,
         payer = user_authority,
-        token::mint = usdc_mint,
+        token::mint = pc_mint,
         token::authority = vault_signer,
     )]
     pub pc_vault: CpiAccount<'info, TokenAccount>,
