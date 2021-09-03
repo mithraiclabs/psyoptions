@@ -123,20 +123,20 @@ describe("permissioned-markets", () => {
         const [serumMarketKey, _serumMarketBump] =
           await PublicKey.findProgramAddress(
             [optionMarket.key.toBuffer(), textEncoder.encode("serumMarket")],
-            DEX_PID
+            program.programId
           );
         const [requestQueue, _requestQueueBump] =
           await PublicKey.findProgramAddress(
             [optionMarket.key.toBuffer(), textEncoder.encode("requestQueue")],
-            DEX_PID
+            program.programId
           );
         const [coinVault, _coinVaultBump] = await PublicKey.findProgramAddress(
           [optionMarket.key.toBuffer(), textEncoder.encode("coinVault")],
-          DEX_PID
+          program.programId
         );
         const [pcVault, _pcVaultBump] = await PublicKey.findProgramAddress(
           [optionMarket.key.toBuffer(), textEncoder.encode("pcVault")],
-          DEX_PID
+          program.programId
         );
         const [vaultOwner, vaultSignerNonce] = await getVaultOwnerAndNonce(
           serumMarketKey,
