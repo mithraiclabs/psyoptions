@@ -7,3 +7,4 @@ packages/**/dist/**/*
 docs
 options/deployed_programs/*
 test-ledger/**/*
+.anchor/**
