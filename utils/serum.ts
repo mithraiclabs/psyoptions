@@ -2,10 +2,13 @@ import * as anchor from "@project-serum/anchor";
 import { BN, Provider } from "@project-serum/anchor";
 import {
   DexInstructions,
+  Logger,
   Market,
   MarketProxy,
   MarketProxyBuilder,
   MARKET_STATE_LAYOUT_V3,
+  OpenOrdersPda,
+  ReferralFees,
   TokenInstructions,
 } from "@project-serum/serum";
 import {
@@ -30,7 +33,7 @@ export const REFERRAL_AUTHORITY = new PublicKey(
 );
 
 type GetAuthority = (market: PublicKey) => Promise<PublicKey>;
-type MarketLoader = (marketId: PublicKey) => Promise<MarketProxy>;
+type MarketLoader = (marketKey: PublicKey) => Promise<MarketProxy>;
 type MarketMaker = {
   tokens: Record<string, any>;
   account: Keypair;
@@ -38,11 +41,33 @@ type MarketMaker = {
 
 type Orders = number[][];
 
+export const marketLoader =
+  (provider: anchor.Provider, program: anchor.Program) =>
+  async (marketKey: PublicKey) => {
+    return new MarketProxyBuilder()
+      .middleware(
+        new OpenOrdersPda({
+          proxyProgramId: program.programId,
+          dexProgramId: DEX_PID,
+        })
+      )
+      .middleware(new ReferralFees())
+      .middleware(new Logger())
+      .load({
+        connection: provider.connection,
+        market: marketKey,
+        dexProgramId: DEX_PID,
+        proxyProgramId: program.programId,
+        options: { commitment: "recent" },
+      });
+  };
+
 export const initMarket = async (
   provider: Provider,
-  authority: PublicKey,
-  proxyProgramId: PublicKey,
-  marketLoader: MarketLoader
+  /** The PsyOptions anchor.Program */
+  program: anchor.Program,
+  marketLoader: MarketLoader,
+  optionMarket: OptionMarketV2
 ) => {
   // Setup mints with initial tokens owned by the provider.
   const decimals = 6;
@@ -91,6 +116,8 @@ export const initMarket = async (
   ];
 
   const [MARKET_A_USDC, vaultSigner] = await setupMarket({
+    provider,
+    program,
     baseMint: MINT_A,
     quoteMint: USDC,
     marketMaker: {
@@ -100,10 +127,8 @@ export const initMarket = async (
     },
     bids,
     asks,
-    provider,
-    authority,
-    proxyProgramId,
     marketLoader,
+    optionMarket,
   });
   return {
     marketA: MARKET_A_USDC,
@@ -115,35 +140,6 @@ export const initMarket = async (
     godUsdc: GOD_USDC,
   };
 };
-
-export // Dummy identity middleware used for testing.
-class Identity {
-  initOpenOrders(ix: TransactionInstruction) {
-    this.proxy(ix);
-  }
-  newOrderV3(ix: TransactionInstruction) {
-    this.proxy(ix);
-  }
-  cancelOrderV2(ix: TransactionInstruction) {
-    this.proxy(ix);
-  }
-  cancelOrderByClientIdV2(ix: TransactionInstruction) {
-    this.proxy(ix);
-  }
-  settleFunds(ix: TransactionInstruction) {
-    this.proxy(ix);
-  }
-  closeOpenOrders(ix: TransactionInstruction) {
-    this.proxy(ix);
-  }
-  proxy(ix: TransactionInstruction) {
-    ix.keys = [
-      { pubkey: SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false },
-      ...ix.keys,
-    ];
-  }
-  prune(ix: TransactionInstruction) {}
-}
 
 const fundAccount = async ({
   provider,
@@ -216,178 +212,75 @@ const fundAccount = async ({
 
 async function setupMarket({
   provider,
+  program,
   baseMint,
   quoteMint,
   bids,
   asks,
-  authority,
-  proxyProgramId,
   marketLoader,
+  optionMarket,
 }: {
   provider: anchor.Provider;
+  program: anchor.Program;
   marketMaker: {
     account: Keypair;
     baseToken: Token;
     quoteToken: Token;
   };
+  optionMarket: OptionMarketV2;
   baseMint: PublicKey;
   quoteMint: PublicKey;
   bids: Orders;
   asks: Orders;
-  authority: PublicKey;
-  proxyProgramId: PublicKey;
   marketLoader: MarketLoader;
-}) {
+}): Promise<[MarketProxy, anchor.web3.PublicKey | anchor.BN]> {
   const [marketAPublicKey, vaultOwner] = await listMarket({
-    connection: provider.connection,
-    wallet: provider.wallet as anchor.Wallet,
-    baseMint: baseMint,
+    provider,
+    program,
     quoteMint: quoteMint,
-    baseLotSize: 100000,
-    quoteLotSize: 100,
     dexProgramId: DEX_PID,
     feeRateBps: 0,
-    authority,
+    optionMarket,
   });
   const MARKET_A_USDC = await marketLoader(marketAPublicKey as PublicKey);
   return [MARKET_A_USDC, vaultOwner];
 }
 
 const listMarket = async ({
-  connection,
-  wallet,
-  baseMint,
+  provider,
+  program,
   quoteMint,
-  baseLotSize,
-  quoteLotSize,
   dexProgramId,
   feeRateBps,
-  authority,
+  optionMarket,
 }: {
-  connection: Connection;
-  wallet: anchor.Wallet;
-  baseMint: PublicKey;
+  provider: anchor.Provider;
+  program: anchor.Program;
   quoteMint: PublicKey;
-  baseLotSize: number;
-  quoteLotSize: number;
   dexProgramId: PublicKey;
   feeRateBps: number;
-  authority: PublicKey;
+  optionMarket: OptionMarketV2;
 }) => {
-  const market = new Keypair();
-  const requestQueue = new Keypair();
-  const eventQueue = new Keypair();
-  const bids = new Keypair();
-  const asks = new Keypair();
-  const baseVault = new Keypair();
-  const quoteVault = new Keypair();
-  const quoteDustThreshold = new BN(100);
+  const { connection, wallet } = provider;
 
-  const [vaultOwner, vaultSignerNonce] = await getVaultOwnerAndNonce(
-    market.publicKey,
+  const { bids, asks, eventQueue } = await createFirstSetOfAccounts({
+    connection: connection,
+    wallet: wallet as anchor.Wallet,
+    dexProgramId,
+  });
+
+  const { serumMarketKey, vaultOwner } = await initSerum(
+    provider,
+    program,
+    optionMarket,
+    quoteMint,
+    eventQueue.publicKey,
+    bids.publicKey,
+    asks.publicKey,
     dexProgramId
   );
 
-  const tx1 = new Transaction();
-  tx1.add(
-    SystemProgram.createAccount({
-      fromPubkey: wallet.publicKey,
-      newAccountPubkey: baseVault.publicKey,
-      lamports: await connection.getMinimumBalanceForRentExemption(165),
-      space: 165,
-      programId: TOKEN_PROGRAM_ID,
-    }),
-    SystemProgram.createAccount({
-      fromPubkey: wallet.publicKey,
-      newAccountPubkey: quoteVault.publicKey,
-      lamports: await connection.getMinimumBalanceForRentExemption(165),
-      space: 165,
-      programId: TOKEN_PROGRAM_ID,
-    }),
-    TokenInstructions.initializeAccount({
-      account: baseVault.publicKey,
-      mint: baseMint,
-      owner: vaultOwner,
-    }),
-    TokenInstructions.initializeAccount({
-      account: quoteVault.publicKey,
-      mint: quoteMint,
-      owner: vaultOwner,
-    })
-  );
-
-  const tx2 = new Transaction();
-  tx2.add(
-    SystemProgram.createAccount({
-      fromPubkey: wallet.publicKey,
-      newAccountPubkey: market.publicKey,
-      lamports: await connection.getMinimumBalanceForRentExemption(
-        MARKET_STATE_LAYOUT_V3.span
-      ),
-      space: MARKET_STATE_LAYOUT_V3.span,
-      programId: dexProgramId,
-    }),
-    SystemProgram.createAccount({
-      fromPubkey: wallet.publicKey,
-      newAccountPubkey: requestQueue.publicKey,
-      lamports: await connection.getMinimumBalanceForRentExemption(5120 + 12),
-      space: 5120 + 12,
-      programId: dexProgramId,
-    }),
-    SystemProgram.createAccount({
-      fromPubkey: wallet.publicKey,
-      newAccountPubkey: eventQueue.publicKey,
-      lamports: await connection.getMinimumBalanceForRentExemption(262144 + 12),
-      space: 262144 + 12,
-      programId: dexProgramId,
-    }),
-    SystemProgram.createAccount({
-      fromPubkey: wallet.publicKey,
-      newAccountPubkey: bids.publicKey,
-      lamports: await connection.getMinimumBalanceForRentExemption(65536 + 12),
-      space: 65536 + 12,
-      programId: dexProgramId,
-    }),
-    SystemProgram.createAccount({
-      fromPubkey: wallet.publicKey,
-      newAccountPubkey: asks.publicKey,
-      lamports: await connection.getMinimumBalanceForRentExemption(65536 + 12),
-      space: 65536 + 12,
-      programId: dexProgramId,
-    }),
-    DexInstructions.initializeMarket({
-      market: market.publicKey,
-      requestQueue: requestQueue.publicKey,
-      eventQueue: eventQueue.publicKey,
-      bids: bids.publicKey,
-      asks: asks.publicKey,
-      baseVault: baseVault.publicKey,
-      quoteVault: quoteVault.publicKey,
-      baseMint,
-      quoteMint,
-      baseLotSize: new BN(baseLotSize),
-      quoteLotSize: new BN(quoteLotSize),
-      feeRateBps,
-      vaultSignerNonce,
-      quoteDustThreshold,
-      programId: dexProgramId,
-      authority: authority,
-    })
-  );
-
-  const transactions = [
-    { transaction: tx1, signers: [baseVault, quoteVault] },
-    {
-      transaction: tx2,
-      signers: [market, requestQueue, eventQueue, bids, asks],
-    },
-  ];
-  for (let tx of transactions) {
-    await anchor.getProvider().send(tx.transaction, tx.signers);
-  }
-  const acc = await connection.getAccountInfo(market.publicKey);
-
-  return [market.publicKey, vaultOwner];
+  return [serumMarketKey, vaultOwner];
 };
 
 export const createFirstSetOfAccounts = async ({
@@ -460,6 +353,16 @@ export const getVaultOwnerAndNonce = async (
   throw new Error("Unable to find nonce");
 };
 
+// b"open-orders"
+export const openOrdersSeed = Buffer.from([
+  111, 112, 101, 110, 45, 111, 114, 100, 101, 114, 115,
+]);
+
+// b"open-orders-init"
+const openOrdersInitSeed = Buffer.from([
+  111, 112, 101, 110, 45, 111, 114, 100, 101, 114, 115, 45, 105, 110, 105, 116,
+]);
+
 export const initSerum = async (
   provider: anchor.Provider,
   program: anchor.Program,
@@ -467,7 +370,8 @@ export const initSerum = async (
   pcMint: PublicKey,
   eventQueue: PublicKey,
   bids: PublicKey,
-  asks: PublicKey
+  asks: PublicKey,
+  dexProgramId: PublicKey
 ) => {
   const textEncoder = new TextEncoder();
   const [serumMarketKey, _serumMarketBump] = await PublicKey.findProgramAddress(
@@ -490,6 +394,11 @@ export const initSerum = async (
     serumMarketKey,
     DEX_PID
   );
+  const [marketAuthority, bumpInit] = await PublicKey.findProgramAddress(
+    [openOrdersInitSeed, dexProgramId.toBuffer(), serumMarketKey.toBuffer()],
+    program.programId
+  );
+
   const coinLotSize = new anchor.BN(100000);
   const pcLotSize = new anchor.BN(100);
   const pcDustThreshold = new anchor.BN(100);
@@ -514,6 +423,7 @@ export const initSerum = async (
         coinVault,
         pcVault,
         vaultSigner: vaultOwner,
+        marketAuthority,
         rent: SYSVAR_RENT_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
@@ -521,5 +431,5 @@ export const initSerum = async (
       signers: [(provider.wallet as anchor.Wallet).payer],
     }
   );
-  return { serumMarketKey };
+  return { serumMarketKey, vaultOwner, marketAuthority };
 };

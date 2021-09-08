@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 #[error]
-pub enum PsyOptionsError {
+pub enum ErrorCode {
   #[msg("Same quote and underlying asset, cannot create market")]
   QuoteAndUnderlyingAssetMustDiffer,
   #[msg("Quote amount and underlying amount per contract must be > 0")]
@@ -48,4 +48,6 @@ pub enum PsyOptionsError {
   OptionMarketNotExpiredCantClose,
   #[msg("Not enough assets in the quote asset pool")]
   NotEnoughQuoteAssetsInPool,
+  #[msg("Invalid auth token provided")]
+  InvalidAuth,
 }
