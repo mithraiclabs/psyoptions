@@ -73,9 +73,9 @@ describe("initOpenOrders", () => {
     tx.add(
       await marketProxy.instruction.initOpenOrders(
         program.provider.wallet.publicKey,
-        dummyAddress.publicKey,
-        dummyAddress.publicKey, // Dummy. Replaced by middleware.
-        dummyAddress.publicKey // Dummy. Replaced by middleware.
+        marketProxy.market.address,
+        marketProxy.market.address, // Dummy. Replaced by middleware.
+        marketProxy.market.address // Dummy. Replaced by middleware.
       )
     );
     await provider.send(tx);
