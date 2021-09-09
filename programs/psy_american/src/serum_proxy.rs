@@ -75,12 +75,14 @@ impl MarketMiddleware for Identity {
 fn verify_and_strip_auth(ctx: &mut Context) -> ProgramResult {
     // The rent sysvar is used as a dummy example of an identity token.
     let auth = &ctx.accounts[0];
+    // msg!("checking auth: {:?}\nAgainst rent: {:?}", auth, rent::ID);
     if auth.key != &rent::ID {
       return Err(errors::ErrorCode::InvalidAuth.into())
     }
 
     // Strip off the account before possing on the message.
     ctx.accounts = (&ctx.accounts[1..]).to_vec();
+    // msg!("left over accounts: {:?}", ctx.accounts.into_iter().map(|x| x.key));
 
     Ok(())
 }

@@ -355,7 +355,7 @@ pub mod psy_american {
             &ctx.accounts.pc_mint.key(),
             &ctx.accounts.coin_vault.key(),
             &ctx.accounts.pc_vault.key(),
-            Some(&ctx.accounts.option_market.key()),
+            Some(&ctx.accounts.market_authority.key()),
             None,
             ctx.accounts.bids.key,
             ctx.accounts.asks.key,
@@ -373,7 +373,7 @@ pub mod psy_american {
             ctx.accounts.pc_mint.to_account_info(),
             ctx.accounts.coin_vault.to_account_info(),
             ctx.accounts.pc_vault.to_account_info(),
-            ctx.accounts.option_market.to_account_info(),
+            ctx.accounts.market_authority.to_account_info(),
             ctx.accounts.bids.to_account_info(),
             ctx.accounts.asks.to_account_info(),
             ctx.accounts.request_queue.to_account_info(),
@@ -896,6 +896,7 @@ pub struct InitSerumMarket<'info> {
     pub pc_vault: CpiAccount<'info, TokenAccount>,
     // Is it possible to add a seeds check for DEX PDA?
     pub vault_signer: AccountInfo<'info>,
+    pub market_authority: AccountInfo<'info>,
 }
 
 #[account]

@@ -76,14 +76,15 @@ describe("permissioned-markets", () => {
     });
 
     it("Initializes new Serum market for OptionMarket", async () => {
-      const { serumMarketKey } = await initSerum(
+      const { serumMarketKey, marketAuthority } = await initSerum(
         provider,
         program,
         optionMarket,
         usdcMint.publicKey,
         eventQueue.publicKey,
         bids.publicKey,
-        asks.publicKey
+        asks.publicKey,
+        DEX_PID
       );
       // Test that a Serum market is created with the proper authority
       const accounts = await provider.connection.getProgramAccounts(DEX_PID, {
@@ -93,7 +94,7 @@ describe("permissioned-markets", () => {
               /** offset into program account data to start comparison */
               offset: MARKET_STATE_LAYOUT_V3.offsetOf("authority"),
               /** data to match, as base-58 encoded string and limited to less than 129 bytes */
-              bytes: optionMarket.key.toBase58(),
+              bytes: marketAuthority.toBase58(),
             },
           },
         ],

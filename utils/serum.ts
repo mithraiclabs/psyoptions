@@ -296,7 +296,7 @@ const listMarket = async ({
   const { bids, asks, eventQueue } = await createFirstSetOfAccounts({
     connection: connection,
     wallet: wallet as anchor.Wallet,
-    dexProgramId: dexProgramId,
+    dexProgramId,
   });
 
   const { serumMarketKey, vaultOwner } = await initSerum(
@@ -306,7 +306,8 @@ const listMarket = async ({
     quoteMint,
     eventQueue.publicKey,
     bids.publicKey,
-    asks.publicKey
+    asks.publicKey,
+    dexProgramId
   );
 
   return [serumMarketKey, vaultOwner];
@@ -382,6 +383,16 @@ export const getVaultOwnerAndNonce = async (
   throw new Error("Unable to find nonce");
 };
 
+// b"open-orders"
+export const openOrdersSeed = Buffer.from([
+  111, 112, 101, 110, 45, 111, 114, 100, 101, 114, 115,
+]);
+
+// b"open-orders-init"
+const openOrdersInitSeed = Buffer.from([
+  111, 112, 101, 110, 45, 111, 114, 100, 101, 114, 115, 45, 105, 110, 105, 116,
+]);
+
 export const initSerum = async (
   provider: anchor.Provider,
   program: anchor.Program,
@@ -389,7 +400,8 @@ export const initSerum = async (
   pcMint: PublicKey,
   eventQueue: PublicKey,
   bids: PublicKey,
-  asks: PublicKey
+  asks: PublicKey,
+  dexProgramId: PublicKey
 ) => {
   const textEncoder = new TextEncoder();
   const [serumMarketKey, _serumMarketBump] = await PublicKey.findProgramAddress(
@@ -412,6 +424,11 @@ export const initSerum = async (
     serumMarketKey,
     DEX_PID
   );
+  const [marketAuthority, bumpInit] = await PublicKey.findProgramAddress(
+    [openOrdersInitSeed, dexProgramId.toBuffer(), serumMarketKey.toBuffer()],
+    program.programId
+  );
+
   const coinLotSize = new anchor.BN(100000);
   const pcLotSize = new anchor.BN(100);
   const pcDustThreshold = new anchor.BN(100);
@@ -436,6 +453,7 @@ export const initSerum = async (
         coinVault,
         pcVault,
         vaultSigner: vaultOwner,
+        marketAuthority,
         rent: SYSVAR_RENT_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
@@ -443,5 +461,5 @@ export const initSerum = async (
       signers: [(provider.wallet as anchor.Wallet).payer],
     }
   );
-  return { serumMarketKey, vaultOwner };
+  return { serumMarketKey, vaultOwner, marketAuthority };
 };

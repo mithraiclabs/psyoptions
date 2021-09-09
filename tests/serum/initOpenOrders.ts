@@ -1,14 +1,19 @@
 import * as anchor from "@project-serum/anchor";
 import assert from "assert";
 import { AccountInfo, Keypair, PublicKey, Transaction } from "@solana/web3.js";
-import { DEX_PID, initMarket, marketLoader } from "../../utils/serum";
+import {
+  DEX_PID,
+  initMarket,
+  marketLoader,
+  openOrdersSeed,
+} from "../../utils/serum";
 import { OptionMarketV2 } from "../../packages/psyoptions-ts/src/types";
 import {
   initNewTokenMint,
   initOptionMarket,
   initSetup,
 } from "../../utils/helpers";
-import { MarketProxy } from "@project-serum/serum";
+import { MarketProxy, OpenOrders } from "@project-serum/serum";
 
 // TODO: create PsyOptions OptionMarket
 // TODO: intialize permissioned Serum market
@@ -23,10 +28,7 @@ describe("initOpenOrders", () => {
 
   // Global DEX accounts and clients shared across all tests.
   let marketProxy: MarketProxy, tokenAccount, usdcAccount;
-  let openOrders: PublicKey,
-    openOrdersBump,
-    openOrdersInitAuthority,
-    openOrdersBumpinit;
+  let openOrdersBump, openOrdersInitAuthority, openOrdersBumpinit;
   let usdcPosted;
   let referralTokenAddress;
   // Global PsyOptions accounts
@@ -69,15 +71,27 @@ describe("initOpenOrders", () => {
   before(() => {});
   it("Creates an open orders account", async () => {
     const tx = new Transaction();
-    const dummyAddress = new Keypair();
-    tx.add(
-      await marketProxy.instruction.initOpenOrders(
-        program.provider.wallet.publicKey,
-        marketProxy.market.address,
-        marketProxy.market.address, // Dummy. Replaced by middleware.
-        marketProxy.market.address // Dummy. Replaced by middleware.
-      )
+    const dummy = new Keypair();
+    console.log("*** openMarket key", optionMarket.key.toString());
+    const owner = program.provider.wallet.publicKey;
+    const [openOrders, bump] = await PublicKey.findProgramAddress(
+      [
+        openOrdersSeed,
+        DEX_PID.toBuffer(),
+        marketProxy.market.address.toBuffer(),
+        owner.toBuffer(),
+      ],
+      program.programId
     );
+
+    // TODO: Validate that separate owners get control over separate OpenOrder accounts
+    const ix = await marketProxy.instruction.initOpenOrders(
+      program.provider.wallet.publicKey,
+      marketProxy.market.address,
+      dummy.publicKey,
+      dummy.publicKey
+    );
+    tx.add(ix);
     await provider.send(tx);
 
     const account = (await provider.connection.getAccountInfo(
