@@ -1,6 +1,6 @@
 [package]
 name = "psyoptions"
-version = "0.0.4"
+version = "0.0.5"
 authors = ["mithraiclabs"]
 edition = "2018"
 description = "Bindings for interacting with the PsyOptions protocol on the Solana blockchain"
@@ -19,8 +19,7 @@ features = ["no-entrypoint"]
 
 [features]
 no-entrypoint = []
-program = ["solana-sdk/program"]
-default = ["solana-sdk/default"]
+cpi = ["no-entrypoint"]
 
 [dependencies]
 solana-program = "1.6.8"
