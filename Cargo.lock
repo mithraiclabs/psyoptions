@@ -318,6 +318,7 @@ name = "brokerage"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
+ "anchor-spl",
  "psy_american",
  "solana-program",
 ]
