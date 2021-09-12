@@ -1,82 +1,71 @@
-# Protocol architecture
-## The Vault
-There is a single USDC vault at the protocol level. Because there is a separation of concerns 
-(e.g. the vAMM is an isolated component with virtual balances) then the vault can be shared
-across all everlastings, regardless of the strike or asset pair involved.
+# Solana Options
 
-## Margin and liquidation:
+Exploring architectures for options trading on Serum
 
-### How is a short handled? If I deposit USDC to my account, then want to short an everlasting, what happens?
-To short we need to track the collateral deposited separately from the vAMM balances a Portfolio has.
-Lets say a user deposits 100 USDC to their Portfolio. They would now have a _net_usdc_deposit_ of 100.
-Then they place a trade on an everlasting that is short 200 USDC that everlasting. Their Portfolio would
-maintain the `net_usdc_deposit = 100`, but their `SingleMarketBalance` would be 
-`{marks: -2, quotes: 200, margin: 100, collateral: 100}`. Here we have the mark price at $100 for calculation 
-ease, so the account just borrowed and sold 2 everlasting_x to earn $200.
+# Development
 
-Now lets say the mark price increases to $125. The margin ratio of the `SingleMarketBalance` is 
-`marginRatio = (collateral + PnL)/(margin + collateral) = (100 + (-50))/(100 + 100) = 50/200 = .25`.
-Continuing on, lets say the mark price continues to increase and hits $140. The marginRatio becomes
-`marginRatio = (100 + (-80))/200 = 20/200 = .10`. The margin ratio will also be calculated and 
-stored at the `Portfolio` level. Because this Portfolio only has 1 SingleMarketBalance account, the
-margin ratio on the portfolio level is the same as the SingleMarketBalance.
+## Dependencies
 
-When an account is liquidatable, a liquidator can call the liquidate instruction. Which will 
-validate the martio ratio is below the margin maintenance requirement and the account will be 
-suceptible to partial liquidation.
+1. [Docker](https://docs.docker.com/get-docker/)
 
-Liquidating 25% when mark is $125:
-* Buy .5 marks @ $125 from vAMM. marks becomes -1.5 quotes become 137.5. So positionNotional liquidated = 62.5
-* new collateral: 100 + (-50 * 0.25) = 87.5
-* margin ratio: (87.5 - (50 * .75)) / (200 - 62.5) =  50/137.5 = .3636
-* marks: -1.5, quotes: 137.5, collateral: 87.5, margin: 50
+## Running Unit tests
 
-Liquidating 25% when mark is $140:
-* Buy .5 marks @ $140 from vAMM. marks becomes -1.5 quotes become 130. So positionNotional liquidated = 70
-* new collateral: 100 + (-80 * 0.25) = 80
-* margin ration: (80 - 60) / (200 - 70) = 20 /130 = .15
-* marks: -1.5, quotes: 130, collateral: 80, margin: 50
+1. `cargo test --features program --lib --manifest-path options/Cargo.toml`
 
-#### The liquidation
-The core of the liquidate instruction will:
-* check the overall Portfolio margin ratio to validate it is liquidate-able (return error if not)
-    * Calculate the PnL (and margin ratio for following steps) of each `SingleMarketBalance` 
-    account in the Portfolio. Use the aggregate PnL to calculate the margin ratio of the Portfolio
-* We want to liquidate across the portfolio as to affect the users 
+## Running Integration tests
 
+1. Make sure the local test net is running `solana-test-validator`
+2. Build and test the options program `cargo test-bpf --manifest-path options/Cargo.toml`
 
-##### Liquidation example 1
-Portfolio has 2 SingleMarketBalance accounts. SingleMarketBalance 1 is for ETH strike of $3000, the 
-values on the account are `{marks: -2, quotes: 200, margin: 100, collateral: 100}`
+## Debugging with lldb
 
+1. Run tests and have them fail
+2. Identifier the file that was running (see “Running **\*\***”)
+3. in terminal run `rust-lldb +nightly FILE_PATH`
+4. set a break point (for example `b instruction.rs:157`)
+5. Run tests with `run —test`
 
+## Deploying and creating a market locally
 
-## Questions that need more research
-### Should MarginAccounts be cross collateralized? Or each MarginAccount can only be tied to 1 everlasting?
-If you do cross collateralization then you likely have to limit the number of everlastings a
-MarginAccount can be tied to, otherwise you will hit computation limits when running any check
-against margin requirements. Cross collateralization would be cool because MarginAccounts could
-create long and short positions on different strikes to hedge exposure.
+1. Run local Solana cluster `yarn localnet:up`
+2. Build program `cargo build-bpf --manifest-path options/Cargo.toml`
+3. Deploy program `solana program deploy --program-id $PWD/options/deployed_programs/psyoptions-local-keypair.json $PWD/options/target/deploy/psyoptions.so`
+   - NOTE: To use the above you must set your Solana config file (usually located at _~/.config/solana/cli/config.yml_) to point to the local cluster AND use an appropriate localnet keypair that has some SOL. Follow the docs to [generate keypair](https://docs.solana.com/wallet-guide/file-system-wallet#generate-a-file-system-wallet-keypair) and [airdrop some tokens](https://docs.solana.com/cli/transfer-tokens#airdrop-some-tokens-to-get-started)
+4. Run the script to build an options market `npx babel-node scripts/buildAndInitMarket.js YOUR_PROGRAM_ADDRESS`
 
-### How are funding payments handled?
-The current belief is that funding payments can be "made" by rebalancing the pools. The funding 
-payment is basically another line item in the list of actions. And that line item would be 
-long or short the mark at the funding rate. 
+## Potential Improvements (V1)
 
-The one concern here is if you look at the exmple below, when only longs open positions, 
-a funding payment occurs and then everyone closes out their positions...there is left over USDC
-in the vault. Assets locked in limbo seems like poor efficiency, 
-so something must be wrong. Is the logic wrong? Or is this an edge case where funding payments 
-shouldn't apply because no one actually took the otherside of the trade?
+- Integration Tests
+  - Wrap the load_bpf_program method and cache the program id so it's not being loaded on each test
 
-### How do funding rates play into MarginAccounts?
-Funding rates rebalance the vAMM pools which adjusts the value of the mark price. (This is subject to change if 
-our theory on funding rates as a rebalancing mechanism are flawed)
+# Deploying the program
 
-### How does interest on margin come into play on MarginAccount?
+## Mainnet
 
-### Should there be an event queue for tracking trades?
+1. Build with anchor `anchor build -p psyoptions --verifiable`
+2. Use an insecure computer to run `solana program write-buffer <target-path> --buffer <buffer-keypair>`
+3. change authority `solana program set-buffer-authority <buffer-address> --new-buffer-authority <hardware-wallet-address>`
+4. Verify the buffer binary is correct `anchor verify -p <lib-name> <buffer-address>`
+5. Switch to hardeware wallet.
+6. Deploy/upgrade with a single transaction from the hardware wallet. `solana program deploy --buffer <buffer-keypair> --program-id <program-keypair> --keypair <hardware-wallet-keypair>`
 
-### Do liquidators need to put collateral up?
-Not sure if with the vAMM if liquidators even need to put up collateral. They might just have to
-turn the crank to liquidate.
+## Dev Net
+
+The program used for Devnet Bet is currently deployed @ `{"programId":"GDvqQy3FkDB2wyNwgZGp5YkmRMUmWbhNNWDMYKbLSZ5N"}`
+
+The old program address for Devnet testing is deployed @ `{"programId":"4DvkJJBUiXMZVYXFGgYQvGceTuM7F5Be4HqWAiR7t2vM"}`
+
+1. Make sure you're on solana CLI >= 1.6.7 `solana-install init v1.6.7`
+2. Build the program `cargo build-bpf --manifest-path options/Cargo.toml`
+3. Set the target network `solana config set --url https://api.devnet.solana.com`
+4. Deploy the program `solana program deploy --program-id $PWD/options/deployed_programs/psyoptions-devnet-beta-3-keypair.json $PWD/options/target/deploy/psyoptions.so`
+
+# Deploying the bindings to NPM
+
+1. Sign into mithraics npm account via cli
+2. build the new package `cd packages/psyoptions-ts` `yarn build:package`
+3. publish to npm `npm publish --access public`
+
+# Publishing the crate
+
+`cd options && cargo publish --features "no-entrypoint"`
