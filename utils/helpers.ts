@@ -205,7 +205,8 @@ export const createMinter = async (
   underlyingAmount: number,
   optionMint: PublicKey,
   writerTokenMint: PublicKey,
-  quoteToken: Token
+  quoteToken: Token,
+  quoteAmount: number = 0
 ) => {
   const transaction = new Transaction();
 
@@ -310,6 +311,15 @@ export const createMinter = async (
     [],
     underlyingAmount
   );
+
+  if (quoteAmount > 0) {
+    await quoteToken.mintTo(
+      quoteAccount.publicKey,
+      mintAuthority,
+      [],
+      quoteAmount
+    );
+  }
   return { optionAccount, quoteAccount, underlyingAccount, writerTokenAccount };
 };
 
@@ -610,6 +620,7 @@ export const exerciseOptionTx = async (
   optionMarket: PublicKey,
   optionTokenKey: PublicKey,
   exerciser: Keypair,
+  optionAuthority: Keypair,
   exerciserOptionTokenSrc: PublicKey,
   underlyingAssetPoolKey: PublicKey,
   underlyingAssetDestKey: PublicKey,
@@ -621,6 +632,7 @@ export const exerciseOptionTx = async (
   await program.rpc.exerciseOption(size, {
     accounts: {
       userAuthority: exerciser.publicKey,
+      optionAuthority: optionAuthority.publicKey,
       optionMarket,
       optionMint: optionTokenKey,
       exerciserOptionTokenSrc: exerciserOptionTokenSrc,
