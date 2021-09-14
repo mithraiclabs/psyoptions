@@ -15,7 +15,7 @@ import {
 } from "../../utils/helpers";
 import { MarketProxy, OpenOrders } from "@project-serum/serum";
 
-describe("initOpenOrders", () => {
+describe("proxyTests", () => {
   const provider = anchor.Provider.env();
   anchor.setProvider(provider);
   const program = anchor.workspace.PsyAmerican as anchor.Program;
