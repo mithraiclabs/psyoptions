@@ -15,9 +15,6 @@ import {
 } from "../../utils/helpers";
 import { MarketProxy, OpenOrders } from "@project-serum/serum";
 
-// TODO: create PsyOptions OptionMarket
-// TODO: intialize permissioned Serum market
-
 describe("initOpenOrders", () => {
   const provider = anchor.Provider.env();
   anchor.setProvider(provider);
@@ -72,9 +69,8 @@ describe("initOpenOrders", () => {
   it("Creates an open orders account", async () => {
     const tx = new Transaction();
     const dummy = new Keypair();
-    console.log("*** openMarket key", optionMarket.key.toString());
     const owner = program.provider.wallet.publicKey;
-    const [openOrders, bump] = await PublicKey.findProgramAddress(
+    const [openOrdersKey, bump] = await PublicKey.findProgramAddress(
       [
         openOrdersSeed,
         DEX_PID.toBuffer(),
@@ -84,9 +80,8 @@ describe("initOpenOrders", () => {
       program.programId
     );
 
-    // TODO: Validate that separate owners get control over separate OpenOrder accounts
     const ix = await marketProxy.instruction.initOpenOrders(
-      program.provider.wallet.publicKey,
+      owner,
       marketProxy.market.address,
       dummy.publicKey,
       dummy.publicKey
@@ -95,8 +90,12 @@ describe("initOpenOrders", () => {
     await provider.send(tx);
 
     const account = (await provider.connection.getAccountInfo(
-      openOrders
+      openOrdersKey
     )) as AccountInfo<Buffer>;
     assert.ok(account.owner.toString() === DEX_PID.toString());
+
+    const decoded = OpenOrders.getLayout(DEX_PID).decode(account.data);
+    const openOrders = new OpenOrders(openOrdersKey, decoded, DEX_PID);
+    assert.equal(openOrders.owner.toString(), openOrdersKey.toString());
   });
 });
