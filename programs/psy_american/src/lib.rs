@@ -150,7 +150,7 @@ pub mod psy_american {
             token::Burn {
                 mint: ctx.accounts.option_mint.to_account_info(),
                 to: ctx.accounts.exerciser_option_token_src.to_account_info(),
-                authority: ctx.accounts.user_authority.to_account_info(),
+                authority: ctx.accounts.option_authority.to_account_info(),
             },
             signer,
         );
@@ -588,26 +588,29 @@ impl<'info> MintOption<'info> {
 #[derive(Accounts)]
 pub struct ExerciseOption<'info> {
     #[account(mut, signer)]
-    user_authority: AccountInfo<'info>,
-    option_market: ProgramAccount<'info, OptionMarket>,
+    pub user_authority: AccountInfo<'info>,
+    /// The owner of the exerciser_option_token_src account
+    #[account(mut, signer)]
+    pub option_authority: AccountInfo<'info>,
+    pub option_market: ProgramAccount<'info, OptionMarket>,
     #[account(mut)]
-    option_mint: CpiAccount<'info, Mint>,
+    pub option_mint: CpiAccount<'info, Mint>,
     #[account(mut)]
-    exerciser_option_token_src: CpiAccount<'info, TokenAccount>,
+    pub exerciser_option_token_src: CpiAccount<'info, TokenAccount>,
     #[account(mut)]
-    underlying_asset_pool: CpiAccount<'info, TokenAccount>,
+    pub underlying_asset_pool: CpiAccount<'info, TokenAccount>,
     #[account(mut)]
-    underlying_asset_dest: CpiAccount<'info, TokenAccount>,
+    pub underlying_asset_dest: CpiAccount<'info, TokenAccount>,
     #[account(mut)]
-    quote_asset_pool: CpiAccount<'info, TokenAccount>,
+    pub quote_asset_pool: CpiAccount<'info, TokenAccount>,
     #[account(mut)]
-    quote_asset_src: CpiAccount<'info, TokenAccount>,
+    pub quote_asset_src: CpiAccount<'info, TokenAccount>,
     #[account(mut)]
-    fee_owner: AccountInfo<'info>,
+    pub fee_owner: AccountInfo<'info>,
 
-    token_program: AccountInfo<'info>,
-    system_program: AccountInfo<'info>,
-    clock: Sysvar<'info, Clock>,
+    pub token_program: AccountInfo<'info>,
+    pub system_program: AccountInfo<'info>,
+    pub clock: Sysvar<'info, Clock>,
 }
 impl<'info> ExerciseOption<'info> {
     fn accounts(ctx: &Context<ExerciseOption>) -> Result<(), ProgramError> {

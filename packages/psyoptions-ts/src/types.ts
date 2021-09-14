@@ -1,5 +1,5 @@
-import { PublicKey } from "@solana/web3.js";
-import BN from "bn.js";
+import { PublicKey } from '@solana/web3.js';
+import BN from 'bn.js';
 
 export type SolanaRpcResponse = {
   pubkey: string;
@@ -12,6 +12,7 @@ export type SolanaRpcResponse = {
 };
 
 export type OptionMarketV2 = {
+  key: PublicKey;
   optionMint: PublicKey;
   writerTokenMint: PublicKey;
   underlyingAssetMint: PublicKey;
@@ -24,4 +25,4 @@ export type OptionMarketV2 = {
   quoteAmountPerContract: BN;
   expirationUnixTimestamp: BN;
   bumpSeed: number;
-}
+};
