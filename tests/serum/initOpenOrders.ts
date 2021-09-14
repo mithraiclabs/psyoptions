@@ -31,7 +31,7 @@ describe("initOpenOrders", () => {
     openOrdersBump: number,
     openOrdersInitAuthority,
     openOrdersBumpinit;
-  let usdcPosted;
+  let usdcPosted: anchor.BN;
   let referralTokenAddress;
   // Global PsyOptions accounts
   let optionMarket: OptionMarketV2;
@@ -143,14 +143,50 @@ describe("initOpenOrders", () => {
     );
     await provider.send(tx);
 
-    // TODO: Validate that the new order is in the OpenOrders
+    // Validate that the new order is in the open orders
     openOrders = OpenOrders.load(provider.connection, openOrdersKey, DEX_PID);
     orders = (await openOrders).orders;
     assert.equal(orders.filter((id) => !id.isZero()).length, 1);
 
+    // Validate that the new order is on the market's orderbook
     bids = await marketProxy.market.loadBids(provider.connection);
     const [p, s] = await bids.getL2(2)[0];
     assert.equal(price, p);
     assert.equal(size, s);
+  });
+
+  it("Cancels a bid on the orderbook", async () => {
+    // Given.
+    const beforeOoAccount = await OpenOrders.load(
+      provider.connection,
+      openOrdersKey,
+      DEX_PID
+    );
+
+    // When.
+    const tx = new Transaction();
+    tx.add(
+      await marketProxy.instruction.cancelOrderByClientId(
+        program.provider.wallet.publicKey,
+        openOrdersKey,
+        new anchor.BN(999)
+      )
+    );
+    await provider.send(tx);
+
+    // Then.
+    const afterOoAccount = await OpenOrders.load(
+      provider.connection,
+      openOrdersKey,
+      DEX_PID
+    );
+    assert.ok(beforeOoAccount.quoteTokenFree.eq(new anchor.BN(0)));
+    assert.ok(beforeOoAccount.quoteTokenTotal.eq(usdcPosted));
+    assert.ok(afterOoAccount.quoteTokenFree.eq(usdcPosted));
+    assert.ok(afterOoAccount.quoteTokenTotal.eq(usdcPosted));
+
+    let bids = await marketProxy.market.loadBids(provider.connection);
+    let l2 = await bids.getL2(2);
+    assert.equal(l2.length, 0);
   });
 });
