@@ -52,7 +52,6 @@ export const marketLoader =
         })
       )
       .middleware(new ReferralFees())
-      .middleware(new Identity())
       .middleware(new Logger())
       .load({
         connection: provider.connection,
@@ -141,35 +140,6 @@ export const initMarket = async (
     godUsdc: GOD_USDC,
   };
 };
-
-export // Dummy identity middleware used for testing.
-class Identity {
-  initOpenOrders(ix: TransactionInstruction) {
-    this.proxy(ix);
-  }
-  newOrderV3(ix: TransactionInstruction) {
-    this.proxy(ix);
-  }
-  cancelOrderV2(ix: TransactionInstruction) {
-    this.proxy(ix);
-  }
-  cancelOrderByClientIdV2(ix: TransactionInstruction) {
-    this.proxy(ix);
-  }
-  settleFunds(ix: TransactionInstruction) {
-    this.proxy(ix);
-  }
-  closeOpenOrders(ix: TransactionInstruction) {
-    this.proxy(ix);
-  }
-  proxy(ix: TransactionInstruction) {
-    ix.keys = [
-      { pubkey: SYSVAR_RENT_PUBKEY, isWritable: false, isSigner: false },
-      ...ix.keys,
-    ];
-  }
-  prune(ix: TransactionInstruction) {}
-}
 
 const fundAccount = async ({
   provider,

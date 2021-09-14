@@ -391,7 +391,6 @@ pub mod psy_american {
     pub fn entry(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         MarketProxy::new()
             .middleware(&mut Logger)
-            .middleware(&mut serum_proxy::Identity)
             .middleware(&mut ReferralFees::new(serum_proxy::referral::ID))
             .middleware(&mut OpenOrdersPda::new())
             .run(program_id, accounts, data)
