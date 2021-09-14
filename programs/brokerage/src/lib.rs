@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
+use psy_american::{OptionMarket, ExerciseOption};
 
 #[program]
 pub mod brokerage {
@@ -14,6 +15,36 @@ pub mod brokerage {
         let cpi_ctx = CpiContext::new(cpi_token_program, cpi_accounts);
         token::transfer(cpi_ctx, amount)?;
         Ok(())
+    }
+
+    pub fn exercise<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, Exercise<'info>>, vault_authority_bump: u8) -> ProgramResult {
+        let cpi_program = ctx.accounts.psy_american_program.clone();
+        let cpi_accounts = ExerciseOption {
+            user_authority: ctx.accounts.authority.to_account_info(),
+            option_authority: ctx.accounts.vault_authority.to_account_info(),
+            option_market: ctx.accounts.option_market.clone().into(),
+            option_mint: ctx.accounts.option_mint.clone(),
+            exerciser_option_token_src: ctx.accounts.exerciser_option_token_src.clone(),
+            underlying_asset_pool: ctx.accounts.underlying_asset_pool.clone(),
+            underlying_asset_dest: ctx.accounts.underlying_asset_dest.clone(),
+            quote_asset_pool: ctx.accounts.quote_asset_pool.clone(),
+            quote_asset_src: ctx.accounts.quote_asset_src.clone(),
+            fee_owner: ctx.accounts.fee_owner.clone(),
+            token_program: ctx.accounts.token_program.to_account_info(),
+            system_program: ctx.accounts.system_program.to_account_info(),
+            clock: ctx.accounts.clock.clone()
+        };
+        let key = ctx.accounts.option_market.key();
+
+        let seeds = &[
+            key.as_ref(),
+            b"vaultAuthority",
+            &[vault_authority_bump]
+        ];
+        let signer = &[&seeds[..]];
+        let mut cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        cpi_ctx.remaining_accounts = ctx.remaining_accounts.to_vec();
+        psy_american::cpi::exercise_option(cpi_ctx, ctx.accounts.exerciser_option_token_src.amount)
     }
 }
 
@@ -36,4 +67,33 @@ pub struct Initialize<'info> {
     pub token_program: AccountInfo<'info>,
     rent: Sysvar<'info, Rent>,
     system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct Exercise<'info> {
+    #[account(mut, signer)]
+    pub authority: AccountInfo<'info>,
+    pub psy_american_program: AccountInfo<'info>,
+    #[account(mut)]
+    pub vault_authority: AccountInfo<'info>,
+    // Exercise CPI accounts
+    option_market: CpiAccount<'info, OptionMarket>,
+    #[account(mut)]
+    option_mint: CpiAccount<'info, Mint>,
+    #[account(mut)]
+    exerciser_option_token_src: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    underlying_asset_pool: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    underlying_asset_dest: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    quote_asset_pool: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    quote_asset_src: CpiAccount<'info, TokenAccount>,
+    #[account(mut)]
+    fee_owner: AccountInfo<'info>,
+
+    token_program: AccountInfo<'info>,
+    system_program: AccountInfo<'info>,
+    clock: Sysvar<'info, Clock>,
 }
