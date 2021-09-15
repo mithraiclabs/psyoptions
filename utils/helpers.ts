@@ -197,6 +197,21 @@ export const initNewTokenAccount = async (
   };
 };
 
+/**
+ *
+ * TODO: This should be transformed to use associated token program accounts. That will make it easier
+ *
+ * @param connection
+ * @param minter
+ * @param mintAuthority
+ * @param underlyingToken
+ * @param underlyingAmount
+ * @param optionMint
+ * @param writerTokenMint
+ * @param quoteToken
+ * @param quoteAmount
+ * @returns
+ */
 export const createMinter = async (
   connection: Connection,
   minter: Keypair,
@@ -289,6 +304,7 @@ export const createMinter = async (
       minter.publicKey
     )
   );
+
   await sendAndConfirmTransaction(
     connection,
     transaction,
@@ -538,8 +554,8 @@ export const initSetup = async (
     quoteAssetPool: quoteAssetPoolAccount.publicKey,
     mintFeeAccount: mintFeeKey,
     exerciseFeeAccount: exerciseFeeKey,
-    underlyingAmountPerContract: underlyingAmountPerContract,
-    quoteAmountPerContract: quoteAmountPerContract,
+    underlyingAmountPerContract,
+    quoteAmountPerContract,
     expirationUnixTimestamp: expiration,
     bumpSeed,
   };
