@@ -230,6 +230,21 @@ describe("proxyTests", () => {
     assert.equal(l2.length, 0);
   });
 
+  // Need to crank the cancel so that we can close later.
+  it("Cranks the cancel transaction", async () => {
+    // TODO: can do this in a single transaction if we covert the pubkey bytes
+    //       into a [u64; 4] array and sort. I'm lazy though.
+    let eq = await marketProxy.market.loadEventQueue(provider.connection);
+    while (eq.length > 0) {
+      const tx = new Transaction();
+      tx.add(
+        marketProxy.market.makeConsumeEventsInstruction([eq[0].openOrders], 1)
+      );
+      await provider.send(tx);
+      eq = await marketProxy.market.loadEventQueue(provider.connection);
+    }
+  });
+
   it("Settles funds on the orderbook", async () => {
     // Given.
     const beforeUsdcTokenAcct = await usdcToken.getAccountInfo(usdcAccount);
@@ -253,5 +268,36 @@ describe("proxyTests", () => {
       afterUSdcTokenAcct.amount.sub(beforeUsdcTokenAcct.amount).toNumber() ===
         usdcPosted.toNumber()
     );
+  });
+
+  it("Closes an open orders account", async () => {
+    // Given.
+    const beforeAccount = await program.provider.connection.getAccountInfo(
+      program.provider.wallet.publicKey
+    );
+
+    // When.
+    const tx = new Transaction();
+    tx.add(
+      marketProxy.instruction.closeOpenOrders(
+        openOrdersKey,
+        provider.wallet.publicKey,
+        provider.wallet.publicKey
+      )
+    );
+    await provider.send(tx);
+
+    // Then.
+    const afterAccount = await program.provider.connection.getAccountInfo(
+      program.provider.wallet.publicKey
+    );
+    const closedAccount = await program.provider.connection.getAccountInfo(
+      openOrdersKey
+    );
+    assert.ok(
+      23352768 ===
+        (afterAccount?.lamports || 0) - (beforeAccount?.lamports || 0)
+    );
+    assert.ok(closedAccount === null);
   });
 });

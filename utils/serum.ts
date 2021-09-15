@@ -52,7 +52,6 @@ export const marketLoader =
         })
       )
       .middleware(new ReferralFees())
-      .middleware(new Logger())
       .load({
         connection: provider.connection,
         market: marketKey,
