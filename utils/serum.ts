@@ -71,12 +71,7 @@ export const initMarket = async (
 ) => {
   // Setup mints with initial tokens owned by the provider.
   const decimals = 6;
-  const [MINT_A, GOD_A] = await serumCmn.createMintAndVault(
-    provider,
-    new BN("1000000000000000000"),
-    undefined,
-    decimals
-  );
+
   const [USDC, GOD_USDC] = await serumCmn.createMintAndVault(
     provider,
     new BN("1000000000000000000"),
@@ -84,130 +79,20 @@ export const initMarket = async (
     decimals
   );
 
-  // Create a funded account to act as market maker.
-  const amount = new BN("10000000000000").muln(10 ** decimals);
-  const marketMaker = await fundAccount({
-    provider,
-    mints: [
-      { god: GOD_A, mint: MINT_A, amount, decimals },
-      { god: GOD_USDC, mint: USDC, amount, decimals },
-    ],
-  });
-
-  // Setup A/USDC with resting orders.
-  const asks = [
-    [6.041, 7.8],
-    [6.051, 72.3],
-    [6.055, 5.4],
-    [6.067, 15.7],
-    [6.077, 390.0],
-    [6.09, 24.0],
-    [6.11, 36.3],
-    [6.133, 300.0],
-    [6.167, 687.8],
-  ];
-  const bids = [
-    [6.004, 8.5],
-    [5.995, 12.9],
-    [5.987, 6.2],
-    [5.978, 15.3],
-    [5.965, 82.8],
-    [5.961, 25.4],
-  ];
-
   const [MARKET_A_USDC, vaultSigner] = await setupMarket({
     provider,
     program,
-    baseMint: MINT_A,
+    baseMint: optionMarket.optionMint,
     quoteMint: USDC,
-    marketMaker: {
-      account: marketMaker.account,
-      baseToken: marketMaker.tokens[MINT_A.toString()],
-      quoteToken: marketMaker.tokens[USDC.toString()],
-    },
-    bids,
-    asks,
     marketLoader,
     optionMarket,
   });
   return {
     marketA: MARKET_A_USDC,
     vaultSigner,
-    marketMaker,
-    mintA: MINT_A,
     usdc: USDC,
-    godA: GOD_A,
     godUsdc: GOD_USDC,
   };
-};
-
-const fundAccount = async ({
-  provider,
-  mints,
-}: {
-  provider: Provider;
-  mints: { god: PublicKey; mint: PublicKey; amount: BN; decimals: number }[];
-}) => {
-  const marketMaker: MarketMaker = {
-    tokens: {},
-    account: MARKET_MAKER,
-  };
-
-  // Transfer lamports to market maker.
-  await provider.send(
-    (() => {
-      const tx = new Transaction();
-      tx.add(
-        SystemProgram.transfer({
-          fromPubkey: provider.wallet.publicKey,
-          toPubkey: MARKET_MAKER.publicKey,
-          lamports: 100000000000,
-        })
-      );
-      return tx;
-    })()
-  );
-
-  // Transfer SPL tokens to the market maker.
-  for (let k = 0; k < mints.length; k += 1) {
-    const { mint, god, amount, decimals } = mints[k];
-    let MINT_A = mint;
-    let GOD_A = god;
-    // Setup token accounts owned by the market maker.
-    const mintAClient = new Token(
-      provider.connection,
-      MINT_A,
-      TOKEN_PROGRAM_ID,
-      (provider.wallet as anchor.Wallet).payer // node only
-    );
-    const marketMakerTokenA = await mintAClient.createAccount(
-      MARKET_MAKER.publicKey
-    );
-
-    await provider.send(
-      (() => {
-        const tx = new Transaction();
-        tx.add(
-          // @ts-ignore
-          Token.createTransferCheckedInstruction(
-            TOKEN_PROGRAM_ID,
-            GOD_A,
-            MINT_A,
-            marketMakerTokenA,
-            provider.wallet.publicKey,
-            [],
-            amount,
-            decimals
-          )
-        );
-        return tx;
-      })()
-    );
-
-    marketMaker.tokens[mint.toString()] = marketMakerTokenA;
-  }
-
-  return marketMaker;
 };
 
 async function setupMarket({
@@ -215,23 +100,14 @@ async function setupMarket({
   program,
   baseMint,
   quoteMint,
-  bids,
-  asks,
   marketLoader,
   optionMarket,
 }: {
   provider: anchor.Provider;
   program: anchor.Program;
-  marketMaker: {
-    account: Keypair;
-    baseToken: Token;
-    quoteToken: Token;
-  };
   optionMarket: OptionMarketV2;
   baseMint: PublicKey;
   quoteMint: PublicKey;
-  bids: Orders;
-  asks: Orders;
   marketLoader: MarketLoader;
 }): Promise<[MarketProxy, anchor.web3.PublicKey | anchor.BN]> {
   const [marketAPublicKey, vaultOwner] = await listMarket({

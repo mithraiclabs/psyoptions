@@ -1,5 +1,5 @@
 import { Connection, PublicKey } from '@solana/web3.js';
-import BN from 'bn.js';
+import { BN } from '@project-serum/anchor';
 import * as BufferLayout from 'buffer-layout';
 import * as Layout from './layout';
 
@@ -73,7 +73,7 @@ export class Market {
     quoteAssetMintKey,
     underlyingAmountPerContract,
     quoteAmountPerContract,
-    expirationUnixTimestamp
+    expirationUnixTimestamp,
   }: {
     programId: PublicKey;
     underlyingAssetMintKey: PublicKey;
@@ -89,7 +89,6 @@ export class Market {
     const expirationBuf = Buffer.alloc(NS64_LAYOUT.span);
     NS64_LAYOUT.encode(expirationUnixTimestamp, expirationBuf);
 
-
     return PublicKey.findProgramAddress(
       [
         underlyingAssetMintKey.toBuffer(),
@@ -100,7 +99,7 @@ export class Market {
       ],
       programId,
     );
-  }
+  };
 
   /**
    * Get all the Markets the program has created.
@@ -116,10 +115,14 @@ export class Market {
       programId,
       connection.commitment,
     );
-    return res.filter(({account}) => account.data.length === OPTION_MARKET_LAYOUT.span).map(
-      // eslint-disable-next-line prettier/prettier
-      ({ pubkey, account }) => new Market(programId, pubkey, account.data),
-    );
+    return res
+      .filter(
+        ({ account }) => account.data.length === OPTION_MARKET_LAYOUT.span,
+      )
+      .map(
+        // eslint-disable-next-line prettier/prettier
+        ({ pubkey, account }) => new Market(programId, pubkey, account.data),
+      );
   };
 
   /**

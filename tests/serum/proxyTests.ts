@@ -9,24 +9,29 @@ import {
 } from "../../utils/serum";
 import { OptionMarketV2 } from "../../packages/psyoptions-ts/src/types";
 import {
+  createMinter,
   initNewTokenMint,
   initOptionMarket,
   initSetup,
 } from "../../utils/helpers";
 import { MarketProxy, OpenOrders } from "@project-serum/serum";
+import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { FEE_OWNER_KEY } from "../../packages/psyoptions-ts/src/fees";
+import { mintOptionsTx } from "../../packages/psyoptions-ts/src";
 
 describe("proxyTests", () => {
   const provider = anchor.Provider.env();
+  const wallet = provider.wallet as anchor.Wallet;
   anchor.setProvider(provider);
   const program = anchor.workspace.PsyAmerican as anchor.Program;
-  // Token client.
-  let usdcClient;
+  let underlyingToken: Token, usdcToken: Token, optionToken: Token;
 
   // Global DEX accounts and clients shared across all tests.
   let marketProxy: MarketProxy,
-    tokenAccount,
-    usdcMint: Keypair,
-    usdcAccount: PublicKey;
+    optionAccount: Keypair,
+    usdcMint: PublicKey,
+    usdcAccount: PublicKey,
+    referral: PublicKey;
   let openOrdersKey: PublicKey,
     openOrdersBump: number,
     openOrdersInitAuthority,
@@ -37,37 +42,72 @@ describe("proxyTests", () => {
   let optionMarket: OptionMarketV2;
   const mintAuthority = anchor.web3.Keypair.generate();
   before(async () => {
-    const { mintAccount } = await initNewTokenMint(
-      provider.connection,
-      (provider.wallet as anchor.Wallet).payer.publicKey,
-      (provider.wallet as anchor.Wallet).payer
-    );
-    usdcMint = mintAccount;
     // Set up and initialize a new OptionMarket
     const {
       optionMarket: newOptionMarket,
       remainingAccounts,
       instructions,
-    } = await initSetup(
-      provider,
-      (provider.wallet as anchor.Wallet).payer,
-      mintAuthority,
-      program
-    );
+    } = await initSetup(provider, wallet.payer, mintAuthority, program);
     optionMarket = newOptionMarket;
     await initOptionMarket(
       program,
-      (provider.wallet as anchor.Wallet).payer,
+      wallet.payer,
       optionMarket,
       remainingAccounts,
       instructions
     );
-    ({ marketA: marketProxy, godUsdc: usdcAccount } = await initMarket(
+    ({
+      marketA: marketProxy,
+      usdc: usdcMint,
+      godUsdc: usdcAccount,
+    } = await initMarket(
       provider,
       program,
       marketLoader(provider, program),
       optionMarket
     ));
+    underlyingToken = new Token(
+      provider.connection,
+      optionMarket.underlyingAssetMint,
+      TOKEN_PROGRAM_ID,
+      wallet.payer
+    );
+    optionToken = new Token(
+      provider.connection,
+      optionMarket.optionMint,
+      TOKEN_PROGRAM_ID,
+      wallet.payer
+    );
+    usdcToken = new Token(
+      provider.connection,
+      usdcMint,
+      TOKEN_PROGRAM_ID,
+      wallet.payer
+    );
+    referral = await usdcToken.createAssociatedTokenAccount(FEE_OWNER_KEY);
+    // create minter and mint options to them
+    let underlyingAccount: Keypair, writerTokenAccount: Keypair;
+    ({ optionAccount, underlyingAccount, writerTokenAccount } =
+      await createMinter(
+        provider.connection,
+        wallet.payer,
+        mintAuthority,
+        underlyingToken,
+        optionMarket.underlyingAmountPerContract.muln(100).toNumber(),
+        optionMarket.optionMint,
+        optionMarket.writerTokenMint,
+        usdcToken
+      ));
+
+    await mintOptionsTx(
+      program,
+      wallet.payer,
+      optionAccount,
+      writerTokenAccount,
+      underlyingAccount,
+      new anchor.BN(25),
+      optionMarket
+    );
   });
 
   before(() => {});
@@ -188,5 +228,39 @@ describe("proxyTests", () => {
     let bids = await marketProxy.market.loadBids(provider.connection);
     let l2 = await bids.getL2(2);
     assert.equal(l2.length, 0);
+  });
+
+  it("Settles funds on the orderbook", async () => {
+    // Given.
+    const beforeUsdcTokenAcct = await usdcToken.getAccountInfo(usdcAccount);
+    const beforeOptionAcct = await optionToken.getAccountInfo(
+      optionAccount.publicKey
+    );
+    console.log(
+      `** usdcAccount: ${beforeUsdcTokenAcct.address.toString()}\tmint: ${beforeUsdcTokenAcct.mint.toString()}\nbeforeTokenAccount: ${beforeOptionAcct.address.toString()}\tmint: ${beforeOptionAcct.mint.toString()}`
+    );
+    console.log(
+      `** market coint mint: ${marketProxy.market.baseMintAddress.toString()}`
+    );
+
+    // When.
+    const tx = new Transaction();
+    tx.add(
+      await marketProxy.instruction.settleFunds(
+        openOrdersKey,
+        provider.wallet.publicKey,
+        optionAccount.publicKey,
+        usdcAccount,
+        referral
+      )
+    );
+    await provider.send(tx);
+
+    // Then.
+    const afterUSdcTokenAcct = await usdcToken.getAccountInfo(usdcAccount);
+    assert.ok(
+      afterUSdcTokenAcct.amount.sub(beforeUsdcTokenAcct.amount).toNumber() ===
+        usdcPosted.toNumber()
+    );
   });
 });

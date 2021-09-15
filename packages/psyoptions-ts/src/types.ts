@@ -1,5 +1,5 @@
+import * as anchor from '@project-serum/anchor';
 import { PublicKey } from '@solana/web3.js';
-import BN from 'bn.js';
 
 export type SolanaRpcResponse = {
   pubkey: string;
@@ -21,9 +21,9 @@ export type OptionMarketV2 = {
   quoteAssetPool: PublicKey;
   mintFeeAccount: PublicKey;
   exerciseFeeAccount: PublicKey;
-  underlyingAmountPerContract: BN;
-  quoteAmountPerContract: BN;
-  expirationUnixTimestamp: BN;
+  underlyingAmountPerContract: anchor.BN;
+  quoteAmountPerContract: anchor.BN;
+  expirationUnixTimestamp: anchor.BN;
   serumMarket?: PublicKey;
   bumpSeed: number;
 };

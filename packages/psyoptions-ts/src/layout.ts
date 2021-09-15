@@ -1,7 +1,7 @@
 /* eslint-disable max-classes-per-file */
 import * as BufferLayout from 'buffer-layout';
 import { PublicKey } from '@solana/web3.js';
-import BN from 'bn.js';
+import { BN } from '@project-serum/anchor';
 
 class PublicKeyLayout extends BufferLayout.Blob {
   constructor(property: string) {
