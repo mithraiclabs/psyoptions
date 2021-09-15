@@ -233,15 +233,6 @@ describe("proxyTests", () => {
   it("Settles funds on the orderbook", async () => {
     // Given.
     const beforeUsdcTokenAcct = await usdcToken.getAccountInfo(usdcAccount);
-    const beforeOptionAcct = await optionToken.getAccountInfo(
-      optionAccount.publicKey
-    );
-    console.log(
-      `** usdcAccount: ${beforeUsdcTokenAcct.address.toString()}\tmint: ${beforeUsdcTokenAcct.mint.toString()}\nbeforeTokenAccount: ${beforeOptionAcct.address.toString()}\tmint: ${beforeOptionAcct.mint.toString()}`
-    );
-    console.log(
-      `** market coint mint: ${marketProxy.market.baseMintAddress.toString()}`
-    );
 
     // When.
     const tx = new Transaction();
