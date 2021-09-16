@@ -274,7 +274,7 @@ export const initSerum = async (
     program.programId
   );
 
-  const coinLotSize = new anchor.BN(100000);
+  const coinLotSize = new anchor.BN(1);
   const pcLotSize = new anchor.BN(100);
   const pcDustThreshold = new anchor.BN(100);
   await program.rpc.initSerumMarket(

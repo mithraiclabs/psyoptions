@@ -8,12 +8,7 @@ import {
   openOrdersSeed,
 } from "../../utils/serum";
 import { OptionMarketV2 } from "../../packages/psyoptions-ts/src/types";
-import {
-  createMinter,
-  initNewTokenMint,
-  initOptionMarket,
-  initSetup,
-} from "../../utils/helpers";
+import { createMinter, initOptionMarket, initSetup } from "../../utils/helpers";
 import { MarketProxy, OpenOrders } from "@project-serum/serum";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { FEE_OWNER_KEY } from "../../packages/psyoptions-ts/src/fees";
@@ -66,6 +61,15 @@ describe("proxyTests", () => {
       marketLoader(provider, program),
       optionMarket
     ));
+    [openOrdersKey, openOrdersBump] = await PublicKey.findProgramAddress(
+      [
+        openOrdersSeed,
+        DEX_PID.toBuffer(),
+        marketProxy.market.address.toBuffer(),
+        program.provider.wallet.publicKey.toBuffer(),
+      ],
+      program.programId
+    );
     underlyingToken = new Token(
       provider.connection,
       optionMarket.underlyingAssetMint,
@@ -115,15 +119,6 @@ describe("proxyTests", () => {
     const tx = new Transaction();
     const dummy = new Keypair();
     const owner = program.provider.wallet.publicKey;
-    [openOrdersKey, openOrdersBump] = await PublicKey.findProgramAddress(
-      [
-        openOrdersSeed,
-        DEX_PID.toBuffer(),
-        marketProxy.market.address.toBuffer(),
-        owner.toBuffer(),
-      ],
-      program.programId
-    );
 
     const ix = await marketProxy.instruction.initOpenOrders(
       owner,
