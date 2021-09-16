@@ -20,6 +20,7 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import assert from "assert";
+import { mintOptionsTx } from "../../packages/psyoptions-ts/src";
 import {
   feeAmount,
   FEE_OWNER_KEY,
@@ -64,44 +65,6 @@ describe("brokerage exercise", () => {
   let vaultAuthorityBump: number;
   let exerciseFeeKey: PublicKey;
 
-  const mintOptionsTx = async (
-    minter: Keypair,
-    minterOptionAcct: Keypair,
-    minterWriterAcct: Keypair,
-    minterUnderlyingAccount: Keypair,
-    opts: {
-      size?: anchor.BN;
-      underlyingAssetPoolAccount?: Keypair;
-      remainingAccounts?: AccountMeta[];
-    } = {}
-  ) => {
-    await americanOptionsProgram.rpc.mintOption(opts.size || size, {
-      accounts: {
-        userAuthority: minter.publicKey,
-        underlyingAssetMint: underlyingToken.publicKey,
-        underlyingAssetPool: (
-          opts.underlyingAssetPoolAccount || underlyingAssetPoolAccount
-        ).publicKey,
-        underlyingAssetSrc: minterUnderlyingAccount.publicKey,
-        optionMint: optionMintAccount.publicKey,
-        mintedOptionDest: minterOptionAcct.publicKey,
-        writerTokenMint: writerTokenMintAccount.publicKey,
-        mintedWriterTokenDest: minterWriterAcct.publicKey,
-        optionMarket: optionMarketKey,
-        feeOwner: FEE_OWNER_KEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-        clock: SYSVAR_CLOCK_PUBKEY,
-        rent: SYSVAR_RENT_PUBKEY,
-        systemProgram: SystemProgram.programId,
-      },
-      remainingAccounts: opts.remainingAccounts
-        ? opts.remainingAccounts
-        : remainingAccounts,
-      signers: [minter],
-    });
-  };
-
   describe("OptionMarket is not expired", () => {
     before(async () => {
       await provider.connection.confirmTransaction(
@@ -122,13 +85,9 @@ describe("brokerage exercise", () => {
         instructions,
         optionMarket: newOptionMarket,
         optionMarketKey: _optionMarketKey,
-        optionMintAccount: _optionMintAccount,
         quoteToken,
         remainingAccounts: _remainingAccounts,
-        underlyingAmountPerContract,
         underlyingToken: _underlyingToken,
-        underlyingAssetPoolAccount: _underlyingAssetPoolAccount,
-        writerTokenMintAccount: _writerTokenMintAccount,
       } = await initSetup(
         provider,
         (provider.wallet as anchor.Wallet).payer,
@@ -141,11 +100,8 @@ describe("brokerage exercise", () => {
       );
       optionMarketKey = _optionMarketKey;
       optionMarket = newOptionMarket;
-      optionMintAccount = _optionMintAccount;
       remainingAccounts = _remainingAccounts;
       underlyingToken = _underlyingToken;
-      underlyingAssetPoolAccount = _underlyingAssetPoolAccount;
-      writerTokenMintAccount = _writerTokenMintAccount;
       await initOptionMarket(
         americanOptionsProgram,
         (provider.wallet as anchor.Wallet).payer,
@@ -169,9 +125,12 @@ describe("brokerage exercise", () => {
         user,
         mintAuthority,
         underlyingToken,
-        new anchor.BN(100).mul(underlyingAmountPerContract).muln(2).toNumber(),
-        optionMintAccount.publicKey,
-        writerTokenMintAccount.publicKey,
+        new anchor.BN(100)
+          .mul(optionMarket.underlyingAmountPerContract)
+          .muln(2)
+          .toNumber(),
+        optionMarket.optionMint,
+        optionMarket.writerTokenMint,
         quoteToken,
         // Make sure the minter has access to enough quote assets to exercise
         new anchor.BN(100)
@@ -180,10 +139,13 @@ describe("brokerage exercise", () => {
           .toNumber()
       ));
       await mintOptionsTx(
+        americanOptionsProgram,
         user,
         userOptionAcct,
         userWriterAcct,
-        userUnderlyingAccount
+        userUnderlyingAccount,
+        new anchor.BN(25),
+        optionMarket
       );
 
       // Initialize and deposit options into a vault
@@ -262,7 +224,7 @@ describe("brokerage exercise", () => {
           signers: [user],
         });
       } catch (err) {
-        console.log(err.toString());
+        console.log((err as Error).toString());
         throw err;
       }
 
