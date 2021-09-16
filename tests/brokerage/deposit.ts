@@ -1,29 +1,17 @@
 import * as anchor from "@project-serum/anchor";
-import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  Token,
-  TOKEN_PROGRAM_ID,
-  u64,
-} from "@solana/spl-token";
+import { Token, TOKEN_PROGRAM_ID, u64 } from "@solana/spl-token";
 import {
   AccountMeta,
   Keypair,
   PublicKey,
   SystemProgram,
-  SYSVAR_CLOCK_PUBKEY,
   SYSVAR_RENT_PUBKEY,
-  TransactionInstruction,
 } from "@solana/web3.js";
 import assert from "assert";
-import { FEE_OWNER_KEY } from "../../packages/psyoptions-ts/src/fees";
+import { mintOptionsTx } from "../../packages/psyoptions-ts/src";
 
 import { OptionMarketV2 } from "../../packages/psyoptions-ts/src/types";
-import {
-  createMinter,
-  initNewTokenAccount,
-  initOptionMarket,
-  initSetup,
-} from "../../utils/helpers";
+import { createMinter, initOptionMarket, initSetup } from "../../utils/helpers";
 
 describe("brokerage deposit", () => {
   const provider = anchor.Provider.env();
@@ -39,53 +27,12 @@ describe("brokerage deposit", () => {
   let underlyingToken: Token;
   let optionToken: Token;
   let optionMarketKey: PublicKey;
-  let optionMintAccount: Keypair;
-  let writerTokenMintAccount: Keypair;
-  let underlyingAssetPoolAccount: Keypair;
   let remainingAccounts: AccountMeta[] = [];
 
   let userWriterAcct: Keypair;
   let userOptionAcct: Keypair;
   let userUnderlyingAccount: Keypair;
   let size = new u64(1);
-
-  const mintOptionsTx = async (
-    minter: Keypair,
-    minterOptionAcct: Keypair,
-    minterWriterAcct: Keypair,
-    minterUnderlyingAccount: Keypair,
-    opts: {
-      size?: anchor.BN;
-      underlyingAssetPoolAccount?: Keypair;
-      remainingAccounts?: AccountMeta[];
-    } = {}
-  ) => {
-    await americanOptionsProgram.rpc.mintOption(opts.size || size, {
-      accounts: {
-        userAuthority: minter.publicKey,
-        underlyingAssetMint: underlyingToken.publicKey,
-        underlyingAssetPool: (
-          opts.underlyingAssetPoolAccount || underlyingAssetPoolAccount
-        ).publicKey,
-        underlyingAssetSrc: minterUnderlyingAccount.publicKey,
-        optionMint: optionMintAccount.publicKey,
-        mintedOptionDest: minterOptionAcct.publicKey,
-        writerTokenMint: writerTokenMintAccount.publicKey,
-        mintedWriterTokenDest: minterWriterAcct.publicKey,
-        optionMarket: optionMarketKey,
-        feeOwner: FEE_OWNER_KEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-        clock: SYSVAR_CLOCK_PUBKEY,
-        rent: SYSVAR_RENT_PUBKEY,
-        systemProgram: SystemProgram.programId,
-      },
-      remainingAccounts: opts.remainingAccounts
-        ? opts.remainingAccounts
-        : remainingAccounts,
-      signers: [minter],
-    });
-  };
 
   before(async () => {
     await provider.connection.confirmTransaction(
@@ -100,13 +47,10 @@ describe("brokerage deposit", () => {
       instructions,
       optionMarket: newOptionMarket,
       optionMarketKey: _optionMarketKey,
-      optionMintAccount: _optionMintAccount,
       quoteToken,
       remainingAccounts: _remainingAccounts,
       underlyingAmountPerContract,
       underlyingToken: _underlyingToken,
-      underlyingAssetPoolAccount: _underlyingAssetPoolAccount,
-      writerTokenMintAccount: _writerTokenMintAccount,
     } = await initSetup(
       provider,
       (provider.wallet as anchor.Wallet).payer,
@@ -115,11 +59,8 @@ describe("brokerage deposit", () => {
     );
     optionMarketKey = _optionMarketKey;
     optionMarket = newOptionMarket;
-    optionMintAccount = _optionMintAccount;
     remainingAccounts = _remainingAccounts;
     underlyingToken = _underlyingToken;
-    underlyingAssetPoolAccount = _underlyingAssetPoolAccount;
-    writerTokenMintAccount = _writerTokenMintAccount;
     await initOptionMarket(
       americanOptionsProgram,
       (provider.wallet as anchor.Wallet).payer,
@@ -142,16 +83,22 @@ describe("brokerage deposit", () => {
       user,
       mintAuthority,
       underlyingToken,
-      new anchor.BN(100).mul(underlyingAmountPerContract).muln(2).toNumber(),
-      optionMintAccount.publicKey,
-      writerTokenMintAccount.publicKey,
+      new anchor.BN(100)
+        .mul(optionMarket.underlyingAmountPerContract)
+        .muln(2)
+        .toNumber(),
+      optionMarket.optionMint,
+      optionMarket.writerTokenMint,
       quoteToken
     ));
     await mintOptionsTx(
+      americanOptionsProgram,
       user,
       userOptionAcct,
       userWriterAcct,
-      userUnderlyingAccount
+      userUnderlyingAccount,
+      size,
+      optionMarket
     );
   });
 

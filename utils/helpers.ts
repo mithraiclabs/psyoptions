@@ -20,10 +20,7 @@ import {
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
-import {
-  getOrAddAssociatedTokenAccountTx,
-  initializeAccountsForMarket,
-} from "../packages/psyoptions-ts/src";
+import { getOrAddAssociatedTokenAccountTx } from "../packages/psyoptions-ts/src";
 import { feeAmount, FEE_OWNER_KEY } from "../packages/psyoptions-ts/src/fees";
 import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
 
@@ -55,57 +52,6 @@ export const createUnderlyingAndQuoteMints = async (
   return {
     quoteToken,
     underlyingToken,
-  };
-};
-
-export const createAccountsForInitializeMarket = async (
-  connection: Connection,
-  wallet: Keypair,
-  optionMarketKey: PublicKey,
-  optionMintAccount: Keypair,
-  writerTokenMintAccount: Keypair,
-  underlyingAssetPoolAccount: Keypair,
-  quoteAssetPoolAccount: Keypair,
-  underlyingToken: Token,
-  quoteToken: Token
-) => {
-  const {
-    transaction: createAccountsTx,
-    signers,
-    optionMintKey,
-    writerTokenMintKey,
-    quoteAssetPoolKey,
-    underlyingAssetPoolKey,
-  } = await initializeAccountsForMarket({
-    connection,
-    payerKey: wallet.publicKey,
-    optionMarketKey,
-    optionMintAccount,
-    writerTokenMintAccount,
-    underlyingAssetPoolAccount,
-    quoteAssetPoolAccount,
-    underlyingToken,
-    quoteToken,
-  });
-
-  try {
-    await sendAndConfirmTransaction(
-      connection,
-      createAccountsTx,
-      [wallet, ...signers],
-      {
-        commitment: "confirmed",
-      }
-    );
-  } catch (error) {
-    console.error(error);
-  }
-
-  return {
-    optionMintKey,
-    writerTokenMintKey,
-    quoteAssetPoolKey,
-    underlyingAssetPoolKey,
   };
 };
 
@@ -444,6 +390,7 @@ export const initSetup = async (
     expiration?: anchor.BN;
   } = {}
 ) => {
+  const textEncoder = new TextEncoder();
   let quoteToken: Token;
   let underlyingToken: Token;
   let underlyingAmountPerContract =
@@ -456,102 +403,103 @@ export const initSetup = async (
   let bumpSeed: number;
   let mintFeeKey = new Keypair().publicKey;
   let exerciseFeeKey = new Keypair().publicKey;
-  const optionMintAccount = new Keypair();
-  let writerTokenMintAccount = new Keypair();
-  let underlyingAssetPoolAccount = new Keypair();
-  let quoteAssetPoolAccount = new Keypair();
   let remainingAccounts: AccountMeta[] = [];
   let instructions: TransactionInstruction[] = [];
-  try {
-    ({ underlyingToken, quoteToken } = await createUnderlyingAndQuoteMints(
-      provider,
-      payer,
-      mintAuthority
-    ));
-    [optionMarketKey, bumpSeed] =
-      await anchor.web3.PublicKey.findProgramAddress(
-        [
-          underlyingToken.publicKey.toBuffer(),
-          quoteToken.publicKey.toBuffer(),
-          underlyingAmountPerContract.toBuffer("le", 8),
-          quoteAmountPerContract.toBuffer("le", 8),
-          expiration.toBuffer("le", 8),
-        ],
-        program.programId
-      );
+  ({ underlyingToken, quoteToken } = await createUnderlyingAndQuoteMints(
+    provider,
+    payer,
+    mintAuthority
+  ));
+  [optionMarketKey, bumpSeed] = await anchor.web3.PublicKey.findProgramAddress(
+    [
+      underlyingToken.publicKey.toBuffer(),
+      quoteToken.publicKey.toBuffer(),
+      underlyingAmountPerContract.toBuffer("le", 8),
+      quoteAmountPerContract.toBuffer("le", 8),
+      expiration.toBuffer("le", 8),
+    ],
+    program.programId
+  );
 
-    // Get the associated fee address if the market requires a fee
-    const mintFee = feeAmount(underlyingAmountPerContract);
-    if (mintFee.gtn(0)) {
-      mintFeeKey = await Token.getAssociatedTokenAddress(
-        ASSOCIATED_TOKEN_PROGRAM_ID,
-        TOKEN_PROGRAM_ID,
-        opts.mintFeeToken?.publicKey || underlyingToken.publicKey,
-        opts.mintFeeOwner || FEE_OWNER_KEY
-      );
-      remainingAccounts.push({
-        pubkey: mintFeeKey,
-        isWritable: true,
-        isSigner: false,
-      });
-      const ix = await getOrAddAssociatedTokenAccountTx(
-        mintFeeKey,
-        opts.mintFeeToken || underlyingToken,
-        payer.publicKey,
-        opts.mintFeeOwner || FEE_OWNER_KEY
-      );
-      if (ix) {
-        instructions.push(ix);
-      }
-    }
-
-    const exerciseFee = feeAmount(quoteAmountPerContract);
-    if (exerciseFee.gtn(0)) {
-      exerciseFeeKey = await Token.getAssociatedTokenAddress(
-        ASSOCIATED_TOKEN_PROGRAM_ID,
-        TOKEN_PROGRAM_ID,
-        opts.exerciseFeeToken?.publicKey || quoteToken.publicKey,
-        opts.exerciseFeeOwner || FEE_OWNER_KEY
-      );
-      remainingAccounts.push({
-        pubkey: exerciseFeeKey,
-        isWritable: false,
-        isSigner: false,
-      });
-      const ix = await getOrAddAssociatedTokenAccountTx(
-        exerciseFeeKey,
-        opts.exerciseFeeToken || quoteToken,
-        payer.publicKey,
-        opts.exerciseFeeOwner || FEE_OWNER_KEY
-      );
-      if (ix) {
-        instructions.push(ix);
-      }
-    }
-
-    await createAccountsForInitializeMarket(
-      provider.connection,
-      payer,
-      optionMarketKey,
-      optionMintAccount,
-      writerTokenMintAccount,
-      underlyingAssetPoolAccount,
-      quoteAssetPoolAccount,
-      underlyingToken,
-      quoteToken
+  const [optionMintKey, optionMintBump] =
+    await anchor.web3.PublicKey.findProgramAddress(
+      [optionMarketKey.toBuffer(), textEncoder.encode("optionToken")],
+      program.programId
     );
-  } catch (err) {
-    console.error(err);
-    throw err;
+
+  const [writerMintKey, writerMintBump] =
+    await anchor.web3.PublicKey.findProgramAddress(
+      [optionMarketKey.toBuffer(), textEncoder.encode("writerToken")],
+      program.programId
+    );
+  const [quoteAssetPoolKey, quoteAssetPoolBump] =
+    await anchor.web3.PublicKey.findProgramAddress(
+      [optionMarketKey.toBuffer(), textEncoder.encode("quoteAssetPool")],
+      program.programId
+    );
+
+  const [underlyingAssetPoolKey, underlyingAssetPoolBump] =
+    await anchor.web3.PublicKey.findProgramAddress(
+      [optionMarketKey.toBuffer(), textEncoder.encode("underlyingAssetPool")],
+      program.programId
+    );
+
+  // Get the associated fee address if the market requires a fee
+  const mintFee = feeAmount(underlyingAmountPerContract);
+  if (mintFee.gtn(0)) {
+    mintFeeKey = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
+      opts.mintFeeToken?.publicKey || underlyingToken.publicKey,
+      opts.mintFeeOwner || FEE_OWNER_KEY
+    );
+    remainingAccounts.push({
+      pubkey: mintFeeKey,
+      isWritable: true,
+      isSigner: false,
+    });
+    const ix = await getOrAddAssociatedTokenAccountTx(
+      mintFeeKey,
+      opts.mintFeeToken || underlyingToken,
+      payer.publicKey,
+      opts.mintFeeOwner || FEE_OWNER_KEY
+    );
+    if (ix) {
+      instructions.push(ix);
+    }
+  }
+
+  const exerciseFee = feeAmount(quoteAmountPerContract);
+  if (exerciseFee.gtn(0)) {
+    exerciseFeeKey = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
+      opts.exerciseFeeToken?.publicKey || quoteToken.publicKey,
+      opts.exerciseFeeOwner || FEE_OWNER_KEY
+    );
+    remainingAccounts.push({
+      pubkey: exerciseFeeKey,
+      isWritable: false,
+      isSigner: false,
+    });
+    const ix = await getOrAddAssociatedTokenAccountTx(
+      exerciseFeeKey,
+      opts.exerciseFeeToken || quoteToken,
+      payer.publicKey,
+      opts.exerciseFeeOwner || FEE_OWNER_KEY
+    );
+    if (ix) {
+      instructions.push(ix);
+    }
   }
   const optionMarket: OptionMarketV2 = {
     key: optionMarketKey,
-    optionMint: optionMintAccount.publicKey,
-    writerTokenMint: writerTokenMintAccount.publicKey,
+    optionMint: optionMintKey,
+    writerTokenMint: writerMintKey,
     underlyingAssetMint: underlyingToken.publicKey,
     quoteAssetMint: quoteToken.publicKey,
-    underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
-    quoteAssetPool: quoteAssetPoolAccount.publicKey,
+    underlyingAssetPool: underlyingAssetPoolKey,
+    quoteAssetPool: quoteAssetPoolKey,
     mintFeeAccount: mintFeeKey,
     exerciseFeeAccount: exerciseFeeKey,
     underlyingAmountPerContract,
@@ -560,9 +508,17 @@ export const initSetup = async (
     bumpSeed,
   };
 
+  const optionToken = new Token(
+    provider.connection,
+    optionMintKey,
+    TOKEN_PROGRAM_ID,
+    payer
+  );
+
   return {
     quoteToken,
     underlyingToken,
+    optionToken,
     underlyingAmountPerContract,
     quoteAmountPerContract,
     expiration,
@@ -570,10 +526,10 @@ export const initSetup = async (
     bumpSeed,
     mintFeeKey,
     exerciseFeeKey,
-    optionMintAccount,
-    writerTokenMintAccount,
-    underlyingAssetPoolAccount,
-    quoteAssetPoolAccount,
+    optionMintKey,
+    writerMintKey,
+    underlyingAssetPoolKey,
+    quoteAssetPoolKey,
     optionMarket,
     remainingAccounts,
     instructions,

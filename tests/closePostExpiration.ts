@@ -1,31 +1,24 @@
 import * as anchor from "@project-serum/anchor";
 import assert from "assert";
-import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  Token,
-  TOKEN_PROGRAM_ID,
-  u64,
-} from "@solana/spl-token";
+import { Token, TOKEN_PROGRAM_ID, u64 } from "@solana/spl-token";
 import {
   AccountMeta,
   Keypair,
   LAMPORTS_PER_SOL,
-  PublicKey,
-  SystemProgram,
-  SYSVAR_CLOCK_PUBKEY,
-  SYSVAR_RENT_PUBKEY,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { FEE_OWNER_KEY } from "../packages/psyoptions-ts/src/fees";
 import {
   closePostExpiration,
   createExerciser,
   createMinter,
   initNewTokenAccount,
   initNewTokenMint,
+  initOptionMarket,
   initSetup,
   wait,
 } from "../utils/helpers";
+import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
+import { mintOptionsTx } from "../packages/psyoptions-ts/src";
 
 describe("closePostExpiration", () => {
   const provider = anchor.Provider.env();
@@ -39,94 +32,17 @@ describe("closePostExpiration", () => {
 
   let quoteToken: Token;
   let underlyingToken: Token;
+  let optionToken: Token;
   let underlyingAmountPerContract: anchor.BN;
-  let quoteAmountPerContract: anchor.BN;
-  let expiration: anchor.BN;
-  let optionMarketKey: PublicKey;
-  let bumpSeed: number;
-  let mintFeeKey: PublicKey | null;
-  let exerciseFeeKey: PublicKey;
+  let optionMarket: OptionMarketV2;
   let exerciserOptionAcct: Keypair;
-  let exerciserQuoteAcct: Keypair;
-  let exerciserUnderlyingAcct: Keypair;
-  let optionMintAccount: Keypair;
-  let writerTokenMintAccount: Keypair;
-  let underlyingAssetPoolAccount: Keypair;
-  let quoteAssetPoolAccount: Keypair;
   let remainingAccounts: AccountMeta[] = [];
   let instructions: TransactionInstruction[] = [];
 
-  let optionToken: Token;
   let minterWriterAcct: Keypair;
   let minterOptionAcct: Keypair;
   let minterUnderlyingAccount: Keypair;
   let size = new u64(1);
-
-  const initOptionMarket = async () => {
-    await program.rpc.initializeMarket(
-      underlyingAmountPerContract,
-      quoteAmountPerContract,
-      expiration,
-      bumpSeed,
-      {
-        accounts: {
-          authority: payer.publicKey,
-          underlyingAssetMint: underlyingToken.publicKey,
-          quoteAssetMint: quoteToken.publicKey,
-          optionMint: optionMintAccount.publicKey,
-          writerTokenMint: writerTokenMintAccount.publicKey,
-          quoteAssetPool: quoteAssetPoolAccount.publicKey,
-          underlyingAssetPool: underlyingAssetPoolAccount.publicKey,
-          optionMarket: optionMarketKey,
-          feeOwner: FEE_OWNER_KEY,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-          rent: SYSVAR_RENT_PUBKEY,
-          systemProgram: SystemProgram.programId,
-        },
-        remainingAccounts,
-        signers: [payer],
-        instructions,
-      }
-    );
-  };
-  const mintOptionsTx = async (
-    minter: Keypair,
-    minterOptionAcct: Keypair,
-    minterWriterAcct: Keypair,
-    minterUnderlyingAccount: Keypair,
-    opts: {
-      size?: anchor.BN;
-      underlyingAssetPoolAccount?: Keypair;
-      remainingAccounts?: AccountMeta[];
-    } = {}
-  ) => {
-    await program.rpc.mintOption(opts.size || size, {
-      accounts: {
-        userAuthority: minter.publicKey,
-        underlyingAssetMint: underlyingToken.publicKey,
-        underlyingAssetPool: (
-          opts.underlyingAssetPoolAccount || underlyingAssetPoolAccount
-        ).publicKey,
-        underlyingAssetSrc: minterUnderlyingAccount.publicKey,
-        optionMint: optionMintAccount.publicKey,
-        mintedOptionDest: minterOptionAcct.publicKey,
-        writerTokenMint: writerTokenMintAccount.publicKey,
-        mintedWriterTokenDest: minterWriterAcct.publicKey,
-        optionMarket: optionMarketKey,
-        feeOwner: FEE_OWNER_KEY,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-        clock: SYSVAR_CLOCK_PUBKEY,
-        rent: SYSVAR_RENT_PUBKEY,
-        systemProgram: SystemProgram.programId,
-      },
-      remainingAccounts: opts.remainingAccounts
-        ? opts.remainingAccounts
-        : remainingAccounts,
-      signers: [minter],
-    });
-  };
 
   before(async () => {
     // airdrop SOL to the payer and minter
@@ -160,23 +76,21 @@ describe("closePostExpiration", () => {
         quoteToken,
         underlyingToken,
         underlyingAmountPerContract,
-        quoteAmountPerContract,
-        expiration,
-        optionMarketKey,
-        bumpSeed,
-        mintFeeKey,
-        exerciseFeeKey,
-        optionMintAccount,
-        writerTokenMintAccount,
-        underlyingAssetPoolAccount,
-        quoteAssetPoolAccount,
+        optionMarket,
+        optionToken,
         remainingAccounts,
         instructions,
       } = await initSetup(provider, payer, mintAuthority, program, {
         // set expiration to 2 seconds from now
         expiration: new anchor.BN(new Date().getTime() / 1000 + 3),
       }));
-      await initOptionMarket();
+      await initOptionMarket(
+        program,
+        payer,
+        optionMarket,
+        remainingAccounts,
+        instructions
+      );
       // Create a new minter
       ({
         optionAccount: minterOptionAcct,
@@ -187,41 +101,39 @@ describe("closePostExpiration", () => {
         minter,
         mintAuthority,
         underlyingToken,
-        new anchor.BN(100).mul(underlyingAmountPerContract).muln(2).toNumber(),
-        optionMintAccount.publicKey,
-        writerTokenMintAccount.publicKey,
+        new anchor.BN(100)
+          .mul(optionMarket.underlyingAmountPerContract)
+          .muln(2)
+          .toNumber(),
+        optionMarket.optionMint,
+        optionMarket.writerTokenMint,
         quoteToken
       ));
       // Mint a bunch of contracts to the minter
       await mintOptionsTx(
+        program,
         minter,
         minterOptionAcct,
         minterWriterAcct,
         minterUnderlyingAccount,
-        { size: new anchor.BN(100) }
+        new anchor.BN(100),
+        optionMarket
       );
       // Create an exerciser
-      ({
-        optionAccount: exerciserOptionAcct,
-        quoteAccount: exerciserQuoteAcct,
-        underlyingAccount: exerciserUnderlyingAcct,
-      } = await createExerciser(
+      ({ optionAccount: exerciserOptionAcct } = await createExerciser(
         provider.connection,
         exerciser,
         mintAuthority,
         quoteToken,
-        new anchor.BN(100).mul(quoteAmountPerContract).muln(2).toNumber(),
-        optionMintAccount.publicKey,
-        underlyingToken.publicKey
+        new anchor.BN(100)
+          .mul(optionMarket.quoteAmountPerContract)
+          .muln(2)
+          .toNumber(),
+        optionMarket.optionMint,
+        optionMarket.underlyingAssetMint
       ));
 
       // Transfer a options to the exerciser
-      optionToken = new Token(
-        provider.connection,
-        optionMintAccount.publicKey,
-        TOKEN_PROGRAM_ID,
-        payer
-      );
       await optionToken.transfer(
         minterOptionAcct.publicKey,
         exerciserOptionAcct.publicKey,
@@ -240,7 +152,7 @@ describe("closePostExpiration", () => {
       it("should burn the WriteToken and transfer the underlying", async () => {
         const writerToken = new Token(
           provider.connection,
-          writerTokenMintAccount.publicKey,
+          optionMarket.writerTokenMint,
           TOKEN_PROGRAM_ID,
           payer
         );
@@ -253,14 +165,14 @@ describe("closePostExpiration", () => {
             program,
             minter,
             size,
-            optionMarketKey,
-            writerTokenMintAccount.publicKey,
+            optionMarket.key,
+            optionMarket.writerTokenMint,
             minterWriterAcct.publicKey,
-            underlyingAssetPoolAccount.publicKey,
+            optionMarket.underlyingAssetPool,
             minterUnderlyingAccount.publicKey
           );
         } catch (err) {
-          console.error(err.toString());
+          console.error((err as Error).toString());
           throw err;
         }
         const writerMintAfter = await writerToken.getMintInfo();
@@ -298,8 +210,8 @@ describe("closePostExpiration", () => {
             program,
             minter,
             size,
-            optionMarketKey,
-            writerTokenMintAccount.publicKey,
+            optionMarket.key,
+            optionMarket.writerTokenMint,
             minterWriterAcct.publicKey,
             badUnderlyingPool.publicKey,
             minterUnderlyingAccount.publicKey
@@ -308,7 +220,7 @@ describe("closePostExpiration", () => {
         } catch (err) {
           const errorMsg =
             "Underlying pool account does not match the value on the OptionMarket";
-          assert.equal(err.toString(), errorMsg);
+          assert.equal((err as Error).toString(), errorMsg);
         }
       });
     });
@@ -328,17 +240,17 @@ describe("closePostExpiration", () => {
             program,
             minter,
             size,
-            optionMarketKey,
+            optionMarket.key,
             badWriterMint.publicKey,
             minterWriterAcct.publicKey,
-            underlyingAssetPoolAccount.publicKey,
+            optionMarket.underlyingAssetPool,
             minterUnderlyingAccount.publicKey
           );
           assert.ok(false);
         } catch (err) {
           const errorMsg =
             "WriterToken mint does not match the value on the OptionMarket";
-          assert.equal(err.toString(), errorMsg);
+          assert.equal((err as Error).toString(), errorMsg);
         }
       });
     });
@@ -359,17 +271,17 @@ describe("closePostExpiration", () => {
             program,
             minter,
             size,
-            optionMarketKey,
-            writerTokenMintAccount.publicKey,
+            optionMarket.key,
+            optionMarket.writerTokenMint,
             minterWriterAcct.publicKey,
-            underlyingAssetPoolAccount.publicKey,
+            optionMarket.underlyingAssetPool,
             badUnderlyingDest.publicKey
           );
           assert.ok(false);
         } catch (err) {
           const errorMsg =
             "Underlying destination mint must match underlying asset mint address";
-          assert.equal(err.toString(), errorMsg);
+          assert.equal((err as Error).toString(), errorMsg);
         }
       });
     });
@@ -381,23 +293,21 @@ describe("closePostExpiration", () => {
         quoteToken,
         underlyingToken,
         underlyingAmountPerContract,
-        quoteAmountPerContract,
-        expiration,
-        optionMarketKey,
-        bumpSeed,
-        mintFeeKey,
-        exerciseFeeKey,
-        optionMintAccount,
-        writerTokenMintAccount,
-        underlyingAssetPoolAccount,
-        quoteAssetPoolAccount,
+        optionMarket,
+        optionToken,
         remainingAccounts,
         instructions,
       } = await initSetup(provider, payer, mintAuthority, program, {
         // set expiration to 2 seconds from now
         expiration: new anchor.BN(new Date().getTime() / 1000 + 600),
       }));
-      await initOptionMarket();
+      await initOptionMarket(
+        program,
+        payer,
+        optionMarket,
+        remainingAccounts,
+        instructions
+      );
       // Create a new minter
       ({
         optionAccount: minterOptionAcct,
@@ -408,41 +318,39 @@ describe("closePostExpiration", () => {
         minter,
         mintAuthority,
         underlyingToken,
-        new anchor.BN(100).mul(underlyingAmountPerContract).muln(2).toNumber(),
-        optionMintAccount.publicKey,
-        writerTokenMintAccount.publicKey,
+        new anchor.BN(100)
+          .mul(optionMarket.underlyingAmountPerContract)
+          .muln(2)
+          .toNumber(),
+        optionMarket.optionMint,
+        optionMarket.writerTokenMint,
         quoteToken
       ));
       // Mint a bunch of contracts to the minter
       await mintOptionsTx(
+        program,
         minter,
         minterOptionAcct,
         minterWriterAcct,
         minterUnderlyingAccount,
-        { size: new anchor.BN(100) }
+        new anchor.BN(100),
+        optionMarket
       );
       // Create an exerciser
-      ({
-        optionAccount: exerciserOptionAcct,
-        quoteAccount: exerciserQuoteAcct,
-        underlyingAccount: exerciserUnderlyingAcct,
-      } = await createExerciser(
+      ({ optionAccount: exerciserOptionAcct } = await createExerciser(
         provider.connection,
         exerciser,
         mintAuthority,
         quoteToken,
-        new anchor.BN(100).mul(quoteAmountPerContract).muln(2).toNumber(),
-        optionMintAccount.publicKey,
-        underlyingToken.publicKey
+        new anchor.BN(100)
+          .mul(optionMarket.quoteAmountPerContract)
+          .muln(2)
+          .toNumber(),
+        optionMarket.optionMint,
+        optionMarket.underlyingAssetMint
       ));
 
       // Transfer a options to the exerciser
-      optionToken = new Token(
-        provider.connection,
-        optionMintAccount.publicKey,
-        TOKEN_PROGRAM_ID,
-        payer
-      );
       await optionToken.transfer(
         minterOptionAcct.publicKey,
         exerciserOptionAcct.publicKey,
@@ -461,16 +369,16 @@ describe("closePostExpiration", () => {
           program,
           minter,
           size,
-          optionMarketKey,
-          writerTokenMintAccount.publicKey,
+          optionMarket.key,
+          optionMarket.writerTokenMint,
           minterWriterAcct.publicKey,
-          underlyingAssetPoolAccount.publicKey,
+          optionMarket.underlyingAssetPool,
           minterUnderlyingAccount.publicKey
         );
         assert.ok(false);
       } catch (err) {
         const errorMsg = "OptionMarket has not expired, can't close";
-        assert.equal(err.toString(), errorMsg);
+        assert.equal((err as Error).toString(), errorMsg);
       }
     });
   });

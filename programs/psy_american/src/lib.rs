@@ -33,8 +33,8 @@ pub mod psy_american {
 
         let fee_accounts = validate_fee_accounts(
             &ctx.remaining_accounts, 
-            &ctx.accounts.underlying_asset_mint.key,
-            &ctx.accounts.quote_asset_mint.key,
+            &ctx.accounts.underlying_asset_mint.key(),
+            &ctx.accounts.quote_asset_mint.key(),
             underlying_amount_per_contract,
             quote_amount_per_contract
         )?;
@@ -43,8 +43,8 @@ pub mod psy_american {
         let option_market = &mut ctx.accounts.option_market;
         option_market.option_mint = *ctx.accounts.option_mint.to_account_info().key;
         option_market.writer_token_mint = *ctx.accounts.writer_token_mint.to_account_info().key;
-        option_market.underlying_asset_mint = *ctx.accounts.underlying_asset_mint.key;
-        option_market.quote_asset_mint = *ctx.accounts.quote_asset_mint.key;
+        option_market.underlying_asset_mint = *ctx.accounts.underlying_asset_mint.to_account_info().key;
+        option_market.quote_asset_mint = *ctx.accounts.quote_asset_mint.to_account_info().key;
         option_market.underlying_amount_per_contract = underlying_amount_per_contract;
         option_market.quote_amount_per_contract = quote_amount_per_contract;
         option_market.expiration_unix_timestamp = expiration_unix_timestamp;
@@ -530,17 +530,45 @@ fn validate_exercise_fee_acct<'c, 'info>(
 pub struct InitializeMarket<'info> {
     #[account(mut, signer)]
     authority: AccountInfo<'info>,
-    pub underlying_asset_mint: AccountInfo<'info>,
-    pub quote_asset_mint: AccountInfo<'info>,
+    pub underlying_asset_mint: CpiAccount<'info, Mint>,
+    pub quote_asset_mint: CpiAccount<'info, Mint>,
+    #[account(init,
+        seeds = [&option_market.key().to_bytes()[..], b"optionToken"],
+        bump,
+        payer = authority,
+        mint::decimals = 0,
+        mint::authority = option_market
+    )]
     pub option_mint: CpiAccount<'info, Mint>,
+    #[account(init,
+        seeds = [&option_market.key().to_bytes()[..], b"writerToken"],
+        bump,
+        payer = authority,
+        mint::decimals = 0,
+        mint::authority = option_market
+    )]
     pub writer_token_mint: CpiAccount<'info, Mint>,
+    #[account(init,
+        seeds = [&option_market.key().to_bytes()[..], b"quoteAssetPool"],
+        bump,
+        payer = authority,    
+        token::mint = quote_asset_mint,
+        token::authority = option_market,
+    )]
     pub quote_asset_pool: CpiAccount<'info, TokenAccount>,
+    #[account(init,
+        seeds = [&option_market.key().to_bytes()[..], b"underlyingAssetPool"],
+        bump,
+        payer = authority,    
+        token::mint = underlying_asset_mint,
+        token::authority = option_market,
+    )]
     pub underlying_asset_pool: CpiAccount<'info, TokenAccount>,
     #[account(
         init,
         seeds = [
-            underlying_asset_mint.key.as_ref(),
-            quote_asset_mint.key.as_ref(),
+            underlying_asset_mint.key().as_ref(),
+            quote_asset_mint.key().as_ref(),
             &underlying_amount_per_contract.to_le_bytes(),
             &quote_amount_per_contract.to_le_bytes(),
             &expiration_unix_timestamp.to_le_bytes()
@@ -570,7 +598,7 @@ impl<'info> InitializeMarket<'info> {
             return Err(errors::ErrorCode::OptionMarketMustOwnQuoteAssetPool.into());
         }
         // check that underlying and quote are not the same asset
-        if ctx.accounts.underlying_asset_mint.key == ctx.accounts.quote_asset_mint.key {
+        if ctx.accounts.underlying_asset_mint.to_account_info().key == ctx.accounts.quote_asset_mint.to_account_info().key {
             return Err(errors::ErrorCode::QuoteAndUnderlyingAssetMustDiffer.into())
         }
         Ok(())
