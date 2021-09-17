@@ -24,8 +24,10 @@ pub mod psy_american {
         expiration_unix_timestamp: i64,
         bump_seed: u8
     ) -> ProgramResult {
-        // TODO: (nice to have) Validate the expiration is in the future
-
+        // (nice to have) Validate the expiration is in the future
+        if expiration_unix_timestamp < ctx.accounts.clock.unix_timestamp {
+            return Err(errors::ErrorCode::ExpirationIsInThePast.into())
+        }
         // check that underlying_amount_per_contract and quote_amount_per_contract are not 0
         if underlying_amount_per_contract <= 0 || quote_amount_per_contract <= 0 {
             return Err(errors::ErrorCode::QuoteOrUnderlyingAmountCannotBe0.into())
@@ -576,6 +578,7 @@ pub struct InitializeMarket<'info> {
     associated_token_program: AccountInfo<'info>,
     rent: Sysvar<'info, Rent>,
     system_program: AccountInfo<'info>,
+    clock: Sysvar<'info, Clock>,
 }
 impl<'info> InitializeMarket<'info> {
     fn accounts(ctx: &Context<InitializeMarket<'info>>) -> Result<(), ProgramError> {

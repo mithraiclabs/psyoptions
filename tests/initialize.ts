@@ -103,6 +103,35 @@ describe("initializeMarket", () => {
       assert.ok(optionTokenMint.mintAuthority?.equals(optionMarket.key));
     });
   });
+  describe("Expiration is in the past", () => {
+    beforeEach(async () => {
+      ({
+        quoteToken,
+        underlyingToken,
+        optionToken,
+        optionMarket,
+        remainingAccounts,
+        instructions,
+      } = await initSetup(provider, payer, mintAuthority, program, {
+        expiration: new anchor.BN(new Date().getTime() / 1000 - 3600),
+      }));
+    });
+    it("should error", async () => {
+      try {
+        await initOptionMarket(
+          program,
+          payer,
+          optionMarket,
+          remainingAccounts,
+          instructions
+        );
+        assert.ok(false);
+      } catch (err) {
+        const errMsg = "Expiration must be in the future";
+        assert.equal((err as Error).toString(), errMsg);
+      }
+    });
+  });
   describe("underlying asset amount <= 0", () => {
     beforeEach(async () => {
       underlyingAmountPerContract = new anchor.BN(0);
