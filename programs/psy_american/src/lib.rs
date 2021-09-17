@@ -24,8 +24,10 @@ pub mod psy_american {
         expiration_unix_timestamp: i64,
         bump_seed: u8
     ) -> ProgramResult {
-        // TODO: (nice to have) Validate the expiration is in the future
-
+        // (nice to have) Validate the expiration is in the future
+        if expiration_unix_timestamp < ctx.accounts.clock.unix_timestamp {
+            return Err(errors::ErrorCode::ExpirationIsInThePast.into())
+        }
         // check that underlying_amount_per_contract and quote_amount_per_contract are not 0
         if underlying_amount_per_contract <= 0 || quote_amount_per_contract <= 0 {
             return Err(errors::ErrorCode::QuoteOrUnderlyingAmountCannotBe0.into())
@@ -52,6 +54,7 @@ pub mod psy_american {
         option_market.quote_asset_pool = *ctx.accounts.quote_asset_pool.to_account_info().key;
         option_market.mint_fee_account = fee_accounts.mint_fee_key;
         option_market.exercise_fee_account = fee_accounts.exercise_fee_key;
+        option_market.expired = false;
         option_market.bump_seed = bump_seed;
 
         Ok(())
@@ -343,11 +346,8 @@ pub mod psy_american {
         Ok(())
     }
 
+    #[access_control(InitSerumMarket::accounts(&ctx))]
     pub fn init_serum_market(ctx: Context<InitSerumMarket>, _market_space: u64, vault_signer_nonce: u64, coin_lot_size: u64, pc_lot_size: u64, pc_dust_threshold: u64) -> ProgramResult {
-        // TODO: Validate that the OptionMarket does not have a serum_market on it
-
-        // TODO: Validate the coin_mint is the same as the OptionMarket.option_mint
-
         let ix = init_serum_market_instruction(
             ctx.accounts.serum_market.key,
             ctx.accounts.dex_program.key,
@@ -380,10 +380,6 @@ pub mod psy_american {
             ctx.accounts.event_queue.to_account_info(),
             ctx.accounts.rent.to_account_info(),
         ])?;
-
-        // Set the OptionMarket serum_market
-        let option_market = &mut ctx.accounts.option_market;
-        option_market.serum_market = *ctx.accounts.serum_market.key;
 
         Ok(())
     }
@@ -582,6 +578,7 @@ pub struct InitializeMarket<'info> {
     associated_token_program: AccountInfo<'info>,
     rent: Sysvar<'info, Rent>,
     system_program: AccountInfo<'info>,
+    clock: Sysvar<'info, Clock>,
 }
 impl<'info> InitializeMarket<'info> {
     fn accounts(ctx: &Context<InitializeMarket<'info>>) -> Result<(), ProgramError> {
@@ -928,6 +925,15 @@ pub struct InitSerumMarket<'info> {
     pub vault_signer: AccountInfo<'info>,
     pub market_authority: AccountInfo<'info>,
 }
+impl<'info> InitSerumMarket<'info> {
+    // Validate the coin_mint is the same as the OptionMarket.option_mint
+    pub fn accounts(ctx: &Context<InitSerumMarket>) -> ProgramResult {
+        if ctx.accounts.option_mint.key() != ctx.accounts.option_market.option_mint {
+            return Err(errors::ErrorCode::CoinMintIsNotOptionMint.into())
+        }
+        Ok(())
+    }
+}
 
 #[account]
 #[derive(Default)]
@@ -959,8 +965,9 @@ pub struct OptionMarket {
     /// The SPL Token account (from the Associated Token Program) that collects
     /// fees on exercise.
     pub exercise_fee_account: Pubkey,
-    /// A permissioned Serum market for this OptionMarket
-    pub serum_market: Pubkey,
+    /// A flag to set and use to when running a memcmp query. 
+    /// This will be set when Serum markets are closed and expiration is validated
+    pub expired: bool,
     /// Bump seed for program derived addresses
     pub bump_seed: u8,
 }

@@ -505,6 +505,7 @@ export const initSetup = async (
     underlyingAmountPerContract,
     quoteAmountPerContract,
     expirationUnixTimestamp: expiration,
+    expired: false,
     bumpSeed,
   };
 
@@ -563,6 +564,7 @@ export const initOptionMarket = async (
         associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
         rent: SYSVAR_RENT_PUBKEY,
         systemProgram: SystemProgram.programId,
+        clock: SYSVAR_CLOCK_PUBKEY,
       },
       remainingAccounts,
       signers: [payer],

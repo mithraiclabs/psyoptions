@@ -1,26 +1,10 @@
 import * as anchor from "@project-serum/anchor";
-import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  Token,
-  TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
-import {
-  AccountInfo,
-  AccountMeta,
-  Keypair,
-  PublicKey,
-  SystemProgram,
-  SYSVAR_RENT_PUBKEY,
-  TransactionInstruction,
-} from "@solana/web3.js";
+import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { AccountMeta, TransactionInstruction } from "@solana/web3.js";
 import assert from "assert";
-import { getOrAddAssociatedTokenAccountTx } from "../packages/psyoptions-ts/src";
 
-import { feeAmount, FEE_OWNER_KEY } from "../packages/psyoptions-ts/src/fees";
 import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
 import {
-  createUnderlyingAndQuoteMints,
-  initNewTokenAccount,
   initNewTokenMint,
   initOptionMarket,
   initSetup,
@@ -40,14 +24,6 @@ describe("initializeMarket", () => {
   let underlyingAmountPerContract: anchor.BN;
   let quoteAmountPerContract: anchor.BN;
   let expiration: anchor.BN;
-  let optionMarketKey: PublicKey;
-  let bumpSeed: number;
-  let mintFeeKey: PublicKey | null;
-  let exerciseFeeKey: PublicKey;
-  let optionMintKey: PublicKey;
-  let writerTokenMintKey: PublicKey;
-  let underlyingAssetPoolKey: PublicKey;
-  let quoteAssetPoolKey: PublicKey;
   let optionMarket: OptionMarketV2;
   let remainingAccounts: AccountMeta[] = [];
   let instructions: TransactionInstruction[] = [];
@@ -118,9 +94,42 @@ describe("initializeMarket", () => {
         onChainOptionMarket.exerciseFeeAccount?.toString(),
         optionMarket.exerciseFeeAccount?.toString()
       );
+      assert.equal(
+        onChainOptionMarket.expired?.toString(),
+        optionMarket.expired?.toString()
+      );
       // Fetch the OptionToken Mint info
       const optionTokenMint = await optionToken.getMintInfo();
       assert.ok(optionTokenMint.mintAuthority?.equals(optionMarket.key));
+    });
+  });
+  describe("Expiration is in the past", () => {
+    beforeEach(async () => {
+      ({
+        quoteToken,
+        underlyingToken,
+        optionToken,
+        optionMarket,
+        remainingAccounts,
+        instructions,
+      } = await initSetup(provider, payer, mintAuthority, program, {
+        expiration: new anchor.BN(new Date().getTime() / 1000 - 3600),
+      }));
+    });
+    it("should error", async () => {
+      try {
+        await initOptionMarket(
+          program,
+          payer,
+          optionMarket,
+          remainingAccounts,
+          instructions
+        );
+        assert.ok(false);
+      } catch (err) {
+        const errMsg = "Expiration must be in the future";
+        assert.equal((err as Error).toString(), errMsg);
+      }
     });
   });
   describe("underlying asset amount <= 0", () => {
