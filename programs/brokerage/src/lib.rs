@@ -2,6 +2,8 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
 use psy_american::{OptionMarket, ExerciseOption};
 
+declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnB");
+
 #[program]
 pub mod brokerage {
     use super::*;
@@ -53,7 +55,7 @@ pub struct Initialize<'info> {
     #[account(mut, signer)]
     pub authority: AccountInfo<'info>,
     #[account(mut)]
-    pub option_source: CpiAccount<'info, TokenAccount>,
+    pub option_source: Account<'info, TokenAccount>,
     pub option_mint: AccountInfo<'info>,
     #[account(init,
         seeds = [&option_mint.key().to_bytes()[..], b"vault"],
@@ -62,7 +64,7 @@ pub struct Initialize<'info> {
         token::mint = option_mint,
         token::authority = vault_authority,
     )]
-    pub vault: CpiAccount<'info, TokenAccount>,
+    pub vault: Account<'info, TokenAccount>,
     pub vault_authority: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
     rent: Sysvar<'info, Rent>,
@@ -79,17 +81,17 @@ pub struct Exercise<'info> {
     // Exercise CPI accounts
     option_market: CpiAccount<'info, OptionMarket>,
     #[account(mut)]
-    option_mint: CpiAccount<'info, Mint>,
+    option_mint: Account<'info, Mint>,
     #[account(mut)]
-    exerciser_option_token_src: CpiAccount<'info, TokenAccount>,
+    exerciser_option_token_src: Account<'info, TokenAccount>,
     #[account(mut)]
-    underlying_asset_pool: CpiAccount<'info, TokenAccount>,
+    underlying_asset_pool: Account<'info, TokenAccount>,
     #[account(mut)]
-    underlying_asset_dest: CpiAccount<'info, TokenAccount>,
+    underlying_asset_dest: Account<'info, TokenAccount>,
     #[account(mut)]
-    quote_asset_pool: CpiAccount<'info, TokenAccount>,
+    quote_asset_pool: Account<'info, TokenAccount>,
     #[account(mut)]
-    quote_asset_src: CpiAccount<'info, TokenAccount>,
+    quote_asset_src: Account<'info, TokenAccount>,
     #[account(mut)]
     fee_owner: AccountInfo<'info>,
 
