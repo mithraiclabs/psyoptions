@@ -1,7 +1,7 @@
 import * as anchor from "@project-serum/anchor";
 import assert from "assert";
 import { MARKET_STATE_LAYOUT_V3 } from "@project-serum/serum";
-import { Keypair } from "@solana/web3.js";
+import { Keypair, PublicKey } from "@solana/web3.js";
 import { OptionMarketV2 } from "../../packages/psyoptions-ts/src/types";
 import {
   initNewTokenMint,
@@ -17,6 +17,7 @@ import {
 describe("permissioned-markets", () => {
   // Anchor client setup.
   const provider = anchor.Provider.env();
+  const payer = anchor.web3.Keypair.generate();
   anchor.setProvider(provider);
   const program = anchor.workspace.PsyAmerican as anchor.Program;
   let usdcMint: Keypair;
@@ -24,6 +25,10 @@ describe("permissioned-markets", () => {
   let optionMarket: OptionMarketV2;
   const mintAuthority = anchor.web3.Keypair.generate();
   before(async () => {
+    await provider.connection.confirmTransaction(
+      await provider.connection.requestAirdrop(payer.publicKey, 10_000_000_000),
+      "confirmed"
+    );
     const { mintAccount } = await initNewTokenMint(
       provider.connection,
       (provider.wallet as anchor.Wallet).payer.publicKey,
@@ -46,6 +51,7 @@ describe("permissioned-markets", () => {
         program
       );
       optionMarket = newOptionMarket;
+      console.log("** optionMarket", optionMarket);
       await initOptionMarket(
         program,
         (provider.wallet as anchor.Wallet).payer,
@@ -85,6 +91,35 @@ describe("permissioned-markets", () => {
         ],
       });
       assert.equal(accounts.length, 1);
+    });
+    describe("Coin mint is not the Option mint", () => {
+      beforeEach(async () => {
+        const { mintAccount } = await initNewTokenMint(
+          provider.connection,
+          payer.publicKey,
+          payer
+        );
+        optionMarket.optionMint = mintAccount.publicKey;
+      });
+
+      it("should error", async () => {
+        try {
+          await initSerum(
+            provider,
+            program,
+            optionMarket,
+            usdcMint.publicKey,
+            eventQueue.publicKey,
+            bids.publicKey,
+            asks.publicKey,
+            DEX_PID
+          );
+          assert.ok(false);
+        } catch (err) {
+          const errMsg = "Coin mint must match option mint";
+          assert.equal((err as Error).toString(), errMsg);
+        }
+      });
     });
   });
 });

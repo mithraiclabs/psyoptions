@@ -344,11 +344,8 @@ pub mod psy_american {
         Ok(())
     }
 
+    #[access_control(InitSerumMarket::accounts(&ctx))]
     pub fn init_serum_market(ctx: Context<InitSerumMarket>, _market_space: u64, vault_signer_nonce: u64, coin_lot_size: u64, pc_lot_size: u64, pc_dust_threshold: u64) -> ProgramResult {
-        // TODO: Validate that the OptionMarket does not have a serum_market on it
-
-        // TODO: Validate the coin_mint is the same as the OptionMarket.option_mint
-
         let ix = init_serum_market_instruction(
             ctx.accounts.serum_market.key,
             ctx.accounts.dex_program.key,
@@ -924,6 +921,15 @@ pub struct InitSerumMarket<'info> {
     // Is it possible to add a seeds check for DEX PDA?
     pub vault_signer: AccountInfo<'info>,
     pub market_authority: AccountInfo<'info>,
+}
+impl<'info> InitSerumMarket<'info> {
+    // Validate the coin_mint is the same as the OptionMarket.option_mint
+    pub fn accounts(ctx: &Context<InitSerumMarket>) -> ProgramResult {
+        if ctx.accounts.option_mint.key() != ctx.accounts.option_market.option_mint {
+            return Err(errors::ErrorCode::CoinMintIsNotOptionMint.into())
+        }
+        Ok(())
+    }
 }
 
 #[account]

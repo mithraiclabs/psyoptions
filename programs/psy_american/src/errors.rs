@@ -50,4 +50,6 @@ pub enum ErrorCode {
   NotEnoughQuoteAssetsInPool,
   #[msg("Invalid auth token provided")]
   InvalidAuth,
+  #[msg("Coin mint must match option mint")]
+  CoinMintIsNotOptionMint,
 }

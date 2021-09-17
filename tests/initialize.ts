@@ -1,26 +1,10 @@
 import * as anchor from "@project-serum/anchor";
-import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  Token,
-  TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
-import {
-  AccountInfo,
-  AccountMeta,
-  Keypair,
-  PublicKey,
-  SystemProgram,
-  SYSVAR_RENT_PUBKEY,
-  TransactionInstruction,
-} from "@solana/web3.js";
+import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { AccountMeta, TransactionInstruction } from "@solana/web3.js";
 import assert from "assert";
-import { getOrAddAssociatedTokenAccountTx } from "../packages/psyoptions-ts/src";
 
-import { feeAmount, FEE_OWNER_KEY } from "../packages/psyoptions-ts/src/fees";
 import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
 import {
-  createUnderlyingAndQuoteMints,
-  initNewTokenAccount,
   initNewTokenMint,
   initOptionMarket,
   initSetup,
@@ -40,14 +24,6 @@ describe("initializeMarket", () => {
   let underlyingAmountPerContract: anchor.BN;
   let quoteAmountPerContract: anchor.BN;
   let expiration: anchor.BN;
-  let optionMarketKey: PublicKey;
-  let bumpSeed: number;
-  let mintFeeKey: PublicKey | null;
-  let exerciseFeeKey: PublicKey;
-  let optionMintKey: PublicKey;
-  let writerTokenMintKey: PublicKey;
-  let underlyingAssetPoolKey: PublicKey;
-  let quoteAssetPoolKey: PublicKey;
   let optionMarket: OptionMarketV2;
   let remainingAccounts: AccountMeta[] = [];
   let instructions: TransactionInstruction[] = [];
