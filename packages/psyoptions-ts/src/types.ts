@@ -24,6 +24,6 @@ export type OptionMarketV2 = {
   underlyingAmountPerContract: anchor.BN;
   quoteAmountPerContract: anchor.BN;
   expirationUnixTimestamp: anchor.BN;
-  serumMarket?: PublicKey;
+  expired: boolean;
   bumpSeed: number;
 };

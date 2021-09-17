@@ -118,6 +118,10 @@ describe("initializeMarket", () => {
         onChainOptionMarket.exerciseFeeAccount?.toString(),
         optionMarket.exerciseFeeAccount?.toString()
       );
+      assert.equal(
+        onChainOptionMarket.expired?.toString(),
+        optionMarket.expired?.toString()
+      );
       // Fetch the OptionToken Mint info
       const optionTokenMint = await optionToken.getMintInfo();
       assert.ok(optionTokenMint.mintAuthority?.equals(optionMarket.key));

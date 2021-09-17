@@ -1,13 +1,7 @@
 import * as anchor from "@project-serum/anchor";
 import assert from "assert";
 import { MARKET_STATE_LAYOUT_V3 } from "@project-serum/serum";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import {
-  Keypair,
-  PublicKey,
-  SystemProgram,
-  SYSVAR_RENT_PUBKEY,
-} from "@solana/web3.js";
+import { Keypair } from "@solana/web3.js";
 import { OptionMarketV2 } from "../../packages/psyoptions-ts/src/types";
 import {
   initNewTokenMint,
@@ -17,7 +11,6 @@ import {
 import {
   createFirstSetOfAccounts,
   DEX_PID,
-  getVaultOwnerAndNonce,
   initSerum,
 } from "../../utils/serum";
 
@@ -26,15 +19,7 @@ describe("permissioned-markets", () => {
   const provider = anchor.Provider.env();
   anchor.setProvider(provider);
   const program = anchor.workspace.PsyAmerican as anchor.Program;
-  // Token client.
-  let usdcClient;
   let usdcMint: Keypair;
-
-  // Global DEX accounts and clients shared across all tests.
-  let marketProxy, tokenAccount, usdcAccount;
-  let openOrders, openOrdersBump, openOrdersInitAuthority, openOrdersBumpinit;
-  let usdcPosted;
-  let referralTokenAddress;
   // Global PsyOptions accounts
   let optionMarket: OptionMarketV2;
   const mintAuthority = anchor.web3.Keypair.generate();
@@ -100,14 +85,6 @@ describe("permissioned-markets", () => {
         ],
       });
       assert.equal(accounts.length, 1);
-      // Validate the OptionMarket updates with the Serum Market
-      const optionMarketAcct = (await program.account.optionMarket.fetch(
-        optionMarket.key
-      )) as OptionMarketV2;
-      assert.equal(
-        optionMarketAcct.serumMarket?.toString(),
-        serumMarketKey.toString()
-      );
     });
   });
 });

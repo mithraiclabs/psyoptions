@@ -52,6 +52,7 @@ pub mod psy_american {
         option_market.quote_asset_pool = *ctx.accounts.quote_asset_pool.to_account_info().key;
         option_market.mint_fee_account = fee_accounts.mint_fee_key;
         option_market.exercise_fee_account = fee_accounts.exercise_fee_key;
+        option_market.expired = false;
         option_market.bump_seed = bump_seed;
 
         Ok(())
@@ -380,10 +381,6 @@ pub mod psy_american {
             ctx.accounts.event_queue.to_account_info(),
             ctx.accounts.rent.to_account_info(),
         ])?;
-
-        // Set the OptionMarket serum_market
-        let option_market = &mut ctx.accounts.option_market;
-        option_market.serum_market = *ctx.accounts.serum_market.key;
 
         Ok(())
     }
@@ -959,8 +956,9 @@ pub struct OptionMarket {
     /// The SPL Token account (from the Associated Token Program) that collects
     /// fees on exercise.
     pub exercise_fee_account: Pubkey,
-    /// A permissioned Serum market for this OptionMarket
-    pub serum_market: Pubkey,
+    /// A flag to set and use to when running a memcmp query. 
+    /// This will be set when Serum markets are closed and expiration is validated
+    pub expired: bool,
     /// Bump seed for program derived addresses
     pub bump_seed: u8,
 }

@@ -505,6 +505,7 @@ export const initSetup = async (
     underlyingAmountPerContract,
     quoteAmountPerContract,
     expirationUnixTimestamp: expiration,
+    expired: false,
     bumpSeed,
   };
 
