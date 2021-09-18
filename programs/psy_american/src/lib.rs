@@ -605,30 +605,30 @@ impl<'info> InitializeMarket<'info> {
 #[derive(Accounts)]
 pub struct MintOption<'info> {
     #[account(mut, signer)]
-    user_authority: AccountInfo<'info>,
-    underlying_asset_mint: AccountInfo<'info>,
+    pub user_authority: AccountInfo<'info>,
+    pub underlying_asset_mint: AccountInfo<'info>,
     #[account(mut)]
-    underlying_asset_pool: CpiAccount<'info, TokenAccount>,
+    pub underlying_asset_pool: CpiAccount<'info, TokenAccount>,
     #[account(mut)]
-    underlying_asset_src: CpiAccount<'info, TokenAccount>,
+    pub underlying_asset_src: CpiAccount<'info, TokenAccount>,
     #[account(mut)]
-    option_mint: CpiAccount<'info, Mint>,
+    pub option_mint: CpiAccount<'info, Mint>,
     #[account(mut)]
-    minted_option_dest: CpiAccount<'info, TokenAccount>,
+    pub minted_option_dest: CpiAccount<'info, TokenAccount>,
     #[account(mut)]
-    writer_token_mint: CpiAccount<'info, Mint>,
+    pub writer_token_mint: CpiAccount<'info, Mint>,
     #[account(mut)]
-    minted_writer_token_dest: CpiAccount<'info, TokenAccount>,
-    option_market: ProgramAccount<'info, OptionMarket>,
+    pub minted_writer_token_dest: CpiAccount<'info, TokenAccount>,
+    pub option_market: ProgramAccount<'info, OptionMarket>,
     #[account(mut)]
-    fee_owner: AccountInfo<'info>,
+    pub fee_owner: AccountInfo<'info>,
 
 
-    token_program: AccountInfo<'info>,
-    associated_token_program: AccountInfo<'info>,
-    clock: Sysvar<'info, Clock>,
-    rent: Sysvar<'info, Rent>,
-    system_program: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+    pub associated_token_program: AccountInfo<'info>,
+    pub clock: Sysvar<'info, Clock>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
 }
 impl<'info> MintOption<'info> {
     fn accounts(ctx: &Context<MintOption<'info>>) -> Result<(), ProgramError> {
