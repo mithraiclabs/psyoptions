@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
+use anchor_spl::token::{self, Mint, TokenAccount, Transfer};
 use psy_american::{OptionMarket, ExerciseOption};
+
+declare_id!("Fk8QcXcNpf5chR5RcviUjgaLVtULgvovGXUXGPMwLioF");
 
 #[program]
 pub mod brokerage {
@@ -18,11 +20,12 @@ pub mod brokerage {
     }
 
     pub fn exercise<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, Exercise<'info>>, vault_authority_bump: u8) -> ProgramResult {
+        msg!("before CPI");
         let cpi_program = ctx.accounts.psy_american_program.clone();
         let cpi_accounts = ExerciseOption {
             user_authority: ctx.accounts.authority.to_account_info(),
             option_authority: ctx.accounts.vault_authority.to_account_info(),
-            option_market: ctx.accounts.option_market.clone().into(),
+            option_market: ctx.accounts.option_market.clone(),
             option_mint: ctx.accounts.option_mint.clone(),
             exerciser_option_token_src: ctx.accounts.exerciser_option_token_src.clone(),
             underlying_asset_pool: ctx.accounts.underlying_asset_pool.clone(),
@@ -53,7 +56,7 @@ pub struct Initialize<'info> {
     #[account(mut, signer)]
     pub authority: AccountInfo<'info>,
     #[account(mut)]
-    pub option_source: CpiAccount<'info, TokenAccount>,
+    pub option_source: Box<Account<'info, TokenAccount>>,
     pub option_mint: AccountInfo<'info>,
     #[account(init,
         seeds = [&option_mint.key().to_bytes()[..], b"vault"],
@@ -62,7 +65,7 @@ pub struct Initialize<'info> {
         token::mint = option_mint,
         token::authority = vault_authority,
     )]
-    pub vault: CpiAccount<'info, TokenAccount>,
+    pub vault: Box<Account<'info, TokenAccount>>,
     pub vault_authority: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
     rent: Sysvar<'info, Rent>,
@@ -77,19 +80,19 @@ pub struct Exercise<'info> {
     #[account(mut)]
     pub vault_authority: AccountInfo<'info>,
     // Exercise CPI accounts
-    option_market: CpiAccount<'info, OptionMarket>,
+    option_market: Box<Account<'info, OptionMarket>>,
     #[account(mut)]
-    option_mint: CpiAccount<'info, Mint>,
+    option_mint: Box<Account<'info, Mint>>,
     #[account(mut)]
-    exerciser_option_token_src: CpiAccount<'info, TokenAccount>,
+    exerciser_option_token_src: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    underlying_asset_pool: CpiAccount<'info, TokenAccount>,
+    underlying_asset_pool: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    underlying_asset_dest: CpiAccount<'info, TokenAccount>,
+    underlying_asset_dest: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    quote_asset_pool: CpiAccount<'info, TokenAccount>,
+    quote_asset_pool: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    quote_asset_src: CpiAccount<'info, TokenAccount>,
+    quote_asset_src: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
     fee_owner: AccountInfo<'info>,
 
