@@ -8,10 +8,10 @@ use spl_token::state::Account as SPLTokenAccount;
 use solana_program::{program::invoke, program_error::ProgramError, program_pack::Pack, system_instruction, system_program};
 use serum_dex::instruction::{initialize_market as init_serum_market_instruction};
 use anchor_spl::dex::{
-    Logger, MarketMiddleware, MarketProxy, OpenOrdersPda, ReferralFees,
+    Logger, MarketProxy, OpenOrdersPda, ReferralFees,
 };
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("2EeLomtYKBwWvHmgHvTk9gECo6isXTC9MmbcExdHWmmb");
 
 #[program]
 pub mod psy_american {
@@ -66,7 +66,7 @@ pub mod psy_american {
     pub fn mint_option<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, MintOption<'info>>, size: u64) -> ProgramResult {
         let option_market = &ctx.accounts.option_market;
         let mint_fee_account = validate_mint_fee_acct(
-            &option_market,
+            option_market,
             ctx.remaining_accounts
         )?;
 
@@ -461,7 +461,7 @@ fn validate_fee_accounts<'info>(
 }
 
 fn validate_mint_fee_acct<'c, 'info>(
-    option_market: &ProgramAccount<OptionMarket>,
+    option_market: &Box<anchor_lang::Account<'info, OptionMarket>>,
     remaining_accounts: &'c [AccountInfo<'info>]
 ) -> Result<Option<&'c AccountInfo<'info>>, ProgramError> {
     let account_info_iter = &mut remaining_accounts.iter();
@@ -575,7 +575,7 @@ pub struct InitializeMarket<'info> {
         bump = bump_seed,
         payer = authority,
     )]
-    pub option_market: ProgramAccount<'info, OptionMarket>,
+    pub option_market: Box<Account<'info, OptionMarket>>,
     fee_owner: AccountInfo<'info>,
     token_program: AccountInfo<'info>,
     associated_token_program: AccountInfo<'info>,
@@ -585,6 +585,7 @@ pub struct InitializeMarket<'info> {
 }
 impl<'info> InitializeMarket<'info> {
     fn accounts(ctx: &Context<InitializeMarket<'info>>) -> Result<(), ProgramError> {
+        msg!("checking account access control");
         if ctx.accounts.option_mint.mint_authority.unwrap() != *ctx.accounts.option_market.to_account_info().key {
             return Err(errors::ErrorCode::OptionMarketMustBeMintAuthority.into());
         }
@@ -622,7 +623,7 @@ pub struct MintOption<'info> {
     pub writer_token_mint: Box<Account<'info, Mint>>,
     #[account(mut)]
     pub minted_writer_token_dest: Box<Account<'info, TokenAccount>>,
-    pub option_market: ProgramAccount<'info, OptionMarket>,
+    pub option_market: Box<Account<'info, OptionMarket>>,
     #[account(mut)]
     pub fee_owner: AccountInfo<'info>,
 
@@ -745,7 +746,7 @@ impl<'info> ExerciseOption<'info> {
 pub struct ClosePostExp<'info> {
     #[account(signer)]
     user_authority: AccountInfo<'info>,
-    option_market: ProgramAccount<'info, OptionMarket>,
+    option_market: Box<Account<'info, OptionMarket>>,
     #[account(mut)]
     writer_token_mint: Box<Account<'info, Mint>>,
     #[account(mut)]
@@ -791,7 +792,7 @@ impl<'info> ClosePostExp<'info> {
 pub struct CloseOptionPosition<'info> {
     #[account(signer)]
     user_authority: AccountInfo<'info>,
-    option_market: ProgramAccount<'info, OptionMarket>,
+    option_market: Box<Account<'info, OptionMarket>>,
     #[account(mut)]
     writer_token_mint: Box<Account<'info, Mint>>,
     #[account(mut)]
@@ -833,7 +834,7 @@ impl<'info> CloseOptionPosition<'info> {
 pub struct BurnWriterForQuote<'info> {
     #[account(signer)]
     user_authority: AccountInfo<'info>,
-    option_market: ProgramAccount<'info, OptionMarket>,
+    option_market: Box<Account<'info, OptionMarket>>,
     #[account(mut)]
     writer_token_mint: Box<Account<'info, Mint>>,
     #[account(mut)]
@@ -877,7 +878,7 @@ pub struct InitSerumMarket<'info> {
     pub user_authority: AccountInfo<'info>,
     // General market accounts
     #[account(mut)]
-    pub option_market: ProgramAccount<'info, OptionMarket>,
+    pub option_market: Box<Account<'info, OptionMarket>>,
     #[account(init,
         seeds = [&option_market.key().to_bytes()[..], b"serumMarket"],
         bump,
