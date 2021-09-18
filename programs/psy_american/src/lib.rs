@@ -187,7 +187,8 @@ pub mod psy_american {
         let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
         let underlying_transfer_amount = option_market.underlying_amount_per_contract.checked_mul(size).unwrap();
         token::transfer(cpi_ctx, underlying_transfer_amount)?;
-    
+
+        msg!("before validate exercise fee accounts");
         // Transfer an exercise fee
         let exercise_fee_account = validate_exercise_fee_acct(&ctx.accounts.option_market, ctx.remaining_accounts)?;
         let exercise_fee_amount = fees::fee_amount(option_market.quote_amount_per_contract);
@@ -489,7 +490,7 @@ fn validate_mint_fee_acct<'c, 'info>(
 }
 
 fn validate_exercise_fee_acct<'c, 'info>(
-    option_market: &ProgramAccount<OptionMarket>,
+    option_market: &Box<anchor_lang::Account<'info, OptionMarket>>,
     remaining_accounts: &'c [AccountInfo<'info>]
 ) -> Result<Option<&'c AccountInfo<'info>>, ProgramError> {
     let account_info_iter = &mut remaining_accounts.iter();
@@ -528,8 +529,8 @@ fn validate_exercise_fee_acct<'c, 'info>(
 pub struct InitializeMarket<'info> {
     #[account(mut, signer)]
     authority: AccountInfo<'info>,
-    pub underlying_asset_mint: Account<'info, Mint>,
-    pub quote_asset_mint: Account<'info, Mint>,
+    pub underlying_asset_mint: Box<Account<'info, Mint>>,
+    pub quote_asset_mint: Box<Account<'info, Mint>>,
     #[account(init,
         seeds = [&option_market.key().to_bytes()[..], b"optionToken"],
         bump,
@@ -537,7 +538,7 @@ pub struct InitializeMarket<'info> {
         mint::decimals = 0,
         mint::authority = option_market
     )]
-    pub option_mint: Account<'info, Mint>,
+    pub option_mint: Box<Account<'info, Mint>>,
     #[account(init,
         seeds = [&option_market.key().to_bytes()[..], b"writerToken"],
         bump,
@@ -545,7 +546,7 @@ pub struct InitializeMarket<'info> {
         mint::decimals = 0,
         mint::authority = option_market
     )]
-    pub writer_token_mint: Account<'info, Mint>,
+    pub writer_token_mint: Box<Account<'info, Mint>>,
     #[account(init,
         seeds = [&option_market.key().to_bytes()[..], b"quoteAssetPool"],
         bump,
@@ -553,7 +554,7 @@ pub struct InitializeMarket<'info> {
         token::mint = quote_asset_mint,
         token::authority = option_market,
     )]
-    pub quote_asset_pool: Account<'info, TokenAccount>,
+    pub quote_asset_pool: Box<Account<'info, TokenAccount>>,
     #[account(init,
         seeds = [&option_market.key().to_bytes()[..], b"underlyingAssetPool"],
         bump,
@@ -561,7 +562,7 @@ pub struct InitializeMarket<'info> {
         token::mint = underlying_asset_mint,
         token::authority = option_market,
     )]
-    pub underlying_asset_pool: Account<'info, TokenAccount>,
+    pub underlying_asset_pool: Box<Account<'info, TokenAccount>>,
     #[account(
         init,
         seeds = [
@@ -610,17 +611,17 @@ pub struct MintOption<'info> {
     pub user_authority: AccountInfo<'info>,
     pub underlying_asset_mint: AccountInfo<'info>,
     #[account(mut)]
-    pub underlying_asset_pool: Account<'info, TokenAccount>,
+    pub underlying_asset_pool: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    pub underlying_asset_src: Account<'info, TokenAccount>,
+    pub underlying_asset_src: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    pub option_mint: Account<'info, Mint>,
+    pub option_mint: Box<Account<'info, Mint>>,
     #[account(mut)]
-    pub minted_option_dest: Account<'info, TokenAccount>,
+    pub minted_option_dest: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    pub writer_token_mint: Account<'info, Mint>,
+    pub writer_token_mint: Box<Account<'info, Mint>>,
     #[account(mut)]
-    pub minted_writer_token_dest: Account<'info, TokenAccount>,
+    pub minted_writer_token_dest: Box<Account<'info, TokenAccount>>,
     pub option_market: ProgramAccount<'info, OptionMarket>,
     #[account(mut)]
     pub fee_owner: AccountInfo<'info>,
@@ -677,19 +678,19 @@ pub struct ExerciseOption<'info> {
     /// The owner of the exerciser_option_token_src account
     #[account(mut, signer)]
     pub option_authority: AccountInfo<'info>,
-    pub option_market: ProgramAccount<'info, OptionMarket>,
+    pub option_market: Box<Account<'info, OptionMarket>>,
     #[account(mut)]
-    pub option_mint: Account<'info, Mint>,
+    pub option_mint: Box<Account<'info, Mint>>,
     #[account(mut)]
-    pub exerciser_option_token_src: Account<'info, TokenAccount>,
+    pub exerciser_option_token_src: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    pub underlying_asset_pool: Account<'info, TokenAccount>,
+    pub underlying_asset_pool: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    pub underlying_asset_dest: Account<'info, TokenAccount>,
+    pub underlying_asset_dest: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    pub quote_asset_pool: Account<'info, TokenAccount>,
+    pub quote_asset_pool: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    pub quote_asset_src: Account<'info, TokenAccount>,
+    pub quote_asset_src: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
     pub fee_owner: AccountInfo<'info>,
 
@@ -746,13 +747,13 @@ pub struct ClosePostExp<'info> {
     user_authority: AccountInfo<'info>,
     option_market: ProgramAccount<'info, OptionMarket>,
     #[account(mut)]
-    writer_token_mint: Account<'info, Mint>,
+    writer_token_mint: Box<Account<'info, Mint>>,
     #[account(mut)]
-    writer_token_src: Account<'info, TokenAccount>,
+    writer_token_src: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    underlying_asset_pool: Account<'info, TokenAccount>,
+    underlying_asset_pool: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    underlying_asset_dest: Account<'info, TokenAccount>,
+    underlying_asset_dest: Box<Account<'info, TokenAccount>>,
 
     token_program: AccountInfo<'info>,
     clock: Sysvar<'info, Clock>,
@@ -792,17 +793,17 @@ pub struct CloseOptionPosition<'info> {
     user_authority: AccountInfo<'info>,
     option_market: ProgramAccount<'info, OptionMarket>,
     #[account(mut)]
-    writer_token_mint: Account<'info, Mint>,
+    writer_token_mint: Box<Account<'info, Mint>>,
     #[account(mut)]
-    writer_token_src: Account<'info, TokenAccount>,
+    writer_token_src: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
     option_token_mint: Account<'info, Mint>,
     #[account(mut)]
-    option_token_src: Account<'info, TokenAccount>,
+    option_token_src: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    underlying_asset_pool: Account<'info, TokenAccount>,
+    underlying_asset_pool: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    underlying_asset_dest: Account<'info, TokenAccount>,
+    underlying_asset_dest: Box<Account<'info, TokenAccount>>,
 
     token_program: AccountInfo<'info>,
 }
@@ -834,13 +835,13 @@ pub struct BurnWriterForQuote<'info> {
     user_authority: AccountInfo<'info>,
     option_market: ProgramAccount<'info, OptionMarket>,
     #[account(mut)]
-    writer_token_mint: Account<'info, Mint>,
+    writer_token_mint: Box<Account<'info, Mint>>,
     #[account(mut)]
-    writer_token_src: Account<'info, TokenAccount>,
+    writer_token_src: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    quote_asset_pool: Account<'info, TokenAccount>,
+    quote_asset_pool: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    writer_quote_dest: Account<'info, TokenAccount>,
+    writer_quote_dest: Box<Account<'info, TokenAccount>>,
 
     token_program: AccountInfo<'info>,
 }
@@ -890,8 +891,8 @@ pub struct InitSerumMarket<'info> {
     pub token_program: AccountInfo<'info>,
     pub dex_program: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
-    pub pc_mint: Account<'info, Mint>,
-    pub option_mint: Account<'info, Mint>,
+    pub pc_mint: Box<Account<'info, Mint>>,
+    pub option_mint: Box<Account<'info, Mint>>,
     // INIT SERUM MARKET ACCOUNTS
     #[account(init,
         seeds = [&option_market.key().to_bytes()[..], b"requestQueue"],
@@ -914,7 +915,7 @@ pub struct InitSerumMarket<'info> {
         token::mint = option_mint,
         token::authority = vault_signer,
     )]
-    pub coin_vault: Account<'info, TokenAccount>,
+    pub coin_vault: Box<Account<'info, TokenAccount>>,
     #[account(init,
         seeds = [&option_market.key().to_bytes()[..], b"pcVault"],
         bump,
@@ -922,8 +923,7 @@ pub struct InitSerumMarket<'info> {
         token::mint = pc_mint,
         token::authority = vault_signer,
     )]
-    pub pc_vault: Account<'info, TokenAccount>,
-    // Is it possible to add a seeds check for DEX PDA?
+    pub pc_vault: Box<Account<'info, TokenAccount>>,
     pub vault_signer: AccountInfo<'info>,
     pub market_authority: AccountInfo<'info>,
 }
