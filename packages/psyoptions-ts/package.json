@@ -1,6 +1,6 @@
 {
   "name": "@mithraic-labs/psyoptions",
-  "version": "0.7.2",
+  "version": "1.0.1-rc",
   "description": "Solana program instruction bindings for mithraiclabs' PsyOptions",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
@@ -20,14 +20,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@project-serum/anchor": "^0.15.0",
     "@solana/spl-token": "^0.1.3",
     "bignumber.js": "^9.0.1",
-    "bn.js": "^5.2.0",
     "buffer-layout": "^1.2.0",
     "rollup": "^2.39.0"
   },
   "devDependencies": {
-    "@types/bn.js": "^5.1.0",
     "@typescript-eslint/eslint-plugin": "^4.15.1",
     "@typescript-eslint/parser": "^4.15.1",
     "eslint": "^7.20.0",
