@@ -1,3 +1,7 @@
+[programs.localnet]
+psy_american = "2EeLomtYKBwWvHmgHvTk9gECo6isXTC9MmbcExdHWmmb"
+brokerage = "Fk8QcXcNpf5chR5RcviUjgaLVtULgvovGXUXGPMwLioF"
+
 [registry]
 url = "https://anchor.projectserum.com"
 
