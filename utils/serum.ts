@@ -7,6 +7,7 @@ import {
   MarketProxy,
   MarketProxyBuilder,
   MARKET_STATE_LAYOUT_V3,
+  Middleware,
   OpenOrdersPda,
   ReferralFees,
   TokenInstructions,
@@ -42,23 +43,32 @@ type MarketMaker = {
 type Orders = number[][];
 
 export const marketLoader =
-  (provider: anchor.Provider, program: anchor.Program) =>
+  (
+    provider: anchor.Provider,
+    program: anchor.Program,
+    optionMarketKey: PublicKey,
+    marketAuthorityBump: number
+  ) =>
   async (marketKey: PublicKey) => {
-    return new MarketProxyBuilder()
-      .middleware(
-        new OpenOrdersPda({
-          proxyProgramId: program.programId,
+    return (
+      new MarketProxyBuilder()
+        .middleware(
+          new OpenOrdersPda({
+            proxyProgramId: program.programId,
+            dexProgramId: DEX_PID,
+          })
+        )
+        .middleware(new Validation(optionMarketKey, marketAuthorityBump))
+        // .middleware(new Logger())
+        .middleware(new ReferralFees())
+        .load({
+          connection: provider.connection,
+          market: marketKey,
           dexProgramId: DEX_PID,
+          proxyProgramId: program.programId,
+          options: { commitment: "recent" },
         })
-      )
-      .middleware(new ReferralFees())
-      .load({
-        connection: provider.connection,
-        market: marketKey,
-        dexProgramId: DEX_PID,
-        proxyProgramId: program.programId,
-        options: { commitment: "recent" },
-      });
+    );
   };
 
 export const initMarket = async (
@@ -78,19 +88,22 @@ export const initMarket = async (
     decimals
   );
 
-  const [MARKET_A_USDC, vaultSigner] = await setupMarket({
-    provider,
-    program,
-    baseMint: optionMarket.optionMint,
-    quoteMint: USDC,
-    marketLoader,
-    optionMarket,
-  });
+  const [MARKET_A_USDC, vaultSigner, marketAuthority, marketAuthorityBump] =
+    await setupMarket({
+      provider,
+      program,
+      baseMint: optionMarket.optionMint,
+      quoteMint: USDC,
+      marketLoader,
+      optionMarket,
+    });
   return {
     marketA: MARKET_A_USDC,
     vaultSigner,
     usdc: USDC,
     godUsdc: GOD_USDC,
+    marketAuthority,
+    marketAuthorityBump,
   };
 };
 
@@ -108,8 +121,20 @@ async function setupMarket({
   baseMint: PublicKey;
   quoteMint: PublicKey;
   marketLoader: MarketLoader;
-}): Promise<[MarketProxy, anchor.web3.PublicKey | anchor.BN]> {
-  const [marketAPublicKey, vaultOwner] = await listMarket({
+}): Promise<
+  [
+    MarketProxy,
+    anchor.web3.PublicKey | anchor.BN,
+    anchor.web3.PublicKey,
+    number
+  ]
+> {
+  const {
+    serumMarketKey: marketAPublicKey,
+    vaultOwner,
+    marketAuthority,
+    marketAuthorityBump,
+  } = await listMarket({
     provider,
     program,
     quoteMint: quoteMint,
@@ -118,7 +143,7 @@ async function setupMarket({
     optionMarket,
   });
   const MARKET_A_USDC = await marketLoader(marketAPublicKey as PublicKey);
-  return [MARKET_A_USDC, vaultOwner];
+  return [MARKET_A_USDC, vaultOwner, marketAuthority, marketAuthorityBump];
 }
 
 const listMarket = async ({
@@ -144,18 +169,19 @@ const listMarket = async ({
     dexProgramId,
   });
 
-  const { serumMarketKey, vaultOwner } = await initSerum(
-    provider,
-    program,
-    optionMarket,
-    quoteMint,
-    eventQueue.publicKey,
-    bids.publicKey,
-    asks.publicKey,
-    dexProgramId
-  );
+  const { serumMarketKey, vaultOwner, marketAuthority, marketAuthorityBump } =
+    await initSerum(
+      provider,
+      program,
+      optionMarket,
+      quoteMint,
+      eventQueue.publicKey,
+      bids.publicKey,
+      asks.publicKey,
+      dexProgramId
+    );
 
-  return [serumMarketKey, vaultOwner];
+  return { serumMarketKey, vaultOwner, marketAuthority, marketAuthorityBump };
 };
 
 export const createFirstSetOfAccounts = async ({
@@ -238,6 +264,47 @@ const openOrdersInitSeed = Buffer.from([
   111, 112, 101, 110, 45, 111, 114, 100, 101, 114, 115, 45, 105, 110, 105, 116,
 ]);
 
+export class Validation implements Middleware {
+  optionMarketKey: PublicKey;
+  marketAuthorityBump: number;
+
+  constructor(optionMarketKey: PublicKey, marketAuthorityBump: number) {
+    this.optionMarketKey = optionMarketKey;
+    this.marketAuthorityBump = marketAuthorityBump;
+  }
+  initOpenOrders(ix: TransactionInstruction) {
+    ix.data = Buffer.concat([Buffer.from([0]), ix.data]);
+  }
+  newOrderV3(ix: TransactionInstruction) {
+    ix.data = Buffer.concat([Buffer.from([1]), ix.data]);
+  }
+  cancelOrderV2(ix: TransactionInstruction) {
+    ix.data = Buffer.concat([Buffer.from([2]), ix.data]);
+  }
+  cancelOrderByClientIdV2(ix: TransactionInstruction) {
+    ix.data = Buffer.concat([Buffer.from([3]), ix.data]);
+  }
+  settleFunds(ix: TransactionInstruction) {
+    ix.data = Buffer.concat([Buffer.from([4]), ix.data]);
+  }
+  closeOpenOrders(ix: TransactionInstruction) {
+    ix.data = Buffer.concat([Buffer.from([5]), ix.data]);
+  }
+  prune(ix: TransactionInstruction) {
+    // prepend a discriminator and the marketAuthorityBump
+    const bumpBuffer = new anchor.BN(this.marketAuthorityBump).toBuffer(
+      "le",
+      1
+    );
+    ix.data = Buffer.concat([Buffer.from([6]), bumpBuffer, ix.data]);
+    // prepend the optionMarket key
+    ix.keys = [
+      { pubkey: this.optionMarketKey, isWritable: false, isSigner: false },
+      ...ix.keys,
+    ];
+  }
+}
+
 export const initSerum = async (
   provider: anchor.Provider,
   program: anchor.Program,
@@ -249,10 +316,6 @@ export const initSerum = async (
   dexProgramId: PublicKey
 ) => {
   const textEncoder = new TextEncoder();
-  const [serumMarketKey, _serumMarketBump] = await PublicKey.findProgramAddress(
-    [optionMarket.key.toBuffer(), textEncoder.encode("serumMarket")],
-    program.programId
-  );
   const [requestQueue, _requestQueueBump] = await PublicKey.findProgramAddress(
     [optionMarket.key.toBuffer(), textEncoder.encode("requestQueue")],
     program.programId
@@ -265,13 +328,13 @@ export const initSerum = async (
     [optionMarket.key.toBuffer(), textEncoder.encode("pcVault")],
     program.programId
   );
+
+  const { serumMarketKey, marketAuthority, marketAuthorityBump } =
+    await getMarketAndAuthorityInfo(program, optionMarket, dexProgramId);
+
   const [vaultOwner, vaultSignerNonce] = await getVaultOwnerAndNonce(
     serumMarketKey,
     DEX_PID
-  );
-  const [marketAuthority, bumpInit] = await PublicKey.findProgramAddress(
-    [openOrdersInitSeed, dexProgramId.toBuffer(), serumMarketKey.toBuffer()],
-    program.programId
   );
 
   const coinLotSize = new anchor.BN(1);
@@ -306,5 +369,28 @@ export const initSerum = async (
       signers: [(provider.wallet as anchor.Wallet).payer],
     }
   );
-  return { serumMarketKey, vaultOwner, marketAuthority };
+  return { serumMarketKey, vaultOwner, marketAuthority, marketAuthorityBump };
+};
+
+export const getMarketAndAuthorityInfo = async (
+  program: anchor.Program,
+  optionMarket: OptionMarketV2,
+  dexProgramId: anchor.web3.PublicKey
+) => {
+  const textEncoder = new TextEncoder();
+  const [serumMarketKey, _serumMarketBump] = await PublicKey.findProgramAddress(
+    [optionMarket.key.toBuffer(), textEncoder.encode("serumMarket")],
+    program.programId
+  );
+  const [marketAuthority, marketAuthorityBump] =
+    await PublicKey.findProgramAddress(
+      [
+        textEncoder.encode("open-orders-init"),
+        dexProgramId.toBuffer(),
+        serumMarketKey.toBuffer(),
+      ],
+      program.programId
+    );
+
+  return { serumMarketKey, marketAuthority, marketAuthorityBump };
 };
