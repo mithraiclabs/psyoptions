@@ -2,8 +2,9 @@ use anchor_lang::prelude::*;
 use anchor_spl::dex::{
     Context, MarketMiddleware
 };
+use solana_program::clock::Clock;
 
-use crate::OptionMarket;
+use crate::{OptionMarket, errors};
 
 pub struct Validation {
     pub market_auth_bump: u8,
@@ -34,6 +35,9 @@ impl MarketMiddleware for Validation {
         let option_market_account = ctx.accounts[0].clone();
         ctx.accounts = (&ctx.accounts[1..]).to_vec();
         let option_market_acct = Account::<OptionMarket>::try_from(&option_market_account)?;
+        if option_market_acct.into_inner().expiration_unix_timestamp >= Clock::get()?.unix_timestamp {
+            return Err(errors::ErrorCode::CannotPruneActiveMarket.into())
+        }
         // Sign with the seeds
         ctx.accounts[3].is_signer = true;
         let seeds = vec![

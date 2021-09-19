@@ -54,4 +54,6 @@ pub enum ErrorCode {
   InvalidAuth,
   #[msg("Coin mint must match option mint")]
   CoinMintIsNotOptionMint,
+  #[msg("Cannot prune the market while it's still active")]
+  CannotPruneActiveMarket,
 }

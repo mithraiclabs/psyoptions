@@ -50,23 +50,25 @@ export const marketLoader =
     marketAuthorityBump: number
   ) =>
   async (marketKey: PublicKey) => {
-    return new MarketProxyBuilder()
-      .middleware(
-        new OpenOrdersPda({
-          proxyProgramId: program.programId,
+    return (
+      new MarketProxyBuilder()
+        .middleware(
+          new OpenOrdersPda({
+            proxyProgramId: program.programId,
+            dexProgramId: DEX_PID,
+          })
+        )
+        .middleware(new Validation(optionMarketKey, marketAuthorityBump))
+        // .middleware(new Logger())
+        .middleware(new ReferralFees())
+        .load({
+          connection: provider.connection,
+          market: marketKey,
           dexProgramId: DEX_PID,
+          proxyProgramId: program.programId,
+          options: { commitment: "recent" },
         })
-      )
-      .middleware(new Validation(optionMarketKey, marketAuthorityBump))
-      .middleware(new Logger())
-      .middleware(new ReferralFees())
-      .load({
-        connection: provider.connection,
-        market: marketKey,
-        dexProgramId: DEX_PID,
-        proxyProgramId: program.programId,
-        options: { commitment: "recent" },
-      });
+    );
   };
 
 export const initMarket = async (
@@ -289,14 +291,13 @@ export class Validation implements Middleware {
     ix.data = Buffer.concat([Buffer.from([5]), ix.data]);
   }
   prune(ix: TransactionInstruction) {
-    console.log("manipulating the prune keys");
+    // prepend a discriminator and the marketAuthorityBump
     const bumpBuffer = new anchor.BN(this.marketAuthorityBump).toBuffer(
       "le",
       1
     );
-    console.log("*** IX data before", ix.data);
     ix.data = Buffer.concat([Buffer.from([6]), bumpBuffer, ix.data]);
-    console.log("*** IX data after", ix.data);
+    // prepend the optionMarket key
     ix.keys = [
       { pubkey: this.optionMarketKey, isWritable: false, isSigner: false },
       ...ix.keys,
