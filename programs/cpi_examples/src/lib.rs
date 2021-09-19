@@ -49,6 +49,10 @@ pub mod cpi_examples {
         cpi_ctx.remaining_accounts = ctx.remaining_accounts.to_vec();
         psy_american::cpi::exercise_option(cpi_ctx, ctx.accounts.exerciser_option_token_src.amount)
     }
+
+    pub fn init_mint_vault(ctx: Context<InitMintVault>) -> ProgramResult {
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -99,4 +103,25 @@ pub struct Exercise<'info> {
     token_program: AccountInfo<'info>,
     system_program: AccountInfo<'info>,
     clock: Sysvar<'info, Clock>,
+}
+
+
+#[derive(Accounts)]
+pub struct InitMintVault<'info> {
+    #[account(mut, signer)]
+    pub authority: AccountInfo<'info>,
+    pub underlying_asset: Box<Account<'info, Mint>>,
+    #[account(init,
+        seeds = [&underlying_asset.key().to_bytes()[..], b"vault"],
+        bump,
+        payer = authority,    
+        token::mint = underlying_asset,
+        token::authority = vault_authority,
+    )]
+    pub vault: Box<Account<'info, TokenAccount>>,
+    pub vault_authority: AccountInfo<'info>,
+
+    pub token_program: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
 }
