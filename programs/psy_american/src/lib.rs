@@ -389,6 +389,7 @@ pub mod psy_american {
 
     pub fn entry(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
         MarketProxy::new()
+            .middleware(&mut serum_proxy::Validation::new())
             .middleware(&mut Logger)
             .middleware(&mut ReferralFees::new(serum_proxy::referral::ID))
             .middleware(&mut OpenOrdersPda::new())
@@ -973,6 +974,10 @@ pub struct OptionMarket {
     /// A flag to set and use to when running a memcmp query. 
     /// This will be set when Serum markets are closed and expiration is validated
     pub expired: bool,
-    /// Bump seed for program derived addresses
+    /// Bump seed for the market PDA
     pub bump_seed: u8,
+    /// The address for the Serum market authority
+    pub market_authority: Pubkey,
+    /// Bump seed for the market authority PDA
+    pub market_authority_bump: u8,
 }

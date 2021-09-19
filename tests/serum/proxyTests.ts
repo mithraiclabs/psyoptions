@@ -3,6 +3,7 @@ import assert from "assert";
 import { AccountInfo, Keypair, PublicKey, Transaction } from "@solana/web3.js";
 import {
   DEX_PID,
+  getMarketAndAuthorityInfo,
   initMarket,
   marketLoader,
   openOrdersSeed,
@@ -29,6 +30,8 @@ describe("proxyTests", () => {
     referral: PublicKey;
   let openOrdersKey: PublicKey,
     openOrdersBump: number,
+    marketAuthority: anchor.web3.PublicKey,
+    marketAuthorityBump: number,
     openOrdersInitAuthority,
     openOrdersBumpinit;
   let usdcPosted: anchor.BN;
@@ -51,14 +54,20 @@ describe("proxyTests", () => {
       remainingAccounts,
       instructions
     );
+    ({ marketAuthority, marketAuthorityBump } = await getMarketAndAuthorityInfo(
+      program,
+      optionMarket,
+      DEX_PID
+    ));
     ({
       marketA: marketProxy,
       usdc: usdcMint,
       godUsdc: usdcAccount,
+      marketAuthorityBump,
     } = await initMarket(
       provider,
       program,
-      marketLoader(provider, program),
+      marketLoader(provider, program, optionMarket.key, marketAuthorityBump),
       optionMarket
     ));
     [openOrdersKey, openOrdersBump] = await PublicKey.findProgramAddress(
