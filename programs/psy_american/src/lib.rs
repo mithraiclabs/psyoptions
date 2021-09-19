@@ -608,6 +608,7 @@ impl<'info> InitializeMarket<'info> {
 
 #[derive(Accounts)]
 pub struct MintOption<'info> {
+    /// The user authority must be the authority that has ownership of the `underlying_asset_src`
     #[account(mut, signer)]
     pub user_authority: AccountInfo<'info>,
     pub underlying_asset_mint: AccountInfo<'info>,
@@ -674,9 +675,10 @@ impl<'info> MintOption<'info> {
 
 #[derive(Accounts)]
 pub struct ExerciseOption<'info> {
+    /// The user_authority must be the authority that has ownership of the `quote_asset_src` account
     #[account(mut, signer)]
     pub user_authority: AccountInfo<'info>,
-    /// The owner of the exerciser_option_token_src account
+    /// The owner of the `exerciser_option_token_src` account
     #[account(mut, signer)]
     pub option_authority: AccountInfo<'info>,
     pub option_market: Box<Account<'info, OptionMarket>>,
