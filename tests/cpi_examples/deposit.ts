@@ -13,11 +13,11 @@ import { mintOptionsTx } from "../../packages/psyoptions-ts/src";
 import { OptionMarketV2 } from "../../packages/psyoptions-ts/src/types";
 import { createMinter, initOptionMarket, initSetup } from "../../utils/helpers";
 
-describe("brokerage deposit", () => {
+describe("cpi_examples deposit", () => {
   const provider = anchor.Provider.env();
   const payer = anchor.web3.Keypair.generate();
   anchor.setProvider(provider);
-  const program = anchor.workspace.Brokerage as anchor.Program;
+  const program = anchor.workspace.CpiExamples as anchor.Program;
   const americanOptionsProgram = anchor.workspace.PsyAmerican as anchor.Program;
   let optionMarket: OptionMarketV2;
   const mintAuthority = anchor.web3.Keypair.generate();

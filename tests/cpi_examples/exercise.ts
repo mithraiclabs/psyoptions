@@ -1,7 +1,3 @@
-// TODO: setup option market
-// TODO: mint options while market is not expired
-// TODO: initialize vault
-// TODO: crank the exercise request
 import * as anchor from "@project-serum/anchor";
 import {
   AccountInfo,
@@ -17,7 +13,6 @@ import {
   SystemProgram,
   SYSVAR_CLOCK_PUBKEY,
   SYSVAR_RENT_PUBKEY,
-  TransactionInstruction,
 } from "@solana/web3.js";
 import assert from "assert";
 import { mintOptionsTx } from "../../packages/psyoptions-ts/src";
@@ -27,19 +22,13 @@ import {
 } from "../../packages/psyoptions-ts/src/fees";
 
 import { OptionMarketV2 } from "../../packages/psyoptions-ts/src/types";
-import {
-  createMinter,
-  initNewTokenAccount,
-  initOptionMarket,
-  initSetup,
-  wait,
-} from "../../utils/helpers";
+import { createMinter, initOptionMarket, initSetup } from "../../utils/helpers";
 
-describe("brokerage exercise", () => {
+describe("cpi_examples exercise", () => {
   const provider = anchor.Provider.env();
   const payer = anchor.web3.Keypair.generate();
   anchor.setProvider(provider);
-  const program = anchor.workspace.Brokerage as anchor.Program;
+  const program = anchor.workspace.CpiExamples as anchor.Program;
   const americanOptionsProgram = anchor.workspace.PsyAmerican as anchor.Program;
   let optionMarket: OptionMarketV2;
   let vaultAccount: AccountInfo;

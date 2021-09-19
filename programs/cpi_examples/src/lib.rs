@@ -5,7 +5,7 @@ use psy_american::{OptionMarket, ExerciseOption};
 declare_id!("Fk8QcXcNpf5chR5RcviUjgaLVtULgvovGXUXGPMwLioF");
 
 #[program]
-pub mod brokerage {
+pub mod cpi_examples {
     use super::*;
     pub fn initialize(ctx: Context<Initialize>, amount: u64) -> ProgramResult {
         let cpi_accounts = Transfer {

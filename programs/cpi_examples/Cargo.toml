@@ -1,12 +1,12 @@
 [package]
-name = "brokerage"
+name = "cpi_examples"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2018"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "brokerage"
+name = "cpi_examples"
 
 [features]
 no-entrypoint = []
