@@ -50,7 +50,11 @@ pub mod cpi_examples {
         psy_american::cpi::exercise_option(cpi_ctx, ctx.accounts.exerciser_option_token_src.amount)
     }
 
-    pub fn init_mint_vault(ctx: Context<InitMintVault>) -> ProgramResult {
+    pub fn init_mint_vault(_ctx: Context<InitMintVault>) -> ProgramResult {
+        Ok(())
+    }
+
+    pub fn mint(_ctx: Context<MintCtx>) -> ProgramResult {
         Ok(())
     }
 }
@@ -120,6 +124,21 @@ pub struct InitMintVault<'info> {
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
     pub vault_authority: AccountInfo<'info>,
+
+    pub token_program: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct MintCtx<'info> {
+    #[account(mut, signer)]
+    pub authority: AccountInfo<'info>,
+    #[account(mut)]
+    pub option_mint: Box<Account<'info, Mint>>,
+    pub underlying_asset: Box<Account<'info, Mint>>,
+    #[account(mut)]
+    pub vault: Box<Account<'info, TokenAccount>>,
 
     pub token_program: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
