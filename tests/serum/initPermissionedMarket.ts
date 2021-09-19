@@ -88,6 +88,14 @@ describe("permissioned-markets", () => {
               bytes: marketAuthority.toBase58(),
             },
           },
+          {
+            memcmp: {
+              /** offset into program account data to start comparison */
+              offset: MARKET_STATE_LAYOUT_V3.offsetOf("pruneAuthority"),
+              /** data to match, as base-58 encoded string and limited to less than 129 bytes */
+              bytes: marketAuthority.toBase58(),
+            },
+          },
         ],
       });
       assert.equal(accounts.length, 1);

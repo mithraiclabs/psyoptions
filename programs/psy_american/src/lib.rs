@@ -359,7 +359,7 @@ pub mod psy_american {
             &ctx.accounts.coin_vault.key(),
             &ctx.accounts.pc_vault.key(),
             Some(&ctx.accounts.market_authority.key()),
-            None,
+            Some(&ctx.accounts.market_authority.key()),
             ctx.accounts.bids.key,
             ctx.accounts.asks.key,
             ctx.accounts.request_queue.key,
