@@ -975,9 +975,5 @@ pub struct OptionMarket {
     /// This will be set when Serum markets are closed and expiration is validated
     pub expired: bool,
     /// Bump seed for the market PDA
-    pub bump_seed: u8,
-    /// The address for the Serum market authority
-    pub market_authority: Pubkey,
-    /// Bump seed for the market authority PDA
-    pub market_authority_bump: u8,
+    pub bump_seed: u8
 }
