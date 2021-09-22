@@ -30,7 +30,7 @@ impl MarketMiddleware for Validation {
     }
 
     fn prune(&self, ctx: &mut Context, _limit: u16) -> ProgramResult {
-        // TODO: Validate that the OptionMarket has expired
+        // Validate that the OptionMarket has expired
         // deserialize the OptionMarket
         let option_market_account = ctx.accounts[0].clone();
         ctx.accounts = (&ctx.accounts[1..]).to_vec();
