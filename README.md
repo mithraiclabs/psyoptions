@@ -42,7 +42,7 @@ Exploring architectures for options trading on Serum
 
 ## Mainnet
 
-1. Build with anchor `anchor build -p psyoptions --verifiable`
+1. Build with anchor `anchor build -p psy_american --verifiable`
 2. Use an insecure computer to run `solana program write-buffer <target-path> --buffer <buffer-keypair>`
 3. change authority `solana program set-buffer-authority <buffer-address> --new-buffer-authority <hardware-wallet-address>`
 4. Verify the buffer binary is correct `anchor verify -p <lib-name> <buffer-address>`

@@ -11,7 +11,7 @@ use anchor_spl::dex::{
     Logger, MarketProxy, OpenOrdersPda, ReferralFees,
 };
 
-declare_id!("2EeLomtYKBwWvHmgHvTk9gECo6isXTC9MmbcExdHWmmb");
+declare_id!("R2y9ip6mxmWUj4pt54jP2hz2dgvMozy9VTSwMWE7evs");
 
 #[program]
 pub mod psy_american {
