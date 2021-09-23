@@ -388,11 +388,12 @@ pub mod psy_american {
     }
 
     pub fn entry(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+        msg!("PsyAmerican entry");
         MarketProxy::new()
             .middleware(&mut serum_proxy::Validation::new())
-            .middleware(&mut Logger)
             .middleware(&mut ReferralFees::new(serum_proxy::referral::ID))
             .middleware(&mut OpenOrdersPda::new())
+            .middleware(&mut Logger)
             .run(program_id, accounts, data)
     }
 }

@@ -50,25 +50,23 @@ export const marketLoader =
     marketAuthorityBump: number
   ) =>
   async (marketKey: PublicKey) => {
-    return (
-      new MarketProxyBuilder()
-        .middleware(
-          new OpenOrdersPda({
-            proxyProgramId: program.programId,
-            dexProgramId: DEX_PID,
-          })
-        )
-        .middleware(new Validation(optionMarketKey, marketAuthorityBump))
-        // .middleware(new Logger())
-        .middleware(new ReferralFees())
-        .load({
-          connection: provider.connection,
-          market: marketKey,
-          dexProgramId: DEX_PID,
+    return new MarketProxyBuilder()
+      .middleware(
+        new OpenOrdersPda({
           proxyProgramId: program.programId,
-          options: { commitment: "recent" },
+          dexProgramId: DEX_PID,
         })
-    );
+      )
+      .middleware(new Validation(optionMarketKey, marketAuthorityBump))
+      .middleware(new Logger())
+      .middleware(new ReferralFees())
+      .load({
+        connection: provider.connection,
+        market: marketKey,
+        dexProgramId: DEX_PID,
+        proxyProgramId: program.programId,
+        options: { commitment: "recent" },
+      });
   };
 
 export const initMarket = async (
