@@ -45,7 +45,7 @@ Exploring architectures for options trading on Serum
 1. Build with anchor `anchor build -p psy_american --verifiable`
 2. Use an insecure computer to run `solana program write-buffer <target-path> --buffer <buffer-keypair>`
 3. change authority `solana program set-buffer-authority <buffer-address> --new-buffer-authority <hardware-wallet-address>`
-4. Verify the buffer binary is correct `anchor verify -p <lib-name> <buffer-address>`
+4. Verify the buffer binary is correct `anchor verify -p <lib-name> <buffer-address> --provider.cluster mainnet`
 5. Switch to hardeware wallet.
 6. Deploy/upgrade with a single transaction from the hardware wallet. `solana program deploy --buffer <buffer-keypair> --program-id <program-keypair> --keypair <hardware-wallet-keypair>`
 
