@@ -1,14 +1,46 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, TokenAccount, Transfer};
-use psy_american::{OptionMarket, ExerciseOption};
+use psy_american::{InitializeMarket, OptionMarket, MintOption, ExerciseOption};
 
 declare_id!("Fk8QcXcNpf5chR5RcviUjgaLVtULgvovGXUXGPMwLioF");
 
 #[program]
-pub mod cpi_examples {
-    use psy_american::MintOption;
-
+pub mod cpi_examples {    
     use super::*;
+
+    pub fn initialize_option_market(ctx: Context<InitOptionMarket>, underlying_amount_per_contract: u64,quote_amount_per_contract: u64,expiration_unix_timestamp: i64,bump_seed: u8) -> ProgramResult {
+        let cpi_program = ctx.accounts.psy_american_program.clone();
+        let cpi_accounts = InitializeMarket {
+            authority: ctx.accounts.user.to_account_info(),
+            // The Mint of the underlying asset for the contracts. Also the mint that is in the vault.
+            underlying_asset_mint: ctx.accounts.underlying_asset_mint.clone(),
+            quote_asset_mint: ctx.accounts.quote_asset_mint.clone(),
+            // The mint of the option
+            option_mint: ctx.accounts.option_mint.clone(),
+            // The Mint of the writer token for the OptionMarket
+            writer_token_mint: ctx.accounts.writer_token_mint.clone(),
+            quote_asset_pool: ctx.accounts.quote_asset_pool.to_account_info(),
+            // The underlying asset pool for the OptionMarket
+            underlying_asset_pool: ctx.accounts.underlying_asset_pool.clone(),
+            // The PsyOptions OptionMarket to mint from
+            option_market: ctx.accounts.option_market.clone(),
+            // The fee_owner that is a constant in the PsyAmerican contract
+            fee_owner: ctx.accounts.fee_owner.to_account_info(),
+            // The rest are self explanatory, we can't spell everything out for you ;)
+            token_program: ctx.accounts.token_program.to_account_info(),
+            associated_token_program: ctx.accounts.associated_token_program.to_account_info(),
+            clock: ctx.accounts.clock.clone(),
+            rent: ctx.accounts.rent.clone(),
+            system_program: ctx.accounts.system_program.to_account_info(),
+        };
+        let key = ctx.accounts.underlying_asset_mint.key();
+
+        let mut cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+        cpi_ctx.remaining_accounts = ctx.remaining_accounts.to_vec();
+        psy_american::cpi::initialize_market(cpi_ctx, underlying_amount_per_contract, quote_amount_per_contract, expiration_unix_timestamp, bump_seed)
+
+    }
+
     pub fn initialize(ctx: Context<Initialize>, amount: u64) -> ProgramResult {
         let cpi_accounts = Transfer {
             from: ctx.accounts.option_source.to_account_info(),
@@ -100,6 +132,30 @@ pub mod cpi_examples {
         psy_american::cpi::mint_option(cpi_ctx, size)
     }
 }
+
+#[derive(Accounts)]
+pub struct InitOptionMarket<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub psy_american_program: AccountInfo<'info>,
+    /////// Init OptionMarket accounts
+    pub underlying_asset_mint: Box<Account<'info, Mint>>,
+    pub quote_asset_mint: Box<Account<'info, Mint>>,
+
+    pub option_mint: AccountInfo<'info>,
+    pub writer_token_mint: AccountInfo<'info>,
+    pub quote_asset_pool: AccountInfo<'info>,
+    pub underlying_asset_pool: AccountInfo<'info>,
+    pub option_market: AccountInfo<'info>,
+    pub fee_owner: AccountInfo<'info>,
+
+    pub token_program: AccountInfo<'info>,
+    pub associated_token_program: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+    pub clock: Sysvar<'info, Clock>,
+}
+
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {

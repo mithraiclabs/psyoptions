@@ -1,13 +1,21 @@
 import * as anchor from "@project-serum/anchor";
 import assert from "assert";
-import { Token } from "@solana/spl-token";
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  Token,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 import {
   AccountMeta,
   PublicKey,
+  SystemProgram,
+  SYSVAR_CLOCK_PUBKEY,
+  SYSVAR_RENT_PUBKEY,
   TransactionInstruction,
 } from "@solana/web3.js";
 import { OptionMarketV2 } from "../../packages/psyoptions-ts/src/types";
 import { initSetup } from "../../utils/helpers";
+import { FEE_OWNER_KEY } from "../../packages/psyoptions-ts/src/fees";
 
 describe("cpi_examples initOptionMarket", () => {
   const provider = anchor.Provider.env();
@@ -33,6 +41,7 @@ describe("cpi_examples initOptionMarket", () => {
       optionMarket,
       optionMarketKey,
       quoteToken,
+      underlyingToken,
       remainingAccounts,
     } = await initSetup(
       provider,
@@ -44,10 +53,26 @@ describe("cpi_examples initOptionMarket", () => {
 
   it("should initialize a new option market", async () => {
     try {
-      await program.rpc.intializeOptionMarket({
+      await program.rpc.initializeOptionMarket({
         accounts: {
-          user: user.publicKey,
+          user: provider.wallet.publicKey,
+          psyAmericanProgram: americanOptionsProgram.programId,
+          underlyingAssetMint: optionMarket.underlyingAssetMint,
+          quoteAssetMint: optionMarket.quoteAssetMint,
+          optionMint: optionMarket.optionMint,
+          writerTokenMint: optionMarket.writerTokenMint,
+          quoteAssetPool: optionMarket.quoteAssetPool,
+          underlyingAssetPool: optionMarket.underlyingAssetPool,
+          optionMarket: optionMarket.key,
+          feeOwner: FEE_OWNER_KEY,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          rent: SYSVAR_RENT_PUBKEY,
+          systemProgram: SystemProgram.programId,
+          clock: SYSVAR_CLOCK_PUBKEY,
         },
+        remainingAccounts,
+        instructions,
       });
     } catch (err) {
       console.error(err);
