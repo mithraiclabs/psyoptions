@@ -529,7 +529,7 @@ fn validate_exercise_fee_acct<'c, 'info>(
 )]
 pub struct InitializeMarket<'info> {
     #[account(mut, signer)]
-    authority: AccountInfo<'info>,
+    pub authority: AccountInfo<'info>,
     pub underlying_asset_mint: Box<Account<'info, Mint>>,
     pub quote_asset_mint: Box<Account<'info, Mint>>,
     #[account(init,
@@ -577,12 +577,12 @@ pub struct InitializeMarket<'info> {
         payer = authority,
     )]
     pub option_market: Box<Account<'info, OptionMarket>>,
-    fee_owner: AccountInfo<'info>,
-    token_program: AccountInfo<'info>,
-    associated_token_program: AccountInfo<'info>,
-    rent: Sysvar<'info, Rent>,
-    system_program: AccountInfo<'info>,
-    clock: Sysvar<'info, Clock>,
+    pub fee_owner: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+    pub associated_token_program: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+    pub clock: Sysvar<'info, Clock>,
 }
 impl<'info> InitializeMarket<'info> {
     fn accounts(ctx: &Context<InitializeMarket<'info>>) -> Result<(), ProgramError> {
