@@ -53,27 +53,33 @@ describe("cpi_examples initOptionMarket", () => {
 
   it("should initialize a new option market", async () => {
     try {
-      await program.rpc.initializeOptionMarket({
-        accounts: {
-          user: provider.wallet.publicKey,
-          psyAmericanProgram: americanOptionsProgram.programId,
-          underlyingAssetMint: optionMarket.underlyingAssetMint,
-          quoteAssetMint: optionMarket.quoteAssetMint,
-          optionMint: optionMarket.optionMint,
-          writerTokenMint: optionMarket.writerTokenMint,
-          quoteAssetPool: optionMarket.quoteAssetPool,
-          underlyingAssetPool: optionMarket.underlyingAssetPool,
-          optionMarket: optionMarket.key,
-          feeOwner: FEE_OWNER_KEY,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-          rent: SYSVAR_RENT_PUBKEY,
-          systemProgram: SystemProgram.programId,
-          clock: SYSVAR_CLOCK_PUBKEY,
-        },
-        remainingAccounts,
-        instructions,
-      });
+      await program.rpc.initializeOptionMarket(
+        optionMarket.underlyingAmountPerContract,
+        optionMarket.quoteAmountPerContract,
+        optionMarket.expirationUnixTimestamp,
+        optionMarket.bumpSeed,
+        {
+          accounts: {
+            user: provider.wallet.publicKey,
+            psyAmericanProgram: americanOptionsProgram.programId,
+            underlyingAssetMint: optionMarket.underlyingAssetMint,
+            quoteAssetMint: optionMarket.quoteAssetMint,
+            optionMint: optionMarket.optionMint,
+            writerTokenMint: optionMarket.writerTokenMint,
+            quoteAssetPool: optionMarket.quoteAssetPool,
+            underlyingAssetPool: optionMarket.underlyingAssetPool,
+            optionMarket: optionMarket.key,
+            feeOwner: FEE_OWNER_KEY,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            rent: SYSVAR_RENT_PUBKEY,
+            systemProgram: SystemProgram.programId,
+            clock: SYSVAR_CLOCK_PUBKEY,
+          },
+          remainingAccounts,
+          instructions,
+        }
+      );
     } catch (err) {
       console.error(err);
       throw err;
