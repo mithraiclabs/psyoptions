@@ -39,9 +39,6 @@ describe("cpi_examples exercise", () => {
   let underlyingToken: Token;
   let optionToken: Token;
   let optionMarketKey: PublicKey;
-  let optionMintAccount: Keypair;
-  let writerTokenMintAccount: Keypair;
-  let underlyingAssetPoolAccount: Keypair;
   let remainingAccounts: AccountMeta[] = [];
 
   let userWriterAcct: Keypair;

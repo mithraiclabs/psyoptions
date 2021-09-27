@@ -1,10 +1,63 @@
+
 use anchor_lang::prelude::*;
 use anchor_lang::InstructionData;
 use anchor_spl::token::{self, Mint, TokenAccount, Transfer};
+use anchor_spl::dex::serum_dex;
+use anchor_spl::dex::serum_dex::{instruction::SelfTradeBehavior as SerumSelfTradeBehavior, matching::{OrderType as SerumOrderType, Side as SerumSide}};
+use psy_american::{OptionMarket, ExerciseOption, MintOption};
+use std::num::NonZeroU64;
 use solana_program::msg;
-use psy_american::{OptionMarket, MintOption, ExerciseOption};
 
 declare_id!("Fk8QcXcNpf5chR5RcviUjgaLVtULgvovGXUXGPMwLioF");
+
+// The external types do not implement the BorshSerialize and BorshDeserialize that is required by Anchor. 
+// Below we create new types that can be cast into the original Serum types
+#[derive(Debug, AnchorSerialize, AnchorDeserialize)]
+pub enum SelfTradeBehavior {
+    DecrementTake = 0,
+    CancelProvide = 1,
+    AbortTransaction = 2,
+}
+impl From<SelfTradeBehavior> for SerumSelfTradeBehavior {
+    fn from(self_trade_behave: SelfTradeBehavior) -> SerumSelfTradeBehavior {
+        match self_trade_behave {
+            SelfTradeBehavior::DecrementTake => SerumSelfTradeBehavior::DecrementTake,
+            SelfTradeBehavior::CancelProvide => SerumSelfTradeBehavior::CancelProvide,
+            SelfTradeBehavior::AbortTransaction => SerumSelfTradeBehavior::AbortTransaction,
+        }
+    }
+}
+
+#[derive(Debug, AnchorSerialize, AnchorDeserialize)]
+pub enum OrderType {
+    Limit = 0,
+    ImmediateOrCancel = 1,
+    PostOnly = 2,
+}
+impl From<OrderType> for SerumOrderType {
+    fn from(order_type: OrderType) -> SerumOrderType {
+        match order_type {
+            OrderType::Limit => SerumOrderType::Limit,
+            OrderType::ImmediateOrCancel => SerumOrderType::ImmediateOrCancel,
+            OrderType::PostOnly => SerumOrderType::PostOnly,
+        }
+    }
+}
+
+#[derive(Debug, AnchorSerialize, AnchorDeserialize)]
+pub enum NewSide {
+    Bid,
+    Ask,
+}
+
+impl From<NewSide> for SerumSide {
+    fn from(side: NewSide) -> SerumSide {
+        match side {
+            NewSide::Bid => SerumSide::Bid,
+            NewSide::Ask => SerumSide::Ask,
+        }
+    }
+}
 
 #[program]
 pub mod cpi_examples {    
@@ -168,6 +221,163 @@ pub mod cpi_examples {
         cpi_ctx.remaining_accounts = ctx.remaining_accounts.to_vec();
         psy_american::cpi::mint_option(cpi_ctx, size)
     }
+
+    pub fn init_new_order_vault(_ctx: Context<InitNewOrderVault>) -> ProgramResult {
+        Ok(())
+    }
+    pub fn place_order(
+        ctx: Context<PlaceOrder>,
+        vault_authority_bump: u8,
+        open_order_bump: u8,
+        open_order_bump_init: u8,
+        side: NewSide,
+        limit_price: u64,
+        max_coin_qty: u64,
+        order_type: OrderType,
+        client_order_id: u64,
+        self_trade_behavior: SelfTradeBehavior,
+        limit: u16,
+        max_native_pc_qty_including_fees: u64
+    ) -> ProgramResult {
+        // TODO: **optionally** create the open orders program with CPI to PsyOptions
+        let cpi_program = ctx.accounts.psy_american_program.clone();
+        if ctx.accounts.open_orders.data_is_empty() {
+            // NOTE: Not sure if this is the best way to handle this. But the InitAccount::try_accounts
+            //  was failing because the vault_authority did not have any SOL. 
+            // Send some SOL to the authority
+            solana_program::program::invoke(
+                &solana_program::system_instruction::transfer(
+                    &ctx.accounts.user_authority.key,
+                    &ctx.accounts.vault_authority.key,
+                    23357760
+                ),
+            &[
+                ctx.accounts.user_authority.to_account_info(),
+                ctx.accounts.vault_authority.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+            )?;
+    //////////////// The following is constructed following the JS client middleware for permissioned markets /////////
+            // Basic Serum DEX InitOpenOrders instruction
+            let mut ix = serum_dex::instruction::init_open_orders(
+                &ctx.accounts.dex_program.key,
+                ctx.accounts.open_orders.key,
+                ctx.accounts.vault_authority.key,
+                ctx.accounts.market.key,
+                Some(ctx.accounts.psy_market_authority.key),
+            )?;
+            ix.program_id = *cpi_program.key;
+            // TODO: Wrap the necessary Psy American middleware updates to the instruction. 
+            //  Note: only the OpenOrdersPda manipulates this instruction
+            // Override the open orders account and market authority.
+            ix.accounts[0].pubkey = ctx.accounts.open_orders.key();
+            ix.accounts[4].pubkey = ctx.accounts.psy_market_authority.key();
+            ix.accounts[4].is_signer = false;
+            // Writable because it must pay for the PDA initialization.
+            ix.accounts[1].is_writable = true;
+            // Prepend to the account list extra accounts needed for PDA initialization.
+            ix.accounts.insert(0, ctx.accounts.system_program.to_account_metas(Some(false))[0].clone());
+            ix.accounts.insert(0, ctx.accounts.dex_program.to_account_metas(Some(false))[0].clone());
+            // Prepend the ix discriminator, bump, and bumpInit to the instruction data,
+            // which saves the program compute by avoiding recalculating them in the
+            // program.
+            ix.data.insert(0, open_order_bump_init);
+            ix.data.insert(0, open_order_bump);
+            ix.data.insert(0, 0 as u8);
+            // PsyOptions Validation discriminator
+            ix.data.insert(0, 0 as u8);
+
+            // Handle the insertion of the dex program id one for time for the general proxy IX
+            ix.accounts.insert(0, ctx.accounts.dex_program.to_account_metas(Some(false))[0].clone());
+
+            let vault_key = ctx.accounts.vault.key();
+            let vault_authority_seeds =  &[
+                vault_key.as_ref(),
+                b"vaultAuthority",
+                &[vault_authority_bump]
+            ];
+            // send initOpenOrders instruction to PsyOptions
+            solana_program::program::invoke_signed(
+                &ix,
+                &[
+                    ctx.accounts.psy_american_program.to_account_info(),
+                    ctx.accounts.dex_program.to_account_info(),
+                    ctx.accounts.open_orders.to_account_info(),
+                    ctx.accounts.vault_authority.to_account_info(),
+                    ctx.accounts.market.to_account_info(),
+                    ctx.accounts.psy_market_authority.to_account_info(),
+                    ctx.accounts.system_program.to_account_info(),
+                    ctx.accounts.rent.to_account_info()
+                ],
+                &[vault_authority_seeds],
+            )?;
+        }
+
+//////////////////// TODO place new order CPI ///////////////////////
+        // Note: struggled to get BorshSerialize implemented for the external structs (.e.g Side, OrderType, etc)
+        //  so passing in the byte data an deserializing was the next best move
+        // deserialize the new order data
+        let mut new_order_ix = serum_dex::instruction::new_order(
+            ctx.accounts.market.key,
+            ctx.accounts.open_orders.key,
+            ctx.accounts.request_queue.key,
+            ctx.accounts.event_queue.key,
+            ctx.accounts.market_bids.key,
+            ctx.accounts.market_asks.key,
+            &ctx.accounts.vault.key(),
+            ctx.accounts.vault_authority.key,
+            ctx.accounts.coin_vault.key,
+            ctx.accounts.pc_vault.key,
+            ctx.accounts.token_program.key,
+            &ctx.accounts.rent.key(),
+            None, // optional Serum discount pubkey?
+            ctx.accounts.dex_program.key,
+            side.into(),
+            NonZeroU64::new(limit_price).unwrap(),
+            NonZeroU64::new(max_coin_qty).unwrap(),
+            order_type.into(),
+            client_order_id,
+            self_trade_behavior.into(),
+            limit,
+            NonZeroU64::new(max_native_pc_qty_including_fees).unwrap()
+        )?;
+        new_order_ix.program_id = *cpi_program.key;
+        // insert data for the OpenOrdersPDA middleware
+        new_order_ix.data.insert(0, 1 as u8);
+        // insert data for the PsyOptions Validation middleware
+        new_order_ix.data.insert(0, 1 as u8);
+        // Handle the insertion of the dex program id one for time for the general proxy IX
+        new_order_ix.accounts.insert(0, ctx.accounts.dex_program.to_account_metas(Some(false))[0].clone());
+        // execute the CPI
+        let vault_key = ctx.accounts.vault.key();
+        let vault_authority_seeds =  &[
+            vault_key.as_ref(),
+            b"vaultAuthority",
+            &[vault_authority_bump]
+        ];
+        // send initOpenOrders instruction to PsyOptions
+        solana_program::program::invoke_signed(
+            &new_order_ix,
+            &[
+                ctx.accounts.market.to_account_info(),
+                ctx.accounts.market_referral_address.to_account_info(),
+                ctx.accounts.open_orders.to_account_info(),
+                ctx.accounts.request_queue.to_account_info(),
+                ctx.accounts.event_queue.to_account_info(),
+                ctx.accounts.market_bids.to_account_info(),
+                ctx.accounts.market_asks.to_account_info(),
+                ctx.accounts.vault.to_account_info(),
+                ctx.accounts.vault_authority.to_account_info(),
+                ctx.accounts.coin_vault.to_account_info(),
+                ctx.accounts.pc_vault.to_account_info(),
+                ctx.accounts.token_program.to_account_info(),
+                ctx.accounts.rent.to_account_info(),
+            ],
+            &[vault_authority_seeds],
+        )?;
+
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -304,4 +514,67 @@ pub struct MintCtx<'info> {
     pub clock: Sysvar<'info, Clock>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct InitNewOrderVault<'info> {
+    authority: Signer<'info>,
+    usdc_mint: Box<Account<'info, Mint>>,
+    #[account(init,
+        seeds = [&usdc_mint.key().to_bytes()[..], b"vault"],
+        bump,
+        payer = authority,    
+        token::mint = usdc_mint,
+        token::authority = vault_authority,
+    )]
+    pub vault: Box<Account<'info, TokenAccount>>,
+    pub vault_authority: AccountInfo<'info>,
+
+    pub token_program: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct PlaceOrder<'info> {
+    /// The user who signed and sent the TX from the client
+    user_authority: Signer<'info>,
+    /// The PsyOptions American program ID
+    psy_american_program: AccountInfo<'info>,
+    /// The Serum DEX program ID
+    dex_program: AccountInfo<'info>,
+    /// The vault's OpenOrders account
+    #[account(mut)]
+    open_orders: AccountInfo<'info>,
+    /// The Serum Market
+    #[account(mut)]
+    market: AccountInfo<'info>,
+    /// The Serum Market market authority
+    psy_market_authority: AccountInfo<'info>,
+    /// The USDC vault account
+    #[account(mut)]
+    vault: Box<Account<'info, TokenAccount>>,
+    /// The vault authority that also has authority over the OpenOrders account
+    #[account(mut)]
+    vault_authority: AccountInfo<'info>,
+
+    //// other new_order accounts
+    #[account(mut)]
+    request_queue: AccountInfo<'info>,
+    #[account(mut)]
+    event_queue: AccountInfo<'info>,
+    #[account(mut)]
+    market_bids: AccountInfo<'info>,
+    #[account(mut)]
+    market_asks: AccountInfo<'info>,
+    #[account(mut)]
+    coin_vault: AccountInfo<'info>,
+    #[account(mut)]
+    pc_vault: AccountInfo<'info>,
+    #[account(mut)]
+    market_referral_address: AccountInfo<'info>,
+
+    system_program: AccountInfo<'info>,
+    token_program: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
 }

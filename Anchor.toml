@@ -11,7 +11,7 @@ wallet = "~/.config/solana/id.json"
 
 [[test.genesis]]
 address = "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin"
-program = "tests/deps/serum-dex/dex/target/deploy/serum_dex.so"
+program = "tests/deps/serum_dex.so"
 
 [scripts]
 test = "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
