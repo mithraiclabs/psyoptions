@@ -43,10 +43,11 @@ pub mod cpi_examples {
             // The rest are self explanatory, we can't spell everything out for you ;)
             ctx.accounts.token_program.to_account_metas(Some(false))[0].clone(),
             ctx.accounts.associated_token_program.to_account_metas(Some(false))[0].clone(),
-            ctx.accounts.clock.to_account_metas(Some(false))[0].clone(),
             ctx.accounts.rent.to_account_metas(Some(false))[0].clone(),
             ctx.accounts.system_program.to_account_metas(Some(false))[0].clone(),
+            ctx.accounts.clock.to_account_metas(Some(false))[0].clone(),
         ];
+        // msg!("cpi_accounts {:?}", cpi_accounts);
         let mut account_infos = vec![
             ctx.accounts.user.to_account_info().clone(),
             ctx.accounts.underlying_asset_mint.to_account_info().clone(),
@@ -59,9 +60,9 @@ pub mod cpi_examples {
             ctx.accounts.fee_owner.to_account_info().clone(),
             ctx.accounts.token_program.to_account_info().clone(),
             ctx.accounts.associated_token_program.to_account_info().clone(),
-            ctx.accounts.clock.to_account_info().clone(),
             ctx.accounts.rent.to_account_info().clone(),
             ctx.accounts.system_program.to_account_info().clone(),
+            ctx.accounts.clock.to_account_info().clone(),
         ];
         for remaining_account in ctx.remaining_accounts {
             cpi_accounts.push(remaining_account.to_account_metas(Some(false))[0].clone());
@@ -73,7 +74,6 @@ pub mod cpi_examples {
             accounts: cpi_accounts,
             data: init_market_args.data()
         };
-        msg!("data: {:?}", ix.data);
 
         solana_program::program::invoke(&ix, &account_infos)
     }
