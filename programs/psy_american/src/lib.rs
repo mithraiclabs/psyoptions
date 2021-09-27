@@ -8,7 +8,7 @@ use spl_token::state::Account as SPLTokenAccount;
 use solana_program::{program::invoke, program_error::ProgramError, program_pack::Pack, system_instruction, system_program};
 use serum_dex::instruction::{initialize_market as init_serum_market_instruction};
 use anchor_spl::dex::{
-    Logger, MarketProxy, OpenOrdersPda, ReferralFees,
+    MarketProxy, OpenOrdersPda, ReferralFees,
 };
 
 declare_id!("R2y9ip6mxmWUj4pt54jP2hz2dgvMozy9VTSwMWE7evs");
@@ -188,7 +188,6 @@ pub mod psy_american {
         let underlying_transfer_amount = option_market.underlying_amount_per_contract.checked_mul(size).unwrap();
         token::transfer(cpi_ctx, underlying_transfer_amount)?;
 
-        msg!("before validate exercise fee accounts");
         // Transfer an exercise fee
         let exercise_fee_account = validate_exercise_fee_acct(&ctx.accounts.option_market, ctx.remaining_accounts)?;
         let exercise_fee_amount = fees::fee_amount(option_market.quote_amount_per_contract);
@@ -388,12 +387,10 @@ pub mod psy_american {
     }
 
     pub fn entry(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
-        msg!("PsyAmerican entry");
         MarketProxy::new()
             .middleware(&mut serum_proxy::Validation::new())
             .middleware(&mut ReferralFees::new(serum_proxy::referral::ID))
             .middleware(&mut OpenOrdersPda::new())
-            .middleware(&mut Logger)
             .run(program_id, accounts, data)
     }
 }
@@ -587,7 +584,6 @@ pub struct InitializeMarket<'info> {
 }
 impl<'info> InitializeMarket<'info> {
     fn accounts(ctx: &Context<InitializeMarket<'info>>) -> Result<(), ProgramError> {
-        msg!("checking account access control");
         if ctx.accounts.option_mint.mint_authority.unwrap() != *ctx.accounts.option_market.to_account_info().key {
             return Err(errors::ErrorCode::OptionMarketMustBeMintAuthority.into());
         }
