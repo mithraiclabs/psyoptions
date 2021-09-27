@@ -1,10 +1,13 @@
 
 use anchor_lang::prelude::*;
+use anchor_lang::InstructionData;
 use anchor_spl::token::{self, Mint, TokenAccount, Transfer};
 use anchor_spl::dex::serum_dex;
 use anchor_spl::dex::serum_dex::{instruction::SelfTradeBehavior as SerumSelfTradeBehavior, matching::{OrderType as SerumOrderType, Side as SerumSide}};
 use psy_american::{OptionMarket, ExerciseOption, MintOption};
 use std::num::NonZeroU64;
+use solana_program::msg;
+
 declare_id!("Fk8QcXcNpf5chR5RcviUjgaLVtULgvovGXUXGPMwLioF");
 
 // The external types do not implement the BorshSerialize and BorshDeserialize that is required by Anchor. 
@@ -57,8 +60,76 @@ impl From<NewSide> for SerumSide {
 }
 
 #[program]
-pub mod cpi_examples {
+pub mod cpi_examples {    
     use super::*;
+
+    pub fn initialize_option_market<'a, 'b, 'c, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, InitOptionMarket<'info>>,
+        underlying_amount_per_contract: u64,
+        quote_amount_per_contract: u64,
+        expiration_unix_timestamp: i64,
+        bump_seed: u8
+    ) -> ProgramResult {
+        let cpi_program = ctx.accounts.psy_american_program.clone();
+        let init_market_args = psy_american::instruction::InitializeMarket {
+            underlying_amount_per_contract,
+            quote_amount_per_contract,
+            expiration_unix_timestamp,
+            bump_seed
+        };
+        let mut cpi_accounts = vec![
+            ctx.accounts.user.to_account_metas(Some(true))[0].clone(),
+            // The Mint of the underlying asset for the contracts. Also the mint that is in the vault.
+            ctx.accounts.underlying_asset_mint.to_account_metas(Some(false))[0].clone(),
+            ctx.accounts.quote_asset_mint.to_account_metas(Some(false))[0].clone(),
+            // The mint of the option
+            ctx.accounts.option_mint.to_account_metas(Some(false))[0].clone(),
+            // The Mint of the writer token for the OptionMarket
+            ctx.accounts.writer_token_mint.to_account_metas(Some(false))[0].clone(),
+            ctx.accounts.quote_asset_pool.to_account_metas(Some(false))[0].clone(),
+            // The underlying asset pool for the OptionMarket
+            ctx.accounts.underlying_asset_pool.to_account_metas(Some(false))[0].clone(),
+            // The PsyOptions OptionMarket to mint from
+            ctx.accounts.option_market.to_account_metas(Some(false))[0].clone(),
+            // The fee_owner that is a constant in the PsyAmerican contract
+            ctx.accounts.fee_owner.to_account_metas(Some(false))[0].clone(),
+            // The rest are self explanatory, we can't spell everything out for you ;)
+            ctx.accounts.token_program.to_account_metas(Some(false))[0].clone(),
+            ctx.accounts.associated_token_program.to_account_metas(Some(false))[0].clone(),
+            ctx.accounts.rent.to_account_metas(Some(false))[0].clone(),
+            ctx.accounts.system_program.to_account_metas(Some(false))[0].clone(),
+            ctx.accounts.clock.to_account_metas(Some(false))[0].clone(),
+        ];
+        // msg!("cpi_accounts {:?}", cpi_accounts);
+        let mut account_infos = vec![
+            ctx.accounts.user.to_account_info().clone(),
+            ctx.accounts.underlying_asset_mint.to_account_info().clone(),
+            ctx.accounts.quote_asset_mint.to_account_info().clone(),
+            ctx.accounts.option_mint.to_account_info().clone(),
+            ctx.accounts.writer_token_mint.to_account_info().clone(),
+            ctx.accounts.quote_asset_pool.to_account_info().clone(),
+            ctx.accounts.underlying_asset_pool.to_account_info().clone(),
+            ctx.accounts.option_market.to_account_info().clone(),
+            ctx.accounts.fee_owner.to_account_info().clone(),
+            ctx.accounts.token_program.to_account_info().clone(),
+            ctx.accounts.associated_token_program.to_account_info().clone(),
+            ctx.accounts.rent.to_account_info().clone(),
+            ctx.accounts.system_program.to_account_info().clone(),
+            ctx.accounts.clock.to_account_info().clone(),
+        ];
+        for remaining_account in ctx.remaining_accounts {
+            cpi_accounts.push(remaining_account.to_account_metas(Some(false))[0].clone());
+            account_infos.push(remaining_account.clone());
+        }
+
+        let ix = solana_program::instruction::Instruction {
+            program_id: *cpi_program.key,
+            accounts: cpi_accounts,
+            data: init_market_args.data()
+        };
+
+        solana_program::program::invoke(&ix, &account_infos)
+    }
 
     pub fn initialize(ctx: Context<Initialize>, amount: u64) -> ProgramResult {
         let cpi_accounts = Transfer {
@@ -308,6 +379,35 @@ pub mod cpi_examples {
         Ok(())
     }
 }
+
+#[derive(Accounts)]
+pub struct InitOptionMarket<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub psy_american_program: AccountInfo<'info>,
+    /////// Init OptionMarket accounts
+    pub underlying_asset_mint: Box<Account<'info, Mint>>,
+    pub quote_asset_mint: Box<Account<'info, Mint>>,
+
+    #[account(mut)]
+    pub option_mint: AccountInfo<'info>,
+    #[account(mut)]
+    pub writer_token_mint: AccountInfo<'info>,
+    #[account(mut)]
+    pub quote_asset_pool: AccountInfo<'info>,
+    #[account(mut)]
+    pub underlying_asset_pool: AccountInfo<'info>,
+    #[account(mut)]
+    pub option_market: AccountInfo<'info>,
+    pub fee_owner: AccountInfo<'info>,
+
+    pub token_program: AccountInfo<'info>,
+    pub associated_token_program: AccountInfo<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: AccountInfo<'info>,
+    pub clock: Sysvar<'info, Clock>,
+}
+
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
