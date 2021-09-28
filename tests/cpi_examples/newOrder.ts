@@ -224,7 +224,6 @@ describe("cpi_examples newOrder", () => {
               coinVault: marketProxy.market._decoded.baseVault,
               // @ts-ignore: Dumb serum stuff
               pcVault: marketProxy.market._decoded.quoteVault,
-              marketReferralAddress: referral,
 
               systemProgram: SystemProgram.programId,
               tokenProgram: TOKEN_PROGRAM_ID,
@@ -303,7 +302,6 @@ describe("cpi_examples newOrder", () => {
                 coinVault: marketProxy.market._decoded.baseVault,
                 // @ts-ignore: Dumb serum stuff
                 pcVault: marketProxy.market._decoded.quoteVault,
-                marketReferralAddress: referral,
 
                 systemProgram: SystemProgram.programId,
                 tokenProgram: TOKEN_PROGRAM_ID,

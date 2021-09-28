@@ -239,7 +239,7 @@ pub mod cpi_examples {
         limit: u16,
         max_native_pc_qty_including_fees: u64
     ) -> ProgramResult {
-        // TODO: **optionally** create the open orders program with CPI to PsyOptions
+        // **optionally** create the open orders program with CPI to PsyOptions
         let cpi_program = ctx.accounts.psy_american_program.clone();
         if ctx.accounts.open_orders.data_is_empty() {
             // NOTE: Not sure if this is the best way to handle this. But the InitAccount::try_accounts
@@ -360,7 +360,6 @@ pub mod cpi_examples {
             &new_order_ix,
             &[
                 ctx.accounts.market.to_account_info(),
-                ctx.accounts.market_referral_address.to_account_info(),
                 ctx.accounts.open_orders.to_account_info(),
                 ctx.accounts.request_queue.to_account_info(),
                 ctx.accounts.event_queue.to_account_info(),
@@ -571,8 +570,6 @@ pub struct PlaceOrder<'info> {
     coin_vault: AccountInfo<'info>,
     #[account(mut)]
     pc_vault: AccountInfo<'info>,
-    #[account(mut)]
-    market_referral_address: AccountInfo<'info>,
 
     system_program: AccountInfo<'info>,
     token_program: AccountInfo<'info>,
