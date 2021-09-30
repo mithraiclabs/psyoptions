@@ -1,7 +1,7 @@
 import * as anchor from "@project-serum/anchor";
 import { MarketProxy, OpenOrders } from "@project-serum/serum";
 import { OrderParams } from "@project-serum/serum/lib/market";
-import { Token, TOKEN_PROGRAM_ID, u64 } from "@solana/spl-token";
+import { MintInfo, Token, TOKEN_PROGRAM_ID, u64 } from "@solana/spl-token";
 import {
   AccountInfo,
   AccountMeta,
@@ -54,6 +54,7 @@ describe("cpi_examples newOrder", () => {
     marketAuthority: anchor.web3.PublicKey,
     marketAuthorityBump: number,
     usdcMint: anchor.web3.PublicKey,
+    usdcMintInfo: MintInfo,
     usdcAccount: anchor.web3.PublicKey,
     referral: anchor.web3.PublicKey,
     openOrders: PublicKey,
@@ -160,11 +161,12 @@ describe("cpi_examples newOrder", () => {
     before(async () => {
       // Vault is already initialized because these tests run sequentially
       // transfer USDC to that vault so it can place an order
+      usdcMintInfo = await usdcToken.getMintInfo();
       await usdcToken.mintTo(
         vault,
         provider.wallet.publicKey,
         [],
-        new u64(10_000_000)
+        new u64(10_000_000 * usdcMintInfo.decimals)
       );
       // Get the open orders account that needs to be optionally created
       [openOrders, openOrdersBump] = await PublicKey.findProgramAddress(
@@ -172,6 +174,7 @@ describe("cpi_examples newOrder", () => {
           openOrdersSeed,
           marketProxy.dexProgramId.toBuffer(),
           marketProxy.market.address.toBuffer(),
+          // NOTE: For other developers, this should be changed to be the User or Vault that has the authority over the account.
           vaultAuthority.toBuffer(),
         ],
         americanOptionsProgram.programId
@@ -181,14 +184,17 @@ describe("cpi_examples newOrder", () => {
     it("should create an open orders account and place an order on the Serum market", async () => {
       // test the vault contains USDC
       const vaultAcct = await usdcToken.getAccountInfo(vault);
-      assert.equal(vaultAcct.amount.toString(), new u64(10_000_000).toString());
+      assert.equal(
+        vaultAcct.amount.toString(),
+        new u64(10_000_000 * usdcMintInfo.decimals).toString()
+      );
       // test the order book is blank
       let bids = await marketProxy.market.loadBids(provider.connection);
       let l2 = await bids.getL2(3);
       assert.equal(l2.length, 0);
 
       const price = 1;
-      const size = 1;
+      const size = 22;
 
       // Run placeOrder instruction for vault
       try {
@@ -203,7 +209,14 @@ describe("cpi_examples newOrder", () => {
           new anchor.BN(999), // client_order_id
           SelfTradeBehavior.AbortTransaction, // self_trade_behavior
           new anchor.BN(65535), // limit - no idea what this is
-          new anchor.BN(1000000), // max_native_pc_qty_including_fees - no idea what exactly this is
+          new anchor.BN(
+            // @ts-ignore: serum
+            marketProxy.market._decoded.quoteLotSize.toNumber()
+          ).mul(
+            marketProxy.market
+              .baseSizeNumberToLots(size)
+              .mul(marketProxy.market.priceNumberToLots(price))
+          ), // max_native_pc_qty_including_fees - no idea what exactly this is
           {
             accounts: {
               userAuthority: provider.wallet.publicKey,
@@ -281,7 +294,14 @@ describe("cpi_examples newOrder", () => {
             new anchor.BN(998), // client_order_id
             SelfTradeBehavior.AbortTransaction, // self_trade_behavior
             new anchor.BN(65535), // limit
-            new anchor.BN(2000000), // max_native_pc_qty_including_fees
+            new anchor.BN(
+              // @ts-ignore: serum
+              marketProxy.market._decoded.quoteLotSize.toNumber()
+            ).mul(
+              marketProxy.market
+                .baseSizeNumberToLots(size)
+                .mul(marketProxy.market.priceNumberToLots(price))
+            ), // max_native_pc_qty_including_fees
             {
               accounts: {
                 userAuthority: provider.wallet.publicKey,
