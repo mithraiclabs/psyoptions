@@ -56,4 +56,6 @@ pub enum ErrorCode {
   CoinMintIsNotOptionMint,
   #[msg("Cannot prune the market while it's still active")]
   CannotPruneActiveMarket,
+  #[msg("Numberical overflow")]
+  NumberOverflow,
 }

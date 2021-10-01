@@ -11,7 +11,7 @@ import {
 } from "@solana/web3.js";
 import assert from "assert";
 import {
-  feeAmount,
+  feeAmountPerContract,
   FEE_OWNER_KEY,
 } from "../../packages/psyoptions-ts/src/fees";
 import { OptionMarketV2 } from "../../packages/psyoptions-ts/src/types";
@@ -147,8 +147,10 @@ describe("cpi_examples mint", () => {
        * NOTE: If the PsyOptions market can handle a 5bps fee (i.e. feeAmount returns > 0)
        * then this remaining account is required.
        */
-      const mintFee = feeAmount(optionMarket.underlyingAmountPerContract);
-      if (mintFee.gtn(0)) {
+      const mintFeePerContract = feeAmountPerContract(
+        optionMarket.underlyingAmountPerContract
+      );
+      if (mintFeePerContract.gtn(0)) {
         mintFeeKey = await Token.getAssociatedTokenAddress(
           ASSOCIATED_TOKEN_PROGRAM_ID,
           TOKEN_PROGRAM_ID,

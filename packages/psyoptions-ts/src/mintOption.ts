@@ -13,7 +13,7 @@ import {
   Token,
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
-import { feeAmount, FEE_OWNER_KEY } from './fees';
+import { feeAmountPerContract, FEE_OWNER_KEY } from './fees';
 import { uint64 } from './layout';
 import { OptionMarketV2 } from './types';
 
@@ -30,7 +30,9 @@ export const mintOptionsTx = async (
 ) => {
   let mintFeeKey: PublicKey,
     remainingAccounts: AccountMeta[] = [];
-  const mintFee = feeAmount(optionMarket.underlyingAmountPerContract);
+  const mintFee = feeAmountPerContract(
+    optionMarket.underlyingAmountPerContract,
+  );
   if (mintFee.gtn(0)) {
     mintFeeKey = await Token.getAssociatedTokenAddress(
       ASSOCIATED_TOKEN_PROGRAM_ID,

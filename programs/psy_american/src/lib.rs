@@ -71,8 +71,8 @@ pub mod psy_american {
         )?;
 
         // Take a mint fee
-        let mint_fee_amount = fees::fee_amount(option_market.underlying_amount_per_contract);
-        if mint_fee_amount > 0 {
+        let mint_fee_amount_per_contract = fees::fee_amount(option_market.underlying_amount_per_contract);
+        if mint_fee_amount_per_contract > 0 {
             match mint_fee_account {
                 Some(account) => {
                     let cpi_accounts = Transfer {
@@ -82,14 +82,16 @@ pub mod psy_american {
                     };
                     let cpi_token_program = ctx.accounts.token_program.clone();
                     let cpi_ctx = CpiContext::new(cpi_token_program, cpi_accounts);
-                    token::transfer(cpi_ctx, mint_fee_amount)?;
+                    let total_fee = mint_fee_amount_per_contract.checked_mul(size).ok_or(errors::ErrorCode::NumberOverflow)?;
+                    token::transfer(cpi_ctx, total_fee)?;
                 },
                 None => {}
             }
         } else {
             // Handle NFT case with SOL fee
+            let total_fee = fees::NFT_MINT_LAMPORTS.checked_mul(size).ok_or(errors::ErrorCode::NumberOverflow)?;
             invoke(
-                &system_instruction::transfer(&ctx.accounts.user_authority.key, &fees::fee_owner_key::ID, fees::NFT_MINT_LAMPORTS),
+                &system_instruction::transfer(&ctx.accounts.user_authority.key, &fees::fee_owner_key::ID, total_fee),
             &[
                 ctx.accounts.user_authority.clone(),
                 ctx.accounts.fee_owner.clone(),
@@ -190,8 +192,8 @@ pub mod psy_american {
 
         // Transfer an exercise fee
         let exercise_fee_account = validate_exercise_fee_acct(&ctx.accounts.option_market, ctx.remaining_accounts)?;
-        let exercise_fee_amount = fees::fee_amount(option_market.quote_amount_per_contract);
-        if exercise_fee_amount > 0 {
+        let exercise_fee_amount_per_contract = fees::fee_amount(option_market.quote_amount_per_contract);
+        if exercise_fee_amount_per_contract > 0 {
             match exercise_fee_account {
                 Some(account) => {
                     let cpi_accounts = Transfer {
@@ -201,14 +203,16 @@ pub mod psy_american {
                     };
                     let cpi_token_program = ctx.accounts.token_program.clone();
                     let cpi_ctx = CpiContext::new(cpi_token_program, cpi_accounts);
-                    token::transfer(cpi_ctx, exercise_fee_amount)?;
+                    let total_fee = exercise_fee_amount_per_contract.checked_mul(size).ok_or(errors::ErrorCode::NumberOverflow)?;
+                    token::transfer(cpi_ctx, total_fee)?;
                 },
                 None => {}
             }
         } else {
             // Handle NFT case with SOL fee
+            let total_fee = fees::NFT_MINT_LAMPORTS.checked_mul(size).ok_or(errors::ErrorCode::NumberOverflow)?;
             invoke(
-                &system_instruction::transfer(&ctx.accounts.user_authority.key, &fees::fee_owner_key::ID, fees::NFT_MINT_LAMPORTS),
+                &system_instruction::transfer(&ctx.accounts.user_authority.key, &fees::fee_owner_key::ID, total_fee),
             &[
                 ctx.accounts.user_authority.clone(),
                 ctx.accounts.fee_owner.clone(),

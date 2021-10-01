@@ -7,6 +7,6 @@ export const FEE_OWNER_KEY = new PublicKey(
 
 export const NFT_MINT_LAMPORTS = LAMPORTS_PER_SOL / 2;
 
-export const feeAmount = (assetQuantity: BN) => {
+export const feeAmountPerContract = (assetQuantity: BN) => {
   return assetQuantity.div(new BN(10_000 / 5));
 };
