@@ -21,7 +21,10 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import { getOrAddAssociatedTokenAccountTx } from "../packages/psyoptions-ts/src";
-import { feeAmount, FEE_OWNER_KEY } from "../packages/psyoptions-ts/src/fees";
+import {
+  feeAmountPerContract,
+  FEE_OWNER_KEY,
+} from "../packages/psyoptions-ts/src/fees";
 import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
 
 export const wait = (delayMS: number) =>
@@ -445,8 +448,8 @@ export const initSetup = async (
     );
 
   // Get the associated fee address if the market requires a fee
-  const mintFee = feeAmount(underlyingAmountPerContract);
-  if (mintFee.gtn(0)) {
+  const mintFeePerContract = feeAmountPerContract(underlyingAmountPerContract);
+  if (mintFeePerContract.gtn(0)) {
     mintFeeKey = await Token.getAssociatedTokenAddress(
       ASSOCIATED_TOKEN_PROGRAM_ID,
       TOKEN_PROGRAM_ID,
@@ -469,7 +472,7 @@ export const initSetup = async (
     }
   }
 
-  const exerciseFee = feeAmount(quoteAmountPerContract);
+  const exerciseFee = feeAmountPerContract(quoteAmountPerContract);
   if (exerciseFee.gtn(0)) {
     exerciseFeeKey = await Token.getAssociatedTokenAddress(
       ASSOCIATED_TOKEN_PROGRAM_ID,

@@ -9,7 +9,7 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import {
-  feeAmount,
+  feeAmountPerContract,
   FEE_OWNER_KEY,
   NFT_MINT_LAMPORTS,
 } from "../packages/psyoptions-ts/src/fees";
@@ -25,6 +25,7 @@ import {
 } from "../utils/helpers";
 import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
 import { mintOptionsTx } from "../packages/psyoptions-ts/src";
+import { BN } from "@project-serum/anchor";
 
 describe("exerciseOption", () => {
   const provider = anchor.Provider.env();
@@ -50,7 +51,7 @@ describe("exerciseOption", () => {
   let remainingAccounts: AccountMeta[] = [];
   let instructions: TransactionInstruction[] = [];
 
-  let size = new u64(1);
+  let size = new u64(2);
 
   before(async () => {
     // airdrop SOL to the payer and minter
@@ -155,7 +156,7 @@ describe("exerciseOption", () => {
       );
     });
     beforeEach(async () => {
-      size = new u64(1);
+      size = new u64(2);
     });
 
     it("should be properly setup", async () => {
@@ -234,7 +235,11 @@ describe("exerciseOption", () => {
         const exerciserQuoteDiff = exerciserQuoteAfter.amount.sub(
           exerciserQuoteBefore.amount
         );
-        const exerciseFee = feeAmount(quoteAmountPerContract);
+        const exerciseFeePerContract = feeAmountPerContract(
+          quoteAmountPerContract
+        );
+        const exerciseFee = exerciseFeePerContract.mul(size);
+        console.log("*** exerciseFee", exerciseFee.toString());
         assert.equal(
           exerciserQuoteDiff.neg().toString(),
           exerciseFee.add(size.mul(quoteAmountPerContract)).toString()
@@ -573,7 +578,7 @@ describe("exerciseOption", () => {
       );
     });
     beforeEach(async () => {
-      size = new u64(1);
+      size = new u64(2);
     });
     it("should error", async () => {
       try {
@@ -675,15 +680,15 @@ describe("exerciseOption", () => {
         optionMarket.underlyingAssetMint
       ));
 
+      size = new u64(2);
       // Transfer a options to the exerciser
       await optionToken.transfer(
         minterOptionAcct.publicKey,
         exerciserOptionAcct.publicKey,
         minter,
         [],
-        new u64(1)
+        size
       );
-      size = new u64(1);
     });
     it("should transfer enough lamports as required by the fee", async () => {
       const exerciserBefore = await provider.connection.getAccountInfo(
@@ -729,8 +734,14 @@ describe("exerciseOption", () => {
       const exerciserDiff =
         exerciserAfter?.lamports - exerciserBefore?.lamports;
       const feeOwnerDiff = feeOwnerAfter - feeOwnerBefore;
-      assert.equal(-exerciserDiff, NFT_MINT_LAMPORTS);
-      assert.equal(feeOwnerDiff, NFT_MINT_LAMPORTS);
+      assert.equal(
+        -exerciserDiff,
+        size.mul(new BN(NFT_MINT_LAMPORTS)).toNumber()
+      );
+      assert.equal(
+        feeOwnerDiff,
+        size.mul(new BN(NFT_MINT_LAMPORTS)).toNumber()
+      );
     });
   });
 });

@@ -17,7 +17,7 @@ import {
 import assert from "assert";
 import { mintOptionsTx } from "../../packages/psyoptions-ts/src";
 import {
-  feeAmount,
+  feeAmountPerContract,
   FEE_OWNER_KEY,
 } from "../../packages/psyoptions-ts/src/fees";
 
@@ -171,8 +171,10 @@ describe("cpi_examples exercise", () => {
         userUnderlyingAccount.publicKey
       );
 
-      const exerciseFee = feeAmount(optionMarket.quoteAmountPerContract);
-      if (exerciseFee.gtn(0)) {
+      const exerciseFeePerContract = feeAmountPerContract(
+        optionMarket.quoteAmountPerContract
+      );
+      if (exerciseFeePerContract.gtn(0)) {
         exerciseFeeKey = await Token.getAssociatedTokenAddress(
           ASSOCIATED_TOKEN_PROGRAM_ID,
           TOKEN_PROGRAM_ID,

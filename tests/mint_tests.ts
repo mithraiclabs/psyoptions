@@ -16,7 +16,7 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import {
-  feeAmount,
+  feeAmountPerContract,
   FEE_OWNER_KEY,
   NFT_MINT_LAMPORTS,
 } from "../packages/psyoptions-ts/src/fees";
@@ -29,6 +29,7 @@ import {
   wait,
 } from "../utils/helpers";
 import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
+import { BN } from "@project-serum/anchor";
 
 describe("mintOption", () => {
   const provider = anchor.Provider.env();
@@ -196,7 +197,10 @@ describe("mintOption", () => {
       const expectedUnderlyingTransfered = size.mul(
         underlyingAmountPerContract
       );
-      const mintFeeAmount = feeAmount(underlyingAmountPerContract);
+      const mintFeeAmountPerContract = feeAmountPerContract(
+        underlyingAmountPerContract
+      );
+      const mintFeeAmount = mintFeeAmountPerContract.mul(size);
 
       const underlyingPoolAfter = await underlyingToken.getAccountInfo(
         optionMarket.underlyingAssetPool
@@ -661,8 +665,8 @@ describe("mintOption", () => {
       }
       const minterDiff = minterAfter?.lamports - minterBefore?.lamports;
       const feeOwnerDiff = feeOwnerAfter - feeOwnerBefore;
-      assert.equal(-minterDiff, NFT_MINT_LAMPORTS);
-      assert.equal(feeOwnerDiff, NFT_MINT_LAMPORTS);
+      assert.equal(-minterDiff, size.mul(new BN(NFT_MINT_LAMPORTS)));
+      assert.equal(feeOwnerDiff, size.mul(new BN(NFT_MINT_LAMPORTS)));
     });
   });
 });
