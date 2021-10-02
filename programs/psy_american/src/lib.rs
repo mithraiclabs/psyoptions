@@ -749,19 +749,19 @@ impl<'info> ExerciseOption<'info> {
 #[derive(Accounts)]
 pub struct ClosePostExp<'info> {
     #[account(signer)]
-    user_authority: AccountInfo<'info>,
-    option_market: Box<Account<'info, OptionMarket>>,
+    pub user_authority: AccountInfo<'info>,
+    pub option_market: Box<Account<'info, OptionMarket>>,
     #[account(mut)]
-    writer_token_mint: Box<Account<'info, Mint>>,
+    pub writer_token_mint: Box<Account<'info, Mint>>,
     #[account(mut)]
-    writer_token_src: Box<Account<'info, TokenAccount>>,
+    pub writer_token_src: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    underlying_asset_pool: Box<Account<'info, TokenAccount>>,
+    pub underlying_asset_pool: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    underlying_asset_dest: Box<Account<'info, TokenAccount>>,
+    pub underlying_asset_dest: Box<Account<'info, TokenAccount>>,
 
-    token_program: AccountInfo<'info>,
-    clock: Sysvar<'info, Clock>,
+    pub token_program: AccountInfo<'info>,
+    pub clock: Sysvar<'info, Clock>,
 }
 impl<'info> ClosePostExp<'info> {
     fn accounts(ctx: &Context<ClosePostExp>) -> Result<(), ProgramError> {
@@ -795,22 +795,22 @@ impl<'info> ClosePostExp<'info> {
 #[derive(Accounts)]
 pub struct CloseOptionPosition<'info> {
     #[account(signer)]
-    user_authority: AccountInfo<'info>,
-    option_market: Box<Account<'info, OptionMarket>>,
+    pub user_authority: AccountInfo<'info>,
+    pub option_market: Box<Account<'info, OptionMarket>>,
     #[account(mut)]
-    writer_token_mint: Box<Account<'info, Mint>>,
+    pub writer_token_mint: Box<Account<'info, Mint>>,
     #[account(mut)]
-    writer_token_src: Box<Account<'info, TokenAccount>>,
+    pub writer_token_src: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    option_token_mint: Account<'info, Mint>,
+    pub option_token_mint: Account<'info, Mint>,
     #[account(mut)]
-    option_token_src: Box<Account<'info, TokenAccount>>,
+    pub option_token_src: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    underlying_asset_pool: Box<Account<'info, TokenAccount>>,
+    pub underlying_asset_pool: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    underlying_asset_dest: Box<Account<'info, TokenAccount>>,
+    pub underlying_asset_dest: Box<Account<'info, TokenAccount>>,
 
-    token_program: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
 }
 impl<'info> CloseOptionPosition<'info> {
     fn accounts(ctx: &Context<CloseOptionPosition>) -> ProgramResult {
@@ -837,18 +837,18 @@ impl<'info> CloseOptionPosition<'info> {
 #[derive(Accounts)]
 pub struct BurnWriterForQuote<'info> {
     #[account(signer)]
-    user_authority: AccountInfo<'info>,
-    option_market: Box<Account<'info, OptionMarket>>,
+    pub user_authority: AccountInfo<'info>,
+    pub option_market: Box<Account<'info, OptionMarket>>,
     #[account(mut)]
-    writer_token_mint: Box<Account<'info, Mint>>,
+    pub writer_token_mint: Box<Account<'info, Mint>>,
     #[account(mut)]
-    writer_token_src: Box<Account<'info, TokenAccount>>,
+    pub writer_token_src: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    quote_asset_pool: Box<Account<'info, TokenAccount>>,
+    pub quote_asset_pool: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    writer_quote_dest: Box<Account<'info, TokenAccount>>,
+    pub writer_quote_dest: Box<Account<'info, TokenAccount>>,
 
-    token_program: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
 }
 impl<'info> BurnWriterForQuote<'info> {
     fn accounts(ctx: &Context<BurnWriterForQuote>) -> ProgramResult{
