@@ -1,6 +1,7 @@
 import * as anchor from "@project-serum/anchor";
 import assert from "assert";
 import { AccountInfo, Keypair, PublicKey, Transaction } from "@solana/web3.js";
+import * as serumCmn from "@project-serum/common";
 import {
   DEX_PID,
   getMarketAndAuthorityInfo,
@@ -54,21 +55,24 @@ describe("proxyTests", () => {
       remainingAccounts,
       instructions
     );
+    [usdcMint, usdcAccount] = await serumCmn.createMintAndVault(
+      provider,
+      new anchor.BN("1000000000000000000"),
+      undefined,
+      6
+    );
     ({ marketAuthority, marketAuthorityBump } = await getMarketAndAuthorityInfo(
       program,
       optionMarket,
-      DEX_PID
+      DEX_PID,
+      usdcMint
     ));
-    ({
-      marketA: marketProxy,
-      usdc: usdcMint,
-      godUsdc: usdcAccount,
-      marketAuthorityBump,
-    } = await initMarket(
+    ({ marketA: marketProxy, marketAuthorityBump } = await initMarket(
       provider,
       program,
       marketLoader(provider, program, optionMarket.key, marketAuthorityBump),
-      optionMarket
+      optionMarket,
+      usdcMint
     ));
     [openOrdersKey, openOrdersBump] = await PublicKey.findProgramAddress(
       [

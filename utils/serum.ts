@@ -74,32 +74,22 @@ export const initMarket = async (
   /** The PsyOptions anchor.Program */
   program: anchor.Program,
   marketLoader: MarketLoader,
-  optionMarket: OptionMarketV2
+  optionMarket: OptionMarketV2,
+  pcMint: PublicKey
 ) => {
-  // Setup mints with initial tokens owned by the provider.
-  const decimals = 6;
-
-  const [USDC, GOD_USDC] = await serumCmn.createMintAndVault(
-    provider,
-    new BN("1000000000000000000"),
-    undefined,
-    decimals
-  );
-
   const [MARKET_A_USDC, vaultSigner, marketAuthority, marketAuthorityBump] =
     await setupMarket({
       provider,
       program,
       baseMint: optionMarket.optionMint,
-      quoteMint: USDC,
+      quoteMint: pcMint,
       marketLoader,
       optionMarket,
     });
   return {
     marketA: MARKET_A_USDC,
     vaultSigner,
-    usdc: USDC,
-    godUsdc: GOD_USDC,
+    usdc: pcMint,
     marketAuthority,
     marketAuthorityBump,
   };
@@ -328,7 +318,12 @@ export const initSerum = async (
   );
 
   const { serumMarketKey, marketAuthority, marketAuthorityBump } =
-    await getMarketAndAuthorityInfo(program, optionMarket, dexProgramId);
+    await getMarketAndAuthorityInfo(
+      program,
+      optionMarket,
+      dexProgramId,
+      pcMint
+    );
 
   const [vaultOwner, vaultSignerNonce] = await getVaultOwnerAndNonce(
     serumMarketKey,
@@ -373,11 +368,16 @@ export const initSerum = async (
 export const getMarketAndAuthorityInfo = async (
   program: anchor.Program,
   optionMarket: OptionMarketV2,
-  dexProgramId: anchor.web3.PublicKey
+  dexProgramId: anchor.web3.PublicKey,
+  serumQuoteAsset: PublicKey
 ) => {
   const textEncoder = new TextEncoder();
   const [serumMarketKey, _serumMarketBump] = await PublicKey.findProgramAddress(
-    [optionMarket.key.toBuffer(), textEncoder.encode("serumMarket")],
+    [
+      optionMarket.key.toBuffer(),
+      serumQuoteAsset.toBuffer(),
+      textEncoder.encode("serumMarket"),
+    ],
     program.programId
   );
   const [marketAuthority, marketAuthorityBump] =

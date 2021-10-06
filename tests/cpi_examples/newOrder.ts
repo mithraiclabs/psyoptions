@@ -1,7 +1,7 @@
 import * as anchor from "@project-serum/anchor";
 import { MarketProxy, OpenOrders } from "@project-serum/serum";
-import { OrderParams } from "@project-serum/serum/lib/market";
 import { MintInfo, Token, TOKEN_PROGRAM_ID, u64 } from "@solana/spl-token";
+import * as serumCmn from "@project-serum/common";
 import {
   AccountInfo,
   AccountMeta,
@@ -55,7 +55,6 @@ describe("cpi_examples newOrder", () => {
     marketAuthorityBump: number,
     usdcMint: anchor.web3.PublicKey,
     usdcMintInfo: MintInfo,
-    usdcAccount: anchor.web3.PublicKey,
     referral: anchor.web3.PublicKey,
     openOrders: PublicKey,
     openOrdersBump: number,
@@ -83,22 +82,26 @@ describe("cpi_examples newOrder", () => {
       remainingAccounts,
       instructions
     );
+    [usdcMint] = await serumCmn.createMintAndVault(
+      provider,
+      new anchor.BN("1000000000000000000"),
+      undefined,
+      6
+    );
     // Initialize a permissioned Serum Market
     ({ marketAuthority, marketAuthorityBump } = await getMarketAndAuthorityInfo(
       americanOptionsProgram,
       optionMarket,
-      DEX_PID
+      DEX_PID,
+      usdcMint
     ));
     // Setup - Create a Serum market for the OptionMarket's option tokens
-    ({
-      marketA: marketProxy,
-      usdc: usdcMint,
-      godUsdc: usdcAccount,
-    } = await initMarket(
+    ({ marketA: marketProxy } = await initMarket(
       provider,
       americanOptionsProgram,
       marketLoader(provider, program, optionMarket.key, marketAuthorityBump),
-      optionMarket
+      optionMarket,
+      usdcMint
     ));
     // Set the token variables for use in later tests
     underlyingToken = new Token(

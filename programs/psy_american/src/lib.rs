@@ -884,7 +884,7 @@ pub struct InitSerumMarket<'info> {
     #[account(mut)]
     pub option_market: Box<Account<'info, OptionMarket>>,
     #[account(init,
-        seeds = [&option_market.key().to_bytes()[..], b"serumMarket"],
+        seeds = [&option_market.key().to_bytes()[..], &pc_mint.key().to_bytes()[..], b"serumMarket"],
         bump,
         space = market_space as usize,
         payer = user_authority,
