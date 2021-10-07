@@ -4,7 +4,8 @@ use anchor_lang::InstructionData;
 use anchor_spl::token::{self, Mint, TokenAccount, Transfer};
 use anchor_spl::dex::serum_dex;
 use anchor_spl::dex::serum_dex::{instruction::SelfTradeBehavior as SerumSelfTradeBehavior, matching::{OrderType as SerumOrderType, Side as SerumSide}};
-use psy_american::{OptionMarket, ExerciseOption, MintOption};
+use psy_american::cpi::accounts::{ExerciseOption, MintOption};
+use psy_american::OptionMarket;
 use std::num::NonZeroU64;
 use solana_program::msg;
 
@@ -149,17 +150,17 @@ pub mod cpi_examples {
         let cpi_accounts = ExerciseOption {
             user_authority: ctx.accounts.authority.to_account_info(),
             option_authority: ctx.accounts.vault_authority.to_account_info(),
-            option_market: ctx.accounts.option_market.clone(),
-            option_mint: ctx.accounts.option_mint.clone(),
-            exerciser_option_token_src: ctx.accounts.exerciser_option_token_src.clone(),
-            underlying_asset_pool: ctx.accounts.underlying_asset_pool.clone(),
-            underlying_asset_dest: ctx.accounts.underlying_asset_dest.clone(),
-            quote_asset_pool: ctx.accounts.quote_asset_pool.clone(),
-            quote_asset_src: ctx.accounts.quote_asset_src.clone(),
+            option_market: ctx.accounts.option_market.to_account_info(),
+            option_mint: ctx.accounts.option_mint.to_account_info(),
+            exerciser_option_token_src: ctx.accounts.exerciser_option_token_src.to_account_info(),
+            underlying_asset_pool: ctx.accounts.underlying_asset_pool.to_account_info(),
+            underlying_asset_dest: ctx.accounts.underlying_asset_dest.to_account_info(),
+            quote_asset_pool: ctx.accounts.quote_asset_pool.to_account_info(),
+            quote_asset_src: ctx.accounts.quote_asset_src.to_account_info(),
             fee_owner: ctx.accounts.fee_owner.clone(),
             token_program: ctx.accounts.token_program.to_account_info(),
             system_program: ctx.accounts.system_program.to_account_info(),
-            clock: ctx.accounts.clock.clone()
+            clock: ctx.accounts.clock.to_account_info()
         };
         let key = ctx.accounts.option_market.key();
 
@@ -187,26 +188,26 @@ pub mod cpi_examples {
             // The Mint of the underlying asset for the contracts. Also the mint that is in the vault.
             underlying_asset_mint: ctx.accounts.underlying_asset_mint.to_account_info(),
             // The underlying asset pool for the OptionMarket
-            underlying_asset_pool: ctx.accounts.underlying_asset_pool.clone(),
+            underlying_asset_pool: ctx.accounts.underlying_asset_pool.to_account_info(),
             // The source account where the underlying assets are coming from. In this case it's the vault.
-            underlying_asset_src: ctx.accounts.vault.clone(),
+            underlying_asset_src: ctx.accounts.vault.to_account_info(),
             // The mint of the option
-            option_mint: ctx.accounts.option_mint.clone(),
+            option_mint: ctx.accounts.option_mint.to_account_info(),
             // The destination for the minted options
-            minted_option_dest: ctx.accounts.minted_option_dest.clone(),
+            minted_option_dest: ctx.accounts.minted_option_dest.to_account_info(),
             // The Mint of the writer token for the OptionMarket
-            writer_token_mint: ctx.accounts.writer_token_mint.clone(),
+            writer_token_mint: ctx.accounts.writer_token_mint.to_account_info(),
             // The destination for the minted WriterTokens
-            minted_writer_token_dest: ctx.accounts.minted_writer_token_dest.clone(),
+            minted_writer_token_dest: ctx.accounts.minted_writer_token_dest.to_account_info(),
             // The PsyOptions OptionMarket to mint from
-            option_market: ctx.accounts.option_market.clone(),
+            option_market: ctx.accounts.option_market.to_account_info(),
             // The fee_owner that is a constant in the PsyAmerican contract
             fee_owner: ctx.accounts.fee_owner.to_account_info(),
             // The rest are self explanatory, we can't spell everything out for you ;)
             token_program: ctx.accounts.token_program.to_account_info(),
             associated_token_program: ctx.accounts.associated_token_program.to_account_info(),
-            clock: ctx.accounts.clock.clone(),
-            rent: ctx.accounts.rent.clone(),
+            clock: ctx.accounts.clock.to_account_info(),
+            rent: ctx.accounts.rent.to_account_info(),
             system_program: ctx.accounts.system_program.to_account_info(),
         };
         let key = ctx.accounts.underlying_asset_mint.key();
