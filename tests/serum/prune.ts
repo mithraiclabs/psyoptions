@@ -4,6 +4,7 @@
  */
 import { assert, expect } from "chai";
 import * as anchor from "@project-serum/anchor";
+import * as serumCmn from "@project-serum/common";
 import { initOptionMarket, initSetup, wait } from "../../utils/helpers";
 import { OptionMarketV2 } from "../../packages/psyoptions-ts/src/types";
 import {
@@ -53,18 +54,26 @@ describe("Serum Prune", () => {
         remainingAccounts,
         instructions
       );
+      [usdcMint, usdcAccount] = await serumCmn.createMintAndVault(
+        provider,
+        new anchor.BN("1000000000000000000"),
+        undefined,
+        6
+      );
       // Initialize a permissioned Serum Market
       ({ marketAuthority, marketAuthorityBump } =
-        await getMarketAndAuthorityInfo(program, optionMarket, DEX_PID));
-      ({
-        marketA: marketProxy,
-        usdc: usdcMint,
-        godUsdc: usdcAccount,
-      } = await initMarket(
+        await getMarketAndAuthorityInfo(
+          program,
+          optionMarket,
+          DEX_PID,
+          usdcMint
+        ));
+      ({ marketA: marketProxy } = await initMarket(
         provider,
         program,
         marketLoader(provider, program, optionMarket.key, marketAuthorityBump),
-        optionMarket
+        optionMarket,
+        usdcMint
       ));
       // Set the token variables for use in later tests
       underlyingToken = new Token(
@@ -211,18 +220,26 @@ describe("Serum Prune", () => {
         remainingAccounts,
         instructions
       );
+      [usdcMint, usdcAccount] = await serumCmn.createMintAndVault(
+        provider,
+        new anchor.BN("1000000000000000000"),
+        undefined,
+        6
+      );
       // Initialize a permissioned Serum Market
       ({ marketAuthority, marketAuthorityBump } =
-        await getMarketAndAuthorityInfo(program, optionMarket, DEX_PID));
-      ({
-        marketA: marketProxy,
-        usdc: usdcMint,
-        godUsdc: usdcAccount,
-      } = await initMarket(
+        await getMarketAndAuthorityInfo(
+          program,
+          optionMarket,
+          DEX_PID,
+          usdcMint
+        ));
+      ({ marketA: marketProxy } = await initMarket(
         provider,
         program,
         marketLoader(provider, program, optionMarket.key, marketAuthorityBump),
-        optionMarket
+        optionMarket,
+        usdcMint
       ));
       // Set the token variables for use in later tests
       underlyingToken = new Token(
