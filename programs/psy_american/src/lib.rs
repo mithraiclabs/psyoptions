@@ -65,40 +65,6 @@ pub mod psy_american {
     #[access_control(MintOption::unexpired_market(&ctx) MintOption::accounts(&ctx) validate_size(size))]
     pub fn mint_option<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, MintOption<'info>>, size: u64) -> ProgramResult {
         let option_market = &ctx.accounts.option_market;
-        let mint_fee_account = validate_mint_fee_acct(
-            option_market,
-            ctx.remaining_accounts
-        )?;
-
-        // Take a mint fee
-        let mint_fee_amount_per_contract = fees::fee_amount(option_market.underlying_amount_per_contract);
-        if mint_fee_amount_per_contract > 0 {
-            match mint_fee_account {
-                Some(account) => {
-                    let cpi_accounts = Transfer {
-                        from: ctx.accounts.underlying_asset_src.to_account_info(),
-                        to: account.clone(),
-                        authority: ctx.accounts.user_authority.clone(),
-                    };
-                    let cpi_token_program = ctx.accounts.token_program.clone();
-                    let cpi_ctx = CpiContext::new(cpi_token_program, cpi_accounts);
-                    let total_fee = mint_fee_amount_per_contract.checked_mul(size).ok_or(errors::ErrorCode::NumberOverflow)?;
-                    token::transfer(cpi_ctx, total_fee)?;
-                },
-                None => {}
-            }
-        } else {
-            // Handle NFT case with SOL fee
-            let total_fee = fees::NFT_MINT_LAMPORTS.checked_mul(size).ok_or(errors::ErrorCode::NumberOverflow)?;
-            invoke(
-                &system_instruction::transfer(&ctx.accounts.user_authority.key, &fees::fee_owner_key::ID, total_fee),
-            &[
-                ctx.accounts.user_authority.clone(),
-                ctx.accounts.fee_owner.clone(),
-                ctx.accounts.system_program.clone(),
-            ],
-            )?;
-        }
 
         // Transfer the underlying assets to the underlying assets pool
         let cpi_accounts = Transfer {
@@ -461,35 +427,6 @@ fn validate_fee_accounts<'info>(
         fee_accounts.exercise_fee_key = *exercise_fee_recipient.key;
     }
     Ok(fee_accounts)
-}
-
-fn validate_mint_fee_acct<'c, 'info>(
-    option_market: &Box<anchor_lang::Account<'info, OptionMarket>>,
-    remaining_accounts: &'c [AccountInfo<'info>]
-) -> Result<Option<&'c AccountInfo<'info>>, ProgramError> {
-    let account_info_iter = &mut remaining_accounts.iter();
-    let acct;
-    if fees::fee_amount(option_market.underlying_amount_per_contract) > 0 {
-        let mint_fee_recipient = next_account_info(account_info_iter)?;
-        if mint_fee_recipient.owner != &spl_token::ID {
-            return Err(errors::ErrorCode::ExpectedSPLTokenProgramId.into())
-        }
-        let mint_fee_account = SPLTokenAccount::unpack_from_slice(&mint_fee_recipient.try_borrow_data()?)?;
-        if mint_fee_account.owner != fees::fee_owner_key::ID {
-            return Err(errors::ErrorCode::MintFeeMustBeOwnedByFeeOwner.into()) 
-        }
-        // check that the mint fee recipient account's mint is also the underlying mint
-        if mint_fee_account.mint != option_market.underlying_asset_mint {
-            return Err(errors::ErrorCode::MintFeeTokenMustMatchUnderlyingAsset.into())
-        }
-        if *mint_fee_recipient.key != option_market.mint_fee_account {
-            return Err(errors::ErrorCode::MintFeeKeyDoesNotMatchOptionMarket.into())
-        }
-        acct = Some(mint_fee_recipient);
-    } else {
-        acct = None;
-    }
-    Ok(acct)
 }
 
 fn validate_exercise_fee_acct<'c, 'info>(

@@ -197,10 +197,7 @@ describe("mintOption", () => {
       const expectedUnderlyingTransfered = size.mul(
         underlyingAmountPerContract
       );
-      const mintFeeAmountPerContract = feeAmountPerContract(
-        underlyingAmountPerContract
-      );
-      const mintFeeAmount = mintFeeAmountPerContract.mul(size);
+      const mintFeeAmount = new anchor.BN(0);
 
       const underlyingPoolAfter = await underlyingToken.getAccountInfo(
         optionMarket.underlyingAssetPool
@@ -444,71 +441,6 @@ describe("mintOption", () => {
     });
   });
 
-  describe("MintFee account differs from option market", () => {
-    let badMintFeeKey: PublicKey;
-    beforeEach(async () => {
-      ({
-        quoteToken,
-        underlyingToken,
-        underlyingAmountPerContract,
-        quoteAmountPerContract,
-        expiration,
-        optionMarketKey,
-        bumpSeed,
-        mintFeeKey,
-        exerciseFeeKey,
-        optionMarket,
-        remainingAccounts,
-        instructions,
-      } = await initSetup(provider, payer, mintAuthority, program));
-      await initOptionMarket(
-        program,
-        payer,
-        optionMarket,
-        remainingAccounts,
-        instructions
-      );
-      // Create a new token account and set it as the mintFeeKey
-      const { tokenAccount } = await initNewTokenAccount(
-        provider.connection,
-        FEE_OWNER_KEY,
-        underlyingToken.publicKey,
-        payer
-      );
-      badMintFeeKey = tokenAccount.publicKey;
-
-      ({ optionAccount, underlyingAccount, writerTokenAccount } =
-        await createMinter(
-          provider.connection,
-          minter,
-          mintAuthority,
-          underlyingToken,
-          optionMarket.underlyingAmountPerContract.muln(2).toNumber(),
-          optionMarket.optionMint,
-          optionMarket.writerTokenMint,
-          quoteToken
-        ));
-    });
-    it("should error", async () => {
-      try {
-        await mintOptionsTx({
-          remainingAccounts: [
-            {
-              pubkey: badMintFeeKey,
-              isWritable: true,
-              isSigner: false,
-            },
-          ],
-        });
-        assert.ok(false);
-      } catch (err) {
-        const errMsg =
-          "MintFee key does not match the value on the OptionMarket";
-        assert.equal((err as Error).toString(), errMsg);
-      }
-    });
-  });
-
   describe("Size <= 0", () => {
     beforeEach(async () => {
       ({
@@ -665,8 +597,8 @@ describe("mintOption", () => {
       }
       const minterDiff = minterAfter?.lamports - minterBefore?.lamports;
       const feeOwnerDiff = feeOwnerAfter - feeOwnerBefore;
-      assert.equal(-minterDiff, size.mul(new BN(NFT_MINT_LAMPORTS)));
-      assert.equal(feeOwnerDiff, size.mul(new BN(NFT_MINT_LAMPORTS)));
+      assert.equal(-minterDiff, new BN(0));
+      assert.equal(feeOwnerDiff, new BN(0));
     });
   });
 });
