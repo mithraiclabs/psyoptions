@@ -71,7 +71,6 @@ describe("cpi_examples initOptionMarket", () => {
             optionMarket: optionMarket.key,
             feeOwner: FEE_OWNER_KEY,
             tokenProgram: TOKEN_PROGRAM_ID,
-            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
             rent: SYSVAR_RENT_PUBKEY,
             systemProgram: SystemProgram.programId,
             clock: SYSVAR_CLOCK_PUBKEY,

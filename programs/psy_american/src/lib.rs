@@ -3,9 +3,9 @@ pub mod fees;
 pub mod serum_proxy;
 
 use anchor_lang::{AccountsExit, Key, prelude::*};
-use anchor_spl::token::{self, Burn, Mint, MintTo, TokenAccount, Transfer};
+use anchor_spl::token::{self, Burn, Mint, MintTo, Token, TokenAccount, Transfer};
 use spl_token::state::Account as SPLTokenAccount;
-use solana_program::{program::invoke, program_error::ProgramError, program_pack::Pack, system_instruction, system_program};
+use solana_program::{program::invoke, program_error::ProgramError, program_pack::Pack, system_instruction};
 use serum_dex::instruction::{initialize_market as init_serum_market_instruction};
 use anchor_spl::dex::{
     MarketProxy, OpenOrdersPda, ReferralFees,
@@ -27,7 +27,7 @@ pub mod psy_american {
         bump_seed: u8
     ) -> ProgramResult {
         // (nice to have) Validate the expiration is in the future
-        if expiration_unix_timestamp < ctx.accounts.clock.unix_timestamp {
+        if expiration_unix_timestamp < Clock::get()?.unix_timestamp {
             return Err(errors::ErrorCode::ExpirationIsInThePast.into())
         }
         // check that underlying_amount_per_contract and quote_amount_per_contract are not 0
@@ -73,7 +73,7 @@ pub mod psy_american {
             authority: ctx.accounts.user_authority.clone(),
         };
         let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new(cpi_token_program, cpi_accounts);
+        let cpi_ctx = CpiContext::new(cpi_token_program.to_account_info(), cpi_accounts);
         let underlying_transfer_amount = option_market.underlying_amount_per_contract.checked_mul(size).unwrap();
         token::transfer(cpi_ctx, underlying_transfer_amount)?;
 
@@ -94,7 +94,7 @@ pub mod psy_american {
             authority: ctx.accounts.option_market.to_account_info(),
         };
         let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program.to_account_info(), cpi_accounts, signer);
         token::mint_to(cpi_ctx, size)?;
 
         // Mint a new WriterToken(s)
@@ -104,7 +104,7 @@ pub mod psy_american {
             authority: ctx.accounts.option_market.to_account_info(),
         };
         let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program.to_account_info(), cpi_accounts, signer);
         token::mint_to(cpi_ctx, size)?;
 
         Ok(())
@@ -124,7 +124,7 @@ pub mod psy_american {
         let signer = &[&seeds[..]];
         // Burn the size of option tokens
         let cpi_ctx = CpiContext::new_with_signer(
-            ctx.accounts.token_program.clone(),
+            ctx.accounts.token_program.to_account_info().clone(),
             Burn {
                 mint: ctx.accounts.option_mint.to_account_info(),
                 to: ctx.accounts.exerciser_option_token_src.to_account_info(),
@@ -141,7 +141,7 @@ pub mod psy_american {
             authority: ctx.accounts.user_authority.to_account_info(),
         };
         let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new(cpi_token_program, cpi_accounts);
+        let cpi_ctx = CpiContext::new(cpi_token_program.to_account_info(), cpi_accounts);
         let quote_transfer_amount = option_market.quote_amount_per_contract.checked_mul(size).unwrap();
         token::transfer(cpi_ctx, quote_transfer_amount)?;
 
@@ -152,7 +152,7 @@ pub mod psy_american {
             authority: ctx.accounts.option_market.to_account_info(),
         };
         let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program.to_account_info(), cpi_accounts, signer);
         let underlying_transfer_amount = option_market.underlying_amount_per_contract.checked_mul(size).unwrap();
         token::transfer(cpi_ctx, underlying_transfer_amount)?;
 
@@ -168,7 +168,7 @@ pub mod psy_american {
                         authority: ctx.accounts.user_authority.clone(),
                     };
                     let cpi_token_program = ctx.accounts.token_program.clone();
-                    let cpi_ctx = CpiContext::new(cpi_token_program, cpi_accounts);
+                    let cpi_ctx = CpiContext::new(cpi_token_program.to_account_info(), cpi_accounts);
                     let total_fee = exercise_fee_amount_per_contract.checked_mul(size).ok_or(errors::ErrorCode::NumberOverflow)?;
                     token::transfer(cpi_ctx, total_fee)?;
                 },
@@ -204,7 +204,7 @@ pub mod psy_american {
 
         // Burn the size of WriterTokens
         let cpi_ctx = CpiContext::new_with_signer(
-            ctx.accounts.token_program.clone(),
+            ctx.accounts.token_program.to_account_info().clone(),
             Burn {
                 mint: ctx.accounts.writer_token_mint.to_account_info(),
                 to: ctx.accounts.writer_token_src.to_account_info(),
@@ -221,7 +221,7 @@ pub mod psy_american {
             authority: ctx.accounts.option_market.to_account_info(),
         };
         let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program.to_account_info(), cpi_accounts, signer);
         let underlying_transfer_amount = option_market.underlying_amount_per_contract.checked_mul(size).unwrap();
         token::transfer(cpi_ctx, underlying_transfer_amount)?;
         Ok(())
@@ -242,7 +242,7 @@ pub mod psy_american {
 
         // Burn the size of WriterTokens
         let cpi_ctx = CpiContext::new_with_signer(
-            ctx.accounts.token_program.clone(),
+            ctx.accounts.token_program.to_account_info().clone(),
             token::Burn {
                 mint: ctx.accounts.writer_token_mint.to_account_info(),
                 to: ctx.accounts.writer_token_src.to_account_info(),
@@ -254,7 +254,7 @@ pub mod psy_american {
 
         // Burn the Optiontokens
         let cpi_ctx = CpiContext::new_with_signer(
-            ctx.accounts.token_program.clone(),
+            ctx.accounts.token_program.to_account_info().clone(),
             Burn {
                 mint: ctx.accounts.option_token_mint.to_account_info(),
                 to: ctx.accounts.option_token_src.to_account_info(),
@@ -272,7 +272,7 @@ pub mod psy_american {
             authority: ctx.accounts.option_market.to_account_info(),
         };
         let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program.to_account_info(), cpi_accounts, signer);
         let underlying_transfer_amount = option_market.underlying_amount_per_contract.checked_mul(size).unwrap();
         token::transfer(cpi_ctx, underlying_transfer_amount)?;
         Ok(())
@@ -293,7 +293,7 @@ pub mod psy_american {
 
         // Burn the size of WriterTokens
         let cpi_ctx = CpiContext::new_with_signer(
-            ctx.accounts.token_program.clone(),
+            ctx.accounts.token_program.to_account_info().clone(),
             Burn {
                 mint: ctx.accounts.writer_token_mint.to_account_info(),
                 to: ctx.accounts.writer_token_src.to_account_info(),
@@ -310,7 +310,7 @@ pub mod psy_american {
             authority: ctx.accounts.option_market.to_account_info(),
         };
         let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program.to_account_info(), cpi_accounts, signer);
         let quote_transfer_amount = option_market.quote_amount_per_contract.checked_mul(size).unwrap();
         token::transfer(cpi_ctx, quote_transfer_amount)?;
         
@@ -430,7 +430,7 @@ fn validate_fee_accounts<'info>(
 }
 
 fn validate_exercise_fee_acct<'c, 'info>(
-    option_market: &Box<anchor_lang::Account<'info, OptionMarket>>,
+    option_market: &anchor_lang::Account<'info, OptionMarket>,
     remaining_accounts: &'c [AccountInfo<'info>]
 ) -> Result<Option<&'c AccountInfo<'info>>, ProgramError> {
     let account_info_iter = &mut remaining_accounts.iter();
@@ -517,11 +517,9 @@ pub struct InitializeMarket<'info> {
     )]
     pub option_market: Box<Account<'info, OptionMarket>>,
     pub fee_owner: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
-    pub associated_token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
-    pub clock: Sysvar<'info, Clock>,
 }
 impl<'info> InitializeMarket<'info> {
     fn accounts(ctx: &Context<InitializeMarket<'info>>) -> Result<(), ProgramError> {
@@ -568,11 +566,7 @@ pub struct MintOption<'info> {
     pub fee_owner: AccountInfo<'info>,
 
 
-    pub token_program: AccountInfo<'info>,
-    pub associated_token_program: AccountInfo<'info>,
-    pub clock: Sysvar<'info, Clock>,
-    pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 impl<'info> MintOption<'info> {
     fn accounts(ctx: &Context<MintOption<'info>>) -> Result<(), ProgramError> {
@@ -596,16 +590,11 @@ impl<'info> MintOption<'info> {
             return Err(errors::ErrorCode::FeeOwnerDoesNotMatchProgram.into())
         }
 
-        // Validate the system program account passed in is correct
-        if !system_program::check_id(ctx.accounts.system_program.key) {
-            return Err(ProgramError::InvalidAccountData);
-        }
-
         Ok(())
     }
     fn unexpired_market(ctx: &Context<MintOption<'info>>) -> Result<(), ProgramError> {
         // Validate the market is not expired
-        if ctx.accounts.option_market.expiration_unix_timestamp < ctx.accounts.clock.unix_timestamp {
+        if ctx.accounts.option_market.expiration_unix_timestamp < Clock::get()?.unix_timestamp {
             return Err(errors::ErrorCode::OptionMarketExpiredCantMint.into())
         }
         Ok(())
@@ -636,9 +625,8 @@ pub struct ExerciseOption<'info> {
     #[account(mut)]
     pub fee_owner: AccountInfo<'info>,
 
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
     pub system_program: AccountInfo<'info>,
-    pub clock: Sysvar<'info, Clock>,
 }
 impl<'info> ExerciseOption<'info> {
     fn accounts(ctx: &Context<ExerciseOption>) -> Result<(), ProgramError> {
@@ -667,16 +655,11 @@ impl<'info> ExerciseOption<'info> {
             return Err(errors::ErrorCode::FeeOwnerDoesNotMatchProgram.into())
         }
 
-        // Validate the system program account passed in is correct
-        if !system_program::check_id(ctx.accounts.system_program.key) {
-            return Err(ProgramError::InvalidAccountData);
-        }
-
         Ok(())
     }
     fn unexpired_market(ctx: &Context<ExerciseOption>) -> Result<(), ProgramError> {
         // Validate the market is not expired
-        if ctx.accounts.option_market.expiration_unix_timestamp < ctx.accounts.clock.unix_timestamp {
+        if ctx.accounts.option_market.expiration_unix_timestamp < Clock::get()?.unix_timestamp {
             return Err(errors::ErrorCode::OptionMarketExpiredCantExercise.into())
         }
         Ok(())
@@ -697,8 +680,7 @@ pub struct ClosePostExp<'info> {
     #[account(mut)]
     pub underlying_asset_dest: Box<Account<'info, TokenAccount>>,
 
-    pub token_program: AccountInfo<'info>,
-    pub clock: Sysvar<'info, Clock>,
+    pub token_program: Program<'info, Token>,
 }
 impl<'info> ClosePostExp<'info> {
     fn accounts(ctx: &Context<ClosePostExp>) -> Result<(), ProgramError> {
@@ -721,7 +703,7 @@ impl<'info> ClosePostExp<'info> {
     }
     fn expired_market(ctx: &Context<ClosePostExp>) -> Result<(), ProgramError> {
         // Validate the market is expired
-        if ctx.accounts.option_market.expiration_unix_timestamp >= ctx.accounts.clock.unix_timestamp {
+        if ctx.accounts.option_market.expiration_unix_timestamp >= Clock::get()?.unix_timestamp {
             return Err(errors::ErrorCode::OptionMarketNotExpiredCantClose.into())
         }
         Ok(())
@@ -739,7 +721,7 @@ pub struct CloseOptionPosition<'info> {
     #[account(mut)]
     pub writer_token_src: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
-    pub option_token_mint: Account<'info, Mint>,
+    pub option_token_mint: Box<Account<'info, Mint>>,
     #[account(mut)]
     pub option_token_src: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
@@ -747,7 +729,7 @@ pub struct CloseOptionPosition<'info> {
     #[account(mut)]
     pub underlying_asset_dest: Box<Account<'info, TokenAccount>>,
 
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 impl<'info> CloseOptionPosition<'info> {
     fn accounts(ctx: &Context<CloseOptionPosition>) -> ProgramResult {
@@ -785,7 +767,7 @@ pub struct BurnWriterForQuote<'info> {
     #[account(mut)]
     pub writer_quote_dest: Box<Account<'info, TokenAccount>>,
 
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 impl<'info> BurnWriterForQuote<'info> {
     fn accounts(ctx: &Context<BurnWriterForQuote>) -> ProgramResult{
