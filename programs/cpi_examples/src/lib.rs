@@ -4,7 +4,7 @@ use anchor_lang::InstructionData;
 use anchor_spl::token::{self, Mint, TokenAccount, Transfer};
 use anchor_spl::dex::serum_dex;
 use anchor_spl::dex::serum_dex::{instruction::SelfTradeBehavior as SerumSelfTradeBehavior, matching::{OrderType as SerumOrderType, Side as SerumSide}};
-use psy_american::cpi::accounts::{ExerciseOption, MintOption};
+use psy_american::cpi::accounts::{ExerciseOption, MintOptionV2};
 use psy_american::OptionMarket;
 use std::num::NonZeroU64;
 use solana_program::msg;
@@ -181,7 +181,7 @@ pub mod cpi_examples {
 
     pub fn mint<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, MintCtx<'info>>, size: u64, vault_authority_bump: u8) -> ProgramResult {
         let cpi_program = ctx.accounts.psy_american_program.clone();
-        let cpi_accounts = MintOption {
+        let cpi_accounts = MintOptionV2 {
             // The authority that has control over the underlying assets. In this case it's the 
             // vault authority set in _init_mint_vault_
             user_authority: ctx.accounts.vault_authority.to_account_info(),
@@ -205,10 +205,6 @@ pub mod cpi_examples {
             fee_owner: ctx.accounts.fee_owner.to_account_info(),
             // The rest are self explanatory, we can't spell everything out for you ;)
             token_program: ctx.accounts.token_program.to_account_info(),
-            associated_token_program: ctx.accounts.associated_token_program.to_account_info(),
-            clock: ctx.accounts.clock.to_account_info(),
-            rent: ctx.accounts.rent.to_account_info(),
-            system_program: ctx.accounts.system_program.to_account_info(),
         };
         let key = ctx.accounts.underlying_asset_mint.key();
 
@@ -218,9 +214,8 @@ pub mod cpi_examples {
             &[vault_authority_bump]
         ];
         let signer = &[&seeds[..]];
-        let mut cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
-        cpi_ctx.remaining_accounts = ctx.remaining_accounts.to_vec();
-        psy_american::cpi::mint_option(cpi_ctx, size)
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        psy_american::cpi::mint_option_v2(cpi_ctx, size)
     }
 
     pub fn init_new_order_vault(_ctx: Context<InitNewOrderVault>) -> ProgramResult {

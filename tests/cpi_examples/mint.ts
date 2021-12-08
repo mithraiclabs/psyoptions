@@ -201,7 +201,6 @@ describe("cpi_examples mint", () => {
               rent: SYSVAR_RENT_PUBKEY,
               systemProgram: SystemProgram.programId,
             },
-            remainingAccounts: mintRemainingAccounts,
             signers: [user],
           });
         } catch (err) {
