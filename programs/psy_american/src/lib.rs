@@ -81,7 +81,7 @@ pub mod psy_american {
                         authority: ctx.accounts.user_authority.clone(),
                     };
                     let cpi_token_program = ctx.accounts.token_program.clone();
-                    let cpi_ctx = CpiContext::new(cpi_token_program, cpi_accounts);
+                    let cpi_ctx = CpiContext::new(cpi_token_program.to_account_info(), cpi_accounts);
                     let total_fee = mint_fee_amount_per_contract.checked_mul(size).ok_or(errors::ErrorCode::NumberOverflow)?;
                     token::transfer(cpi_ctx, total_fee)?;
                 },
@@ -107,7 +107,7 @@ pub mod psy_american {
             authority: ctx.accounts.user_authority.clone(),
         };
         let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new(cpi_token_program, cpi_accounts);
+        let cpi_ctx = CpiContext::new(cpi_token_program.to_account_info(), cpi_accounts);
         let underlying_transfer_amount = option_market.underlying_amount_per_contract.checked_mul(size).unwrap();
         token::transfer(cpi_ctx, underlying_transfer_amount)?;
 
@@ -128,7 +128,7 @@ pub mod psy_american {
             authority: ctx.accounts.option_market.to_account_info(),
         };
         let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program.to_account_info(), cpi_accounts, signer);
         token::mint_to(cpi_ctx, size)?;
 
         // Mint a new WriterToken(s)
@@ -138,7 +138,7 @@ pub mod psy_american {
             authority: ctx.accounts.option_market.to_account_info(),
         };
         let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program.to_account_info(), cpi_accounts, signer);
         token::mint_to(cpi_ctx, size)?;
 
         Ok(())
@@ -206,7 +206,7 @@ pub mod psy_american {
         let signer = &[&seeds[..]];
         // Burn the size of option tokens
         let cpi_ctx = CpiContext::new_with_signer(
-            ctx.accounts.token_program.clone(),
+            ctx.accounts.token_program.to_account_info().clone(),
             Burn {
                 mint: ctx.accounts.option_mint.to_account_info(),
                 to: ctx.accounts.exerciser_option_token_src.to_account_info(),
@@ -223,7 +223,7 @@ pub mod psy_american {
             authority: ctx.accounts.user_authority.to_account_info(),
         };
         let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new(cpi_token_program, cpi_accounts);
+        let cpi_ctx = CpiContext::new(cpi_token_program.to_account_info(), cpi_accounts);
         let quote_transfer_amount = option_market.quote_amount_per_contract.checked_mul(size).unwrap();
         token::transfer(cpi_ctx, quote_transfer_amount)?;
 
@@ -234,7 +234,7 @@ pub mod psy_american {
             authority: ctx.accounts.option_market.to_account_info(),
         };
         let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program.to_account_info(), cpi_accounts, signer);
         let underlying_transfer_amount = option_market.underlying_amount_per_contract.checked_mul(size).unwrap();
         token::transfer(cpi_ctx, underlying_transfer_amount)?;
 
@@ -250,7 +250,7 @@ pub mod psy_american {
                         authority: ctx.accounts.user_authority.clone(),
                     };
                     let cpi_token_program = ctx.accounts.token_program.clone();
-                    let cpi_ctx = CpiContext::new(cpi_token_program, cpi_accounts);
+                    let cpi_ctx = CpiContext::new(cpi_token_program.to_account_info(), cpi_accounts);
                     let total_fee = exercise_fee_amount_per_contract.checked_mul(size).ok_or(errors::ErrorCode::NumberOverflow)?;
                     token::transfer(cpi_ctx, total_fee)?;
                 },
@@ -286,7 +286,7 @@ pub mod psy_american {
 
         // Burn the size of WriterTokens
         let cpi_ctx = CpiContext::new_with_signer(
-            ctx.accounts.token_program.clone(),
+            ctx.accounts.token_program.to_account_info().clone(),
             Burn {
                 mint: ctx.accounts.writer_token_mint.to_account_info(),
                 to: ctx.accounts.writer_token_src.to_account_info(),
@@ -303,7 +303,7 @@ pub mod psy_american {
             authority: ctx.accounts.option_market.to_account_info(),
         };
         let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program.to_account_info(), cpi_accounts, signer);
         let underlying_transfer_amount = option_market.underlying_amount_per_contract.checked_mul(size).unwrap();
         token::transfer(cpi_ctx, underlying_transfer_amount)?;
         Ok(())
@@ -324,7 +324,7 @@ pub mod psy_american {
 
         // Burn the size of WriterTokens
         let cpi_ctx = CpiContext::new_with_signer(
-            ctx.accounts.token_program.clone(),
+            ctx.accounts.token_program.to_account_info().clone(),
             token::Burn {
                 mint: ctx.accounts.writer_token_mint.to_account_info(),
                 to: ctx.accounts.writer_token_src.to_account_info(),
@@ -336,7 +336,7 @@ pub mod psy_american {
 
         // Burn the Optiontokens
         let cpi_ctx = CpiContext::new_with_signer(
-            ctx.accounts.token_program.clone(),
+            ctx.accounts.token_program.to_account_info().clone(),
             Burn {
                 mint: ctx.accounts.option_token_mint.to_account_info(),
                 to: ctx.accounts.option_token_src.to_account_info(),
@@ -354,7 +354,7 @@ pub mod psy_american {
             authority: ctx.accounts.option_market.to_account_info(),
         };
         let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program.to_account_info(), cpi_accounts, signer);
         let underlying_transfer_amount = option_market.underlying_amount_per_contract.checked_mul(size).unwrap();
         token::transfer(cpi_ctx, underlying_transfer_amount)?;
         Ok(())
@@ -375,7 +375,7 @@ pub mod psy_american {
 
         // Burn the size of WriterTokens
         let cpi_ctx = CpiContext::new_with_signer(
-            ctx.accounts.token_program.clone(),
+            ctx.accounts.token_program.to_account_info().clone(),
             Burn {
                 mint: ctx.accounts.writer_token_mint.to_account_info(),
                 to: ctx.accounts.writer_token_src.to_account_info(),
@@ -392,7 +392,7 @@ pub mod psy_american {
             authority: ctx.accounts.option_market.to_account_info(),
         };
         let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program, cpi_accounts, signer);
+        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program.to_account_info(), cpi_accounts, signer);
         let quote_transfer_amount = option_market.quote_amount_per_contract.checked_mul(size).unwrap();
         token::transfer(cpi_ctx, quote_transfer_amount)?;
         
@@ -628,7 +628,7 @@ pub struct InitializeMarket<'info> {
     )]
     pub option_market: Box<Account<'info, OptionMarket>>,
     pub fee_owner: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
     pub associated_token_program: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: AccountInfo<'info>,
@@ -679,7 +679,7 @@ pub struct MintOption<'info> {
     pub fee_owner: AccountInfo<'info>,
 
 
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
     pub associated_token_program: AccountInfo<'info>,
     pub clock: Sysvar<'info, Clock>,
     pub rent: Sysvar<'info, Rent>,
@@ -805,7 +805,7 @@ pub struct ExerciseOption<'info> {
     #[account(mut)]
     pub fee_owner: AccountInfo<'info>,
 
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
     pub system_program: AccountInfo<'info>,
     pub clock: Sysvar<'info, Clock>,
 }
@@ -866,7 +866,7 @@ pub struct ClosePostExp<'info> {
     #[account(mut)]
     pub underlying_asset_dest: Box<Account<'info, TokenAccount>>,
 
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
     pub clock: Sysvar<'info, Clock>,
 }
 impl<'info> ClosePostExp<'info> {
@@ -916,7 +916,7 @@ pub struct CloseOptionPosition<'info> {
     #[account(mut)]
     pub underlying_asset_dest: Box<Account<'info, TokenAccount>>,
 
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 impl<'info> CloseOptionPosition<'info> {
     fn accounts(ctx: &Context<CloseOptionPosition>) -> ProgramResult {
@@ -954,7 +954,7 @@ pub struct BurnWriterForQuote<'info> {
     #[account(mut)]
     pub writer_quote_dest: Box<Account<'info, TokenAccount>>,
 
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 impl<'info> BurnWriterForQuote<'info> {
     fn accounts(ctx: &Context<BurnWriterForQuote>) -> ProgramResult{
@@ -999,7 +999,7 @@ pub struct InitSerumMarket<'info> {
     pub serum_market: AccountInfo<'info>,
     // system accounts
     pub system_program: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
     pub dex_program: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub pc_mint: Box<Account<'info, Mint>>,
