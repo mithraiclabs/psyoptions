@@ -201,8 +201,6 @@ pub mod cpi_examples {
             minted_writer_token_dest: ctx.accounts.minted_writer_token_dest.to_account_info(),
             // The PsyOptions OptionMarket to mint from
             option_market: ctx.accounts.option_market.to_account_info(),
-            // The fee_owner that is a constant in the PsyAmerican contract
-            fee_owner: ctx.accounts.fee_owner.to_account_info(),
             // The rest are self explanatory, we can't spell everything out for you ;)
             token_program: ctx.accounts.token_program.to_account_info(),
         };

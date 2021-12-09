@@ -742,9 +742,6 @@ pub struct MintOptionV2<'info> {
     #[account(mut)]
     pub minted_writer_token_dest: Box<Account<'info, TokenAccount>>,
     pub option_market: Box<Account<'info, OptionMarket>>,
-    #[account(mut)]
-    pub fee_owner: AccountInfo<'info>,
-
 
     pub token_program: Program<'info, Token>,
 }
@@ -763,11 +760,6 @@ impl<'info> MintOptionV2<'info> {
         // Validate the writer token mint is the same as on the OptionMarket
         if *ctx.accounts.writer_token_mint.to_account_info().key != ctx.accounts.option_market.writer_token_mint {
             return Err(errors::ErrorCode::WriterTokenMintDoesNotMatchMarket.into())
-        }
-
-        // Validate the fee owner is correct
-        if *ctx.accounts.fee_owner.key != fees::fee_owner_key::ID {
-            return Err(errors::ErrorCode::FeeOwnerDoesNotMatchProgram.into())
         }
 
         Ok(())

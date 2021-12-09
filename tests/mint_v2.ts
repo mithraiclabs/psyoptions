@@ -1,25 +1,12 @@
 import * as anchor from "@project-serum/anchor";
 import assert from "assert";
-import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  Token,
-  TOKEN_PROGRAM_ID,
-  u64,
-} from "@solana/spl-token";
+import { Token, TOKEN_PROGRAM_ID, u64 } from "@solana/spl-token";
 import {
   AccountMeta,
   Keypair,
   PublicKey,
-  SystemProgram,
-  SYSVAR_CLOCK_PUBKEY,
-  SYSVAR_RENT_PUBKEY,
   TransactionInstruction,
 } from "@solana/web3.js";
-import {
-  feeAmountPerContract,
-  FEE_OWNER_KEY,
-  NFT_MINT_LAMPORTS,
-} from "../packages/psyoptions-ts/src/fees";
 import {
   createMinter,
   initNewTokenAccount,
@@ -29,7 +16,6 @@ import {
   wait,
 } from "../utils/helpers";
 import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
-import { BN } from "@project-serum/anchor";
 
 describe("mintOption", () => {
   const provider = anchor.Provider.env();
@@ -82,7 +68,6 @@ describe("mintOption", () => {
     opts: {
       underlyingAssetPoolKey?: PublicKey;
       remainingAccounts?: AccountMeta[];
-      feeOwner?: PublicKey;
     } = {}
   ) => {
     await program.rpc.mintOptionV2(size, {
@@ -97,7 +82,6 @@ describe("mintOption", () => {
         writerTokenMint: optionMarket?.writerTokenMint,
         mintedWriterTokenDest: writerTokenAccount.publicKey,
         optionMarket: optionMarket?.key,
-        feeOwner: opts.feeOwner || FEE_OWNER_KEY,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
       remainingAccounts: opts.remainingAccounts
@@ -171,13 +155,10 @@ describe("mintOption", () => {
       assert.equal(mintInfo.supply.toString(), size.toString());
     });
 
-    it("should transfer the underlying from the minter to the pool and take a fee", async () => {
+    it("should transfer the underlying from the minter to the pool", async () => {
       if (!mintFeeKey) {
         throw new Error("mintFeeKey wasn't set when it should be");
       }
-      const mintFeeAcctBefore = await underlyingToken.getAccountInfo(
-        mintFeeKey
-      );
       const underlyingPoolBefore = await underlyingToken.getAccountInfo(
         optionMarket.underlyingAssetPool
       );
@@ -200,7 +181,6 @@ describe("mintOption", () => {
       const poolDiff = underlyingPoolAfter.amount.sub(
         underlyingPoolBefore.amount
       );
-      const mintFeeAcctAfter = await underlyingToken.getAccountInfo(mintFeeKey);
       assert.equal(
         poolDiff.toString(),
         expectedUnderlyingTransfered.toString()
@@ -216,10 +196,6 @@ describe("mintOption", () => {
         expectedUnderlyingTransfered.neg().toString(),
         minterUnderlyingDiff.toString()
       );
-      const mintFeeAcctDiff = mintFeeAcctAfter.amount.sub(
-        mintFeeAcctBefore.amount
-      );
-      assert.equal(mintFeeAcctDiff.toString(), 0);
     });
   });
 
@@ -482,118 +458,6 @@ describe("mintOption", () => {
         const errMsg = "The size argument must be > 0";
         assert.equal((err as Error).toString(), errMsg);
       }
-    });
-  });
-  describe("Fee owner is incorrect", () => {
-    beforeEach(async () => {
-      ({
-        quoteToken,
-        underlyingToken,
-        underlyingAmountPerContract,
-        quoteAmountPerContract,
-        expiration,
-        optionMarketKey,
-        bumpSeed,
-        mintFeeKey,
-        exerciseFeeKey,
-        optionMarket,
-        remainingAccounts,
-        instructions,
-      } = await initSetup(provider, payer, mintAuthority, program));
-      await initOptionMarket(
-        program,
-        payer,
-        optionMarket,
-        remainingAccounts,
-        instructions
-      );
-      ({ optionAccount, underlyingAccount, writerTokenAccount } =
-        await createMinter(
-          provider.connection,
-          minter,
-          mintAuthority,
-          underlyingToken,
-          optionMarket.underlyingAmountPerContract.muln(2).toNumber(),
-          optionMarket.optionMint,
-          optionMarket.writerTokenMint,
-          quoteToken
-        ));
-    });
-    it("should error", async () => {
-      try {
-        await mintOptionsTx({
-          feeOwner: new Keypair().publicKey,
-        });
-        assert.ok(false);
-      } catch (err) {
-        const errMsg = "Fee owner does not match the program's fee owner";
-        assert.equal((err as Error).toString(), errMsg);
-      }
-    });
-  });
-  describe("OptionMarket is for NFT", () => {
-    beforeEach(async () => {
-      ({
-        quoteToken,
-        underlyingToken,
-        underlyingAmountPerContract,
-        quoteAmountPerContract,
-        expiration,
-        optionMarketKey,
-        bumpSeed,
-        mintFeeKey,
-        exerciseFeeKey,
-        optionMarket,
-        remainingAccounts,
-        instructions,
-      } = await initSetup(provider, payer, mintAuthority, program, {
-        underlyingAmountPerContract: new anchor.BN("1"),
-      }));
-      await initOptionMarket(
-        program,
-        payer,
-        optionMarket,
-        remainingAccounts,
-        instructions
-      );
-      ({ optionAccount, underlyingAccount, writerTokenAccount } =
-        await createMinter(
-          provider.connection,
-          minter,
-          mintAuthority,
-          underlyingToken,
-          optionMarket.underlyingAmountPerContract.muln(2).toNumber(),
-          optionMarket.optionMint,
-          optionMarket.writerTokenMint,
-          quoteToken
-        ));
-    });
-    it("should transfer enough lamports as required by the fee", async () => {
-      const minterBefore = await provider.connection.getAccountInfo(
-        minter.publicKey
-      );
-      const feeOwnerBefore =
-        (await provider.connection.getAccountInfo(FEE_OWNER_KEY))?.lamports ||
-        0;
-      try {
-        await mintOptionsTx();
-      } catch (err) {
-        console.error((err as Error).toString());
-        throw err;
-      }
-      const minterAfter = await provider.connection.getAccountInfo(
-        minter.publicKey
-      );
-      const feeOwnerAfter =
-        (await provider.connection.getAccountInfo(FEE_OWNER_KEY))?.lamports ||
-        0;
-      if (!minterAfter?.lamports || !minterBefore?.lamports) {
-        throw new Error("minter has no lamports");
-      }
-      const minterDiff = minterAfter?.lamports - minterBefore?.lamports;
-      const feeOwnerDiff = feeOwnerAfter - feeOwnerBefore;
-      assert.equal(-minterDiff, new BN(0));
-      assert.equal(feeOwnerDiff, new BN(0));
     });
   });
 });
