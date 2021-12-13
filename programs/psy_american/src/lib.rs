@@ -998,7 +998,7 @@ pub struct InitSerumMarket<'info> {
     pub option_mint: Box<Account<'info, Mint>>,
     // INIT SERUM MARKET ACCOUNTS
     #[account(init,
-        seeds = [&option_market.key().to_bytes()[..], b"requestQueue"],
+        seeds = [&option_market.key().to_bytes()[..], &pc_mint.key().to_bytes()[..], b"requestQueue"],
         bump,
         space = 5120 + 12,
         payer = user_authority,
@@ -1012,7 +1012,7 @@ pub struct InitSerumMarket<'info> {
     #[account(mut)]
     pub asks: AccountInfo<'info>,
     #[account(init,
-        seeds = [&option_market.key().to_bytes()[..], b"coinVault"],
+        seeds = [&option_market.key().to_bytes()[..], &pc_mint.key().to_bytes()[..], b"coinVault"],
         bump,
         payer = user_authority,    
         token::mint = option_mint,
@@ -1020,7 +1020,7 @@ pub struct InitSerumMarket<'info> {
     )]
     pub coin_vault: Box<Account<'info, TokenAccount>>,
     #[account(init,
-        seeds = [&option_market.key().to_bytes()[..], b"pcVault"],
+        seeds = [&option_market.key().to_bytes()[..], &pc_mint.key().to_bytes()[..], b"pcVault"],
         bump,
         payer = user_authority,
         token::mint = pc_mint,

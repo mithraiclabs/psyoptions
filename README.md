@@ -51,11 +51,9 @@ Exploring architectures for options trading on Serum
 
 ## Dev Net
 
-The program used for Devnet Bet is currently deployed @ `{"programId":"GDvqQy3FkDB2wyNwgZGp5YkmRMUmWbhNNWDMYKbLSZ5N"}`
+The program used for Devnet Bet is currently deployed @ `{"programId":"R2y9ip6mxmWUj4pt54jP2hz2dgvMozy9VTSwMWE7evs"}`
 
-The old program address for Devnet testing is deployed @ `{"programId":"4DvkJJBUiXMZVYXFGgYQvGceTuM7F5Be4HqWAiR7t2vM"}`
-
-1. Make sure you're on solana CLI >= 1.6.7 `solana-install init v1.6.7`
+1. Make sure you're on solana CLI >= 1.8.0 `solana-install init v1.8.1`
 2. Build the program `cargo build-bpf --manifest-path options/Cargo.toml`
 3. Set the target network `solana config set --url https://api.devnet.solana.com`
 4. Deploy the program `solana program deploy --program-id $PWD/options/deployed_programs/psyoptions-devnet-beta-3-keypair.json $PWD/options/target/deploy/psyoptions.so`

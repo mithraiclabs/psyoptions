@@ -1,5 +1,6 @@
 import * as anchor from "@project-serum/anchor";
 import { BN, Provider } from "@project-serum/anchor";
+import { serumUtils } from "@mithraic-labs/psy-american";
 import {
   DexInstructions,
   Logger,
@@ -303,18 +304,21 @@ export const initSerum = async (
   asks: PublicKey,
   dexProgramId: PublicKey
 ) => {
-  const textEncoder = new TextEncoder();
-  const [requestQueue, _requestQueueBump] = await PublicKey.findProgramAddress(
-    [optionMarket.key.toBuffer(), textEncoder.encode("requestQueue")],
-    program.programId
+  const [requestQueue, _requestQueueBump] = await serumUtils.deriveRequestQueue(
+    program,
+    optionMarket.key,
+    pcMint
   );
-  const [coinVault, _coinVaultBump] = await PublicKey.findProgramAddress(
-    [optionMarket.key.toBuffer(), textEncoder.encode("coinVault")],
-    program.programId
+
+  const [coinVault, _coinVaultBump] = await serumUtils.deriveCoinVault(
+    program,
+    optionMarket.key,
+    pcMint
   );
-  const [pcVault, _pcVaultBump] = await PublicKey.findProgramAddress(
-    [optionMarket.key.toBuffer(), textEncoder.encode("pcVault")],
-    program.programId
+  const [pcVault, _pcVaultBump] = await serumUtils.derivePCVault(
+    program,
+    optionMarket.key,
+    pcMint
   );
 
   const { serumMarketKey, marketAuthority, marketAuthorityBump } =
@@ -372,14 +376,12 @@ export const getMarketAndAuthorityInfo = async (
   serumQuoteAsset: PublicKey
 ) => {
   const textEncoder = new TextEncoder();
-  const [serumMarketKey, _serumMarketBump] = await PublicKey.findProgramAddress(
-    [
-      optionMarket.key.toBuffer(),
-      serumQuoteAsset.toBuffer(),
-      textEncoder.encode("serumMarket"),
-    ],
-    program.programId
-  );
+  const [serumMarketKey, _serumMarketBump] =
+    await serumUtils.deriveSerumMarketAddress(
+      program,
+      optionMarket.key,
+      serumQuoteAsset
+    );
   const [marketAuthority, marketAuthorityBump] =
     await PublicKey.findProgramAddress(
       [
