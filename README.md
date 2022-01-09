@@ -67,3 +67,9 @@ The program used for Devnet Bet is currently deployed @ `{"programId":"R2y9ip6mx
 # Publishing the crate
 
 `cd options && cargo publish --features "no-entrypoint"`
+
+# Found a bug??
+
+Please report to developers@psyoptions.io. Include which part of the protocol(s)/code it impacts and the severity.
+
+A more formal bug bounty will be posted soon
