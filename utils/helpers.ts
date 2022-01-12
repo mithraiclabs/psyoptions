@@ -26,6 +26,7 @@ import {
   FEE_OWNER_KEY,
 } from "../packages/psyoptions-ts/src/fees";
 import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
+import { PsyAmerican } from "../target/types/psy_american";
 
 export const wait = (delayMS: number) =>
   new Promise((resolve) => setTimeout(resolve, delayMS));
@@ -382,7 +383,7 @@ export const initSetup = async (
   provider: anchor.Provider,
   payer: Keypair,
   mintAuthority: Keypair,
-  program: anchor.Program,
+  program: anchor.Program<PsyAmerican>,
   opts: {
     underlyingAmountPerContract?: anchor.BN;
     quoteAmountPerContract?: anchor.BN;
@@ -541,7 +542,7 @@ export const initSetup = async (
 };
 
 export const initOptionMarket = async (
-  program: anchor.Program,
+  program: anchor.Program<PsyAmerican>,
   payer: Keypair,
   optionMarket: OptionMarketV2,
   remainingAccounts: AccountMeta[],
@@ -592,7 +593,7 @@ export const initOptionMarket = async (
  * @param remainingAccounts
  */
 export const exerciseOptionTx = async (
-  program: anchor.Program,
+  program: anchor.Program<PsyAmerican>,
   size: anchor.BN,
   optionMarket: PublicKey,
   optionTokenKey: PublicKey,

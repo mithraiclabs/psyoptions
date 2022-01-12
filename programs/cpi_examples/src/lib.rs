@@ -307,10 +307,7 @@ pub mod cpi_examples {
             )?;
         }
 
-//////////////////// TODO place new order CPI ///////////////////////
-        // Note: struggled to get BorshSerialize implemented for the external structs (.e.g Side, OrderType, etc)
-        //  so passing in the byte data an deserializing was the next best move
-        // deserialize the new order data
+
         let mut new_order_ix = serum_dex::instruction::new_order(
             ctx.accounts.market.key,
             ctx.accounts.open_orders.key,

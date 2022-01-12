@@ -16,10 +16,10 @@
   "author": "mithraiclabs",
   "license": "ISC",
   "devDependencies": {
-    "@project-serum/anchor": "^0.16.1",
+    "@project-serum/anchor": "^0.18.2",
     "@project-serum/common": "^0.0.1-beta.3",
     "@project-serum/serum": "^0.13.57",
-    "@mithraic-labs/psy-american": "^0.0.13",
+    "@mithraic-labs/psy-american": "^0.1.1-rc.2",
     "@types/chai": "^4.2.21",
     "@types/mocha": "^8.2.3",
     "chai": "^4.3.4",
