@@ -1,6 +1,6 @@
 [package]
 name = "cpi_examples"
-version = "0.2.2"
+version = "0.2.4"
 description = "Created with Anchor"
 edition = "2018"
 
