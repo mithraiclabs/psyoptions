@@ -46,12 +46,12 @@
     "@ethersproject/logger" "^5.5.0"
     hash.js "1.1.7"
 
-"@mithraic-labs/psy-american@^0.0.13":
-  version "0.0.13"
-  resolved "https://registry.yarnpkg.com/@mithraic-labs/psy-american/-/psy-american-0.0.13.tgz#9e0fb4875a3332c95b1c4c8d39578223bdcd16d7"
-  integrity sha512-cHM5XF/9DsfggfPx7hg6Q444EUd3la2sXfjQP5NCL1YfUOiRiw+/D7q/hUoVzb2oMbFgeVJ4NB98uA6t775p7w==
+"@mithraic-labs/psy-american@^0.1.1":
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/@mithraic-labs/psy-american/-/psy-american-0.1.1.tgz#cb0bfe33f75a30202ba640e5021763c8a5277e38"
+  integrity sha512-mzsU9a944bF6KwAVbrolBgJfZtzb5JJ/QInTz4QHrPGf8NV7HTqEKXfN82H4CqnjBDiQO7LadR3E520fz9eKlA==
   dependencies:
-    "@project-serum/anchor" "^0.16.1"
+    "@project-serum/anchor" "^0.18.2"
     "@project-serum/serum" "^0.13.60"
     "@solana/spl-token" "^0.1.8"
     "@solana/web3.js" "^1.28.0"
@@ -76,10 +76,10 @@
     snake-case "^3.0.4"
     toml "^3.0.0"
 
-"@project-serum/anchor@^0.16.1":
-  version "0.16.2"
-  resolved "https://registry.yarnpkg.com/@project-serum/anchor/-/anchor-0.16.2.tgz#b8b4ec4c749d59a224108f8d82ab68217ef752ae"
-  integrity sha512-wOJwObd4wOZ5tRRMCKYjeMNsEmf7vuC71KQRnw6wthhErL8c/818n4gYIZCf/1ZPl/8WPruIlmtQHDSEyy2+0Q==
+"@project-serum/anchor@^0.18.2":
+  version "0.18.2"
+  resolved "https://registry.yarnpkg.com/@project-serum/anchor/-/anchor-0.18.2.tgz#0f13b5c2046446b7c24cf28763eec90febb28485"
+  integrity sha512-uyjiN/3Ipp+4hrZRm/hG18HzGLZyvP790LXrCsGO3IWxSl28YRhiGEpKnZycfMW94R7nxdUoE3wY67V+ZHSQBQ==
   dependencies:
     "@project-serum/borsh" "^0.2.2"
     "@solana/web3.js" "^1.17.0"
