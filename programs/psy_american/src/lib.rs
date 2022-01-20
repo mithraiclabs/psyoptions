@@ -1098,7 +1098,7 @@ pub struct InitSerumMarket<'info> {
     // system accounts
     pub system_program: AccountInfo<'info>,
     pub token_program: Program<'info, Token>,
-    pub dex_program: AccountInfo<'info>,
+    pub dex_program: Program<'info, anchor_spl::dex::Dex>,
     pub rent: Sysvar<'info, Rent>,
     pub pc_mint: Box<Account<'info, Mint>>,
     pub option_mint: Box<Account<'info, Mint>>,
