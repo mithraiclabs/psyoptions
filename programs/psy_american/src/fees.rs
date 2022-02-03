@@ -6,13 +6,13 @@ pub mod fee_owner_key {
   declare_id!("6c33US7ErPmLXZog9SyChQUYUrrJY51k4GmzdhrbhNnD");
 }
 
-/// Markets with an NFT or not enough underlying assets per contract to warrent
+/// Markets with an NFT or not enough underlying assets per contract to warrant
 /// a 3bps fee will be charged 1/2 a SOL to MINT. This is arbitrarily made up
 /// and subject to change based on feedback and eventually governance.
 pub const NFT_MINT_LAMPORTS: u64 = 1_000_000_000 / 2;
 
-/// Floating points are not ideal for the Solana runtime, so we need a integer type than
-/// can handle fraction parts for us. The highest 64 bits are the integer, the lower 64
+/// Floating points are not ideal for the Solana runtime, so we need a integer type that
+/// can handle fractional parts for us. The highest 64 bits are the integer, the lower 64
 /// bits are the decimals.
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug)]
