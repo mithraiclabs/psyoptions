@@ -1,3 +1,5 @@
+anchor_version = "0.18.2"
+
 [programs.localnet]
 psy_american = "R2y9ip6mxmWUj4pt54jP2hz2dgvMozy9VTSwMWE7evs"
 cpi_examples = "Fk8QcXcNpf5chR5RcviUjgaLVtULgvovGXUXGPMwLioF"
@@ -15,3 +17,6 @@ program = "tests/deps/serum_dex.so"
 
 [scripts]
 test = "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+
+[programs.mainnet]
+psy_american = "R2y9ip6mxmWUj4pt54jP2hz2dgvMozy9VTSwMWE7evs"
