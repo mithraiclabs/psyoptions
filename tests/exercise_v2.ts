@@ -175,7 +175,7 @@ describe("exerciseOption", () => {
         underlyingToken.publicKey
       ));
 
-      // Transfer a options to the exerciser
+      // Transfer an option to the exerciser
       await optionToken.transfer(
         minterOptionAcct.publicKey,
         exerciserOptionAcct.publicKey,
