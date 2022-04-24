@@ -25,7 +25,7 @@ pub mod psy_american {
         quote_amount_per_contract: u64,
         expiration_unix_timestamp: i64,
         bump_seed: u8
-    ) -> ProgramResult {
+    ) -> Result<()> {
         // (nice to have) Validate the expiration is in the future
         if expiration_unix_timestamp < ctx.accounts.clock.unix_timestamp {
             return Err(errors::ErrorCode::ExpirationIsInThePast.into())
@@ -63,7 +63,7 @@ pub mod psy_american {
     }
 
     #[access_control(MintOption::unexpired_market(&ctx) MintOption::accounts(&ctx) validate_size(size))]
-    pub fn mint_option<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, MintOption<'info>>, size: u64) -> ProgramResult {
+    pub fn mint_option<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, MintOption<'info>>, size: u64) -> Result<()> {
         let option_market = &ctx.accounts.option_market;
         let mint_fee_account = validate_mint_fee_acct(
             option_market,
@@ -145,7 +145,7 @@ pub mod psy_american {
     }
 
     #[access_control(MintOptionV2::unexpired_market(&ctx) MintOptionV2::accounts(&ctx) validate_size(size))]
-    pub fn mint_option_v2<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, MintOptionV2<'info>>, size: u64) -> ProgramResult {
+    pub fn mint_option_v2<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, MintOptionV2<'info>>, size: u64) -> Result<()> {
         let option_market = &ctx.accounts.option_market;
 
         // Transfer the underlying assets to the underlying assets pool
@@ -193,7 +193,7 @@ pub mod psy_american {
     }
 
     #[access_control(ExerciseOption::accounts(&ctx) ExerciseOption::unexpired_market(&ctx))]
-    pub fn exercise_option<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, ExerciseOption<'info>>, size: u64) -> ProgramResult {
+    pub fn exercise_option<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, ExerciseOption<'info>>, size: u64) -> Result<()> {
         let option_market = &ctx.accounts.option_market;
         let seeds = &[
             option_market.underlying_asset_mint.as_ref(),
@@ -209,7 +209,7 @@ pub mod psy_american {
             ctx.accounts.token_program.to_account_info().clone(),
             Burn {
                 mint: ctx.accounts.option_mint.to_account_info(),
-                to: ctx.accounts.exerciser_option_token_src.to_account_info(),
+                from: ctx.accounts.exerciser_option_token_src.to_account_info(),
                 authority: ctx.accounts.option_authority.to_account_info(),
             },
             signer,
@@ -272,7 +272,7 @@ pub mod psy_american {
     }
 
     #[access_control(ExerciseOptionV2::accounts(&ctx) ExerciseOptionV2::unexpired_market(&ctx))]
-    pub fn exercise_option_v2<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, ExerciseOptionV2<'info>>, size: u64) -> ProgramResult {
+    pub fn exercise_option_v2<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, ExerciseOptionV2<'info>>, size: u64) -> Result<()> {
         let option_market = &ctx.accounts.option_market;
         let seeds = &[
             option_market.underlying_asset_mint.as_ref(),
@@ -288,7 +288,7 @@ pub mod psy_american {
             ctx.accounts.token_program.to_account_info().clone(),
             Burn {
                 mint: ctx.accounts.option_mint.to_account_info(),
-                to: ctx.accounts.exerciser_option_token_src.to_account_info(),
+                from: ctx.accounts.exerciser_option_token_src.to_account_info(),
                 authority: ctx.accounts.option_authority.to_account_info(),
             },
             signer,
@@ -321,7 +321,7 @@ pub mod psy_american {
     }
 
     #[access_control(ClosePostExp::accounts(&ctx) ClosePostExp::expired_market(&ctx))]
-    pub fn close_post_expiration(ctx: Context<ClosePostExp>, size: u64) -> ProgramResult {
+    pub fn close_post_expiration(ctx: Context<ClosePostExp>, size: u64) -> Result<()> {
         let option_market = &ctx.accounts.option_market;
         let seeds = &[
             option_market.underlying_asset_mint.as_ref(),
@@ -338,7 +338,7 @@ pub mod psy_american {
             ctx.accounts.token_program.to_account_info().clone(),
             Burn {
                 mint: ctx.accounts.writer_token_mint.to_account_info(),
-                to: ctx.accounts.writer_token_src.to_account_info(),
+                from: ctx.accounts.writer_token_src.to_account_info(),
                 authority: ctx.accounts.user_authority.to_account_info(),
             },
             signer,
@@ -359,7 +359,7 @@ pub mod psy_american {
     }
 
     #[access_control(CloseOptionPosition::accounts(&ctx))]
-    pub fn close_option_position(ctx: Context<CloseOptionPosition>, size: u64) -> ProgramResult {
+    pub fn close_option_position(ctx: Context<CloseOptionPosition>, size: u64) -> Result<()> {
         let option_market = &ctx.accounts.option_market;
         let seeds = &[
             option_market.underlying_asset_mint.as_ref(),
@@ -374,9 +374,9 @@ pub mod psy_american {
         // Burn the size of WriterTokens
         let cpi_ctx = CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info().clone(),
-            token::Burn {
+            Burn {
                 mint: ctx.accounts.writer_token_mint.to_account_info(),
-                to: ctx.accounts.writer_token_src.to_account_info(),
+                from: ctx.accounts.writer_token_src.to_account_info(),
                 authority: ctx.accounts.user_authority.to_account_info(),
             },
             signer,
@@ -388,7 +388,7 @@ pub mod psy_american {
             ctx.accounts.token_program.to_account_info().clone(),
             Burn {
                 mint: ctx.accounts.option_token_mint.to_account_info(),
-                to: ctx.accounts.option_token_src.to_account_info(),
+                from: ctx.accounts.option_token_src.to_account_info(),
                 authority: ctx.accounts.user_authority.to_account_info(),
             },
             signer,
@@ -410,7 +410,7 @@ pub mod psy_american {
     }
 
     #[access_control(BurnWriterForQuote::accounts(&ctx) BurnWriterForQuote::quotes_in_pool(&ctx, size))]
-    pub fn burn_writer_for_quote(ctx: Context<BurnWriterForQuote>, size: u64)  -> ProgramResult {
+    pub fn burn_writer_for_quote(ctx: Context<BurnWriterForQuote>, size: u64)  -> Result<()> {
         let option_market = &ctx.accounts.option_market;
         let seeds = &[
             option_market.underlying_asset_mint.as_ref(),
@@ -427,7 +427,7 @@ pub mod psy_american {
             ctx.accounts.token_program.to_account_info().clone(),
             Burn {
                 mint: ctx.accounts.writer_token_mint.to_account_info(),
-                to: ctx.accounts.writer_token_src.to_account_info(),
+                from: ctx.accounts.writer_token_src.to_account_info(),
                 authority: ctx.accounts.user_authority.to_account_info(),
             },
             signer,
@@ -450,7 +450,7 @@ pub mod psy_american {
     }
 
     #[access_control(InitSerumMarket::accounts(&ctx))]
-    pub fn init_serum_market(ctx: Context<InitSerumMarket>, _market_space: u64, vault_signer_nonce: u64, coin_lot_size: u64, pc_lot_size: u64, pc_dust_threshold: u64) -> ProgramResult {
+    pub fn init_serum_market(ctx: Context<InitSerumMarket>, _market_space: u64, vault_signer_nonce: u64, coin_lot_size: u64, pc_lot_size: u64, pc_dust_threshold: u64) -> Result<()> {
         let ix = init_serum_market_instruction(
             ctx.accounts.serum_market.key,
             ctx.accounts.dex_program.key,
@@ -487,7 +487,7 @@ pub mod psy_american {
         Ok(())
     }
 
-    pub fn entry(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+    pub fn entry(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> Result<()> {
         MarketProxy::new()
             .middleware(&mut serum_proxy::Validation::new())
             .middleware(&mut ReferralFees::new(serum_proxy::referral::ID))
@@ -1017,7 +1017,7 @@ pub struct CloseOptionPosition<'info> {
     pub token_program: Program<'info, Token>,
 }
 impl<'info> CloseOptionPosition<'info> {
-    fn accounts(ctx: &Context<CloseOptionPosition>) -> ProgramResult {
+    fn accounts(ctx: &Context<CloseOptionPosition>) -> Result<()> {
         // Validate the WriterToken mint is the same as the OptionMarket
         if *ctx.accounts.writer_token_mint.to_account_info().key != ctx.accounts.option_market.writer_token_mint {
             return Err(errors::ErrorCode::WriterTokenMintDoesNotMatchMarket.into())
@@ -1055,7 +1055,7 @@ pub struct BurnWriterForQuote<'info> {
     pub token_program: Program<'info, Token>,
 }
 impl<'info> BurnWriterForQuote<'info> {
-    fn accounts(ctx: &Context<BurnWriterForQuote>) -> ProgramResult{
+    fn accounts(ctx: &Context<BurnWriterForQuote>) -> Result<()>{
         // Validate the Quote asset pool matches the OptionMarket
         if ctx.accounts.quote_asset_pool.key() != ctx.accounts.option_market.quote_asset_pool {
             return Err(errors::ErrorCode::QuotePoolAccountDoesNotMatchMarket.into())
@@ -1070,7 +1070,7 @@ impl<'info> BurnWriterForQuote<'info> {
     }
 
     // Validate there is enough quote assets in the pool
-    fn quotes_in_pool(ctx: &Context<BurnWriterForQuote>, size: u64) -> ProgramResult {
+    fn quotes_in_pool(ctx: &Context<BurnWriterForQuote>, size: u64) -> Result<()> {
         if ctx.accounts.quote_asset_pool.amount < size.checked_mul(ctx.accounts.option_market.quote_amount_per_contract).unwrap() {
             return Err(errors::ErrorCode::NotEnoughQuoteAssetsInPool.into())
         }
@@ -1138,7 +1138,7 @@ pub struct InitSerumMarket<'info> {
 }
 impl<'info> InitSerumMarket<'info> {
     // Validate the coin_mint is the same as the OptionMarket.option_mint
-    pub fn accounts(ctx: &Context<InitSerumMarket>) -> ProgramResult {
+    pub fn accounts(ctx: &Context<InitSerumMarket>) -> Result<()> {
         if ctx.accounts.option_mint.key() != ctx.accounts.option_market.option_mint {
             return Err(errors::ErrorCode::CoinMintIsNotOptionMint.into())
         }
