@@ -9,6 +9,10 @@ use psy_american::OptionMarket;
 use std::num::NonZeroU64;
 use solana_program::msg;
 
+pub mod errors;
+
+use errors as CpiExampleErrors;
+
 declare_id!("Fk8QcXcNpf5chR5RcviUjgaLVtULgvovGXUXGPMwLioF");
 
 // The external types do not implement the BorshSerialize and BorshDeserialize that is required by Anchor. 
@@ -70,7 +74,7 @@ pub mod cpi_examples {
         quote_amount_per_contract: u64,
         expiration_unix_timestamp: i64,
         bump_seed: u8
-    ) -> ProgramResult {
+    ) -> Result<()> {
         let cpi_program = ctx.accounts.psy_american_program.clone();
         let init_market_args = psy_american::instruction::InitializeMarket {
             underlying_amount_per_contract,
@@ -129,10 +133,10 @@ pub mod cpi_examples {
             data: init_market_args.data()
         };
 
-        solana_program::program::invoke(&ix, &account_infos)
+        anchor_lang::solana_program::program::invoke(&ix, &account_infos).map_err(|_x| CpiExampleErrors::ErrorCode::DexIxError.into())
     }
 
-    pub fn initialize(ctx: Context<Initialize>, amount: u64) -> ProgramResult {
+    pub fn initialize(ctx: Context<Initialize>, amount: u64) -> Result<()> {
         let cpi_accounts = Transfer {
             from: ctx.accounts.option_source.to_account_info(),
             to: ctx.accounts.vault.to_account_info(),
@@ -144,7 +148,7 @@ pub mod cpi_examples {
         Ok(())
     }
 
-    pub fn exercise<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, Exercise<'info>>, vault_authority_bump: u8) -> ProgramResult {
+    pub fn exercise<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, Exercise<'info>>, vault_authority_bump: u8) -> Result<()> {
         msg!("before CPI");
         let cpi_program = ctx.accounts.psy_american_program.clone();
         let cpi_accounts = ExerciseOption {
@@ -175,11 +179,11 @@ pub mod cpi_examples {
         psy_american::cpi::exercise_option(cpi_ctx, ctx.accounts.exerciser_option_token_src.amount)
     }
 
-    pub fn init_mint_vault(_ctx: Context<InitMintVault>) -> ProgramResult {
+    pub fn init_mint_vault(_ctx: Context<InitMintVault>) -> Result<()> {
         Ok(())
     }
 
-    pub fn mint<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, MintCtx<'info>>, size: u64, vault_authority_bump: u8) -> ProgramResult {
+    pub fn mint<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, MintCtx<'info>>, size: u64, vault_authority_bump: u8) -> Result<()> {
         let cpi_program = ctx.accounts.psy_american_program.clone();
         let cpi_accounts = MintOptionV2 {
             // The authority that has control over the underlying assets. In this case it's the 
@@ -216,7 +220,7 @@ pub mod cpi_examples {
         psy_american::cpi::mint_option_v2(cpi_ctx, size)
     }
 
-    pub fn init_new_order_vault(_ctx: Context<InitNewOrderVault>) -> ProgramResult {
+    pub fn init_new_order_vault(_ctx: Context<InitNewOrderVault>) -> Result<()> {
         Ok(())
     }
     pub fn place_order(
@@ -232,7 +236,7 @@ pub mod cpi_examples {
         self_trade_behavior: SelfTradeBehavior,
         limit: u16,
         max_native_pc_qty_including_fees: u64
-    ) -> ProgramResult {
+    ) -> Result<()> {
         // **optionally** create the open orders program with CPI to PsyOptions
         let cpi_program = ctx.accounts.psy_american_program.clone();
         if ctx.accounts.open_orders.data_is_empty() {
@@ -259,7 +263,7 @@ pub mod cpi_examples {
                 ctx.accounts.vault_authority.key,
                 ctx.accounts.market.key,
                 Some(ctx.accounts.psy_market_authority.key),
-            )?;
+            ).map_err(|_x| CpiExampleErrors::ErrorCode::DexIxError)?;
             ix.program_id = *cpi_program.key;
             // TODO: Wrap the necessary Psy American middleware updates to the instruction. 
             //  Note: only the OpenOrdersPda manipulates this instruction
@@ -331,7 +335,7 @@ pub mod cpi_examples {
             self_trade_behavior.into(),
             limit,
             NonZeroU64::new(max_native_pc_qty_including_fees).unwrap()
-        )?;
+        ).map_err(|_x| CpiExampleErrors::ErrorCode::DexIxError)?;
         new_order_ix.program_id = *cpi_program.key;
         // insert data for the OpenOrdersPDA middleware
         new_order_ix.data.insert(0, 1 as u8);
@@ -508,6 +512,7 @@ pub struct MintCtx<'info> {
 
 #[derive(Accounts)]
 pub struct InitNewOrderVault<'info> {
+    #[account(mut)]
     authority: Signer<'info>,
     usdc_mint: Box<Account<'info, Mint>>,
     #[account(init,

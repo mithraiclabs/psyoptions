@@ -172,6 +172,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0188c33b4a3c124c4e593f2b440415aaea70a7650fac6ba0772395385d71c003"
 dependencies = [
  "anchor-lang",
+ "serum_dex 0.4.0",
  "solana-program",
  "spl-associated-token-account",
  "spl-token",
@@ -941,8 +942,20 @@ version = "0.2.5"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
- "serum_dex",
+ "psyfi-serum-dex-permissioned",
  "solana-program",
+ "spl-token",
+]
+
+[[package]]
+name = "psyfi-serum-dex-permissioned"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d04c6e22a6b4b0834998452a3e2a9ca6bfe75e0181365526089df070b670769d"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+ "serum_dex 0.5.4",
  "spl-token",
 ]
 
@@ -1133,6 +1146,30 @@ name = "serum_dex"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02705854bae4622e552346c8edd43ab90c7425da35d63d2c689f39238f8d8b25"
+dependencies = [
+ "arrayref",
+ "bincode",
+ "bytemuck",
+ "byteorder",
+ "enumflags2",
+ "field-offset",
+ "itertools 0.9.0",
+ "num-traits",
+ "num_enum",
+ "safe-transmute",
+ "serde",
+ "solana-program",
+ "spl-token",
+ "static_assertions",
+ "thiserror",
+ "without-alloc",
+]
+
+[[package]]
+name = "serum_dex"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c62b5450e2d875e269af76b80080126e2d8eeb10ac256f900dc7cbad1a8dc85e"
 dependencies = [
  "arrayref",
  "bincode",
