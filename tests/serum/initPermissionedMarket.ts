@@ -13,13 +13,14 @@ import {
   DEX_PID,
   initSerum,
 } from "../../utils/serum";
+import { AnchorError, Program } from "@project-serum/anchor";
+import { PsyAmerican } from "../../target/types/psy_american";
 
 describe("permissioned-markets", () => {
   // Anchor client setup.
-  const provider = anchor.Provider.env();
   const payer = anchor.web3.Keypair.generate();
-  anchor.setProvider(provider);
-  const program = anchor.workspace.PsyAmerican as anchor.Program;
+  const program = anchor.workspace.PsyAmerican as Program<PsyAmerican>;
+  const provider = program.provider;
   let usdcMint: Keypair;
   // Global PsyOptions accounts
   let optionMarket: OptionMarketV2;
@@ -125,7 +126,7 @@ describe("permissioned-markets", () => {
           assert.ok(false);
         } catch (err) {
           const errMsg = "Coin mint must match option mint";
-          assert.equal((err as Error).toString(), errMsg);
+          assert.equal((err as AnchorError).error.errorMessage, errMsg);
         }
       });
     });

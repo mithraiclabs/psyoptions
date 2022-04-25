@@ -28,21 +28,19 @@ import {
   OptionMarketWithKey,
   instructions as psyAmericanInstructions,
 } from "@mithraic-labs/psy-american";
-import { BN, Program } from "@project-serum/anchor";
+import { AnchorProvider, BN, Program } from "@project-serum/anchor";
 import { PsyAmerican } from "../target/types/psy_american";
-import { NodeWallet } from "@project-serum/anchor/dist/cjs/provider";
 
 describe("exerciseOption", () => {
-  const provider = anchor.Provider.env();
   const payer = anchor.web3.Keypair.generate();
   const mintAuthority = anchor.web3.Keypair.generate();
-  anchor.setProvider(provider);
-  const program = anchor.workspace.PsyAmerican as anchor.Program<PsyAmerican>;
+  const program = anchor.workspace.PsyAmerican as Program<PsyAmerican>;
+  const provider = program.provider;
 
   const minter = anchor.web3.Keypair.generate();
-  const minterProvider = new anchor.Provider(
+  const minterProvider = new AnchorProvider(
     provider.connection,
-    new NodeWallet(minter),
+    new anchor.Wallet(minter),
     {}
   );
   const minterProgram = new Program(
@@ -143,9 +141,7 @@ describe("exerciseOption", () => {
           new anchor.BN(100),
           optionMarket
         );
-      await program.provider.send(new Transaction().add(mintOptionsIx), [
-        minter,
-      ]);
+      await provider.send(new Transaction().add(mintOptionsIx), [minter]);
       // Create an exerciser
       ({
         optionAccount: exerciserOptionAcct,
@@ -218,7 +214,7 @@ describe("exerciseOption", () => {
             ]
           );
         } catch (err) {
-          console.error((err as Error).toString());
+          console.error((err as AnchorError).error.errorMessage);
           throw err;
         }
         const optionTokenAfter = await optionToken.getMintInfo();
@@ -302,7 +298,7 @@ describe("exerciseOption", () => {
         } catch (err) {
           const errMsg =
             "exerciseFee key does not match the value on the OptionMarket";
-          assert.equal((err as Error).toString(), errMsg);
+          assert.equal((err as AnchorError).error.errorMessage, errMsg);
         }
       });
     });
@@ -344,7 +340,7 @@ describe("exerciseOption", () => {
         } catch (err) {
           const errMsg =
             "Quote pool account does not match the value on the OptionMarket";
-          assert.equal((err as Error).toString(), errMsg);
+          assert.equal((err as AnchorError).error.errorMessage, errMsg);
         }
       });
     });
@@ -386,7 +382,7 @@ describe("exerciseOption", () => {
         } catch (err) {
           const errMsg =
             "Underlying pool account does not match the value on the OptionMarket";
-          assert.equal((err as Error).toString(), errMsg);
+          assert.equal((err as AnchorError).error.errorMessage, errMsg);
         }
       });
     });
@@ -428,7 +424,7 @@ describe("exerciseOption", () => {
         } catch (err) {
           const errMsg =
             "Underlying destination mint must match underlying asset mint address";
-          assert.equal((err as Error).toString(), errMsg);
+          assert.equal((err as AnchorError).error.errorMessage, errMsg);
         }
       });
     });
@@ -474,7 +470,7 @@ describe("exerciseOption", () => {
         } catch (err) {
           const errMsg =
             "OptionToken mint does not match the value on the OptionMarket";
-          assert.equal((err as Error).toString(), errMsg);
+          assert.equal((err as AnchorError).error.errorMessage, errMsg);
         }
       });
     });
@@ -509,7 +505,7 @@ describe("exerciseOption", () => {
           assert.ok(false);
         } catch (err) {
           const errMsg = "Fee owner does not match the program's fee owner";
-          assert.equal((err as Error).toString(), errMsg);
+          assert.equal((err as AnchorError).error.errorMessage, errMsg);
         }
       });
     });
@@ -627,7 +623,7 @@ describe("exerciseOption", () => {
         assert.ok(false);
       } catch (err) {
         const errMsg = "OptionMarket is expired, can't exercise";
-        assert.equal((err as Error).toString(), errMsg);
+        assert.equal((err as AnchorError).error.errorMessage, errMsg);
       }
     });
   });
@@ -743,7 +739,7 @@ describe("exerciseOption", () => {
           ]
         );
       } catch (err) {
-        console.error((err as Error).toString());
+        console.error((err as AnchorError).error.errorMessage);
         throw err;
       }
       const exerciserAfter = await provider.connection.getAccountInfo(

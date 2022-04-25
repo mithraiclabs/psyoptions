@@ -15,12 +15,13 @@
     "lint": "eslint -c .eslintrc.json --fix",
     "prepublishOnly": "rollup -c",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "copy-idl": "test -e ../../target/types/psy_american.ts && cp ../../target/types/psy_american.ts ./src || echo \"Run anchor build first\" >&2"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@project-serum/anchor": "^0.15.0",
+    "@project-serum/anchor": "^0.24.2",
     "@solana/spl-token": "^0.1.3",
     "bignumber.js": "^9.0.1",
     "buffer-layout": "^1.2.0",

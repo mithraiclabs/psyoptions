@@ -16,13 +16,16 @@ import {
 import { OptionMarketV2 } from "../../packages/psyoptions-ts/src/types";
 import { initSetup } from "../../utils/helpers";
 import { FEE_OWNER_KEY } from "../../packages/psyoptions-ts/src/fees";
+import { CpiExamples } from "../../target/types/cpi_examples";
+import { Program } from "@project-serum/anchor";
+import { PsyAmerican } from "../../target/types/psy_american";
 
 describe("cpi_examples initOptionMarket", () => {
-  const provider = anchor.Provider.env();
   const user = anchor.web3.Keypair.generate();
-  anchor.setProvider(provider);
-  const program = anchor.workspace.CpiExamples as anchor.Program;
-  const americanOptionsProgram = anchor.workspace.PsyAmerican as anchor.Program;
+  const program = anchor.workspace.CpiExamples as Program<CpiExamples>;
+  const provider = program.provider;
+  const americanOptionsProgram = anchor.workspace
+    .PsyAmerican as Program<PsyAmerican>;
 
   let optionMarket: OptionMarketV2;
   let underlyingToken: Token;

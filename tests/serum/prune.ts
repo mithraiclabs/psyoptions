@@ -17,12 +17,14 @@ import {
 import { MarketProxy, OpenOrders } from "@project-serum/serum";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { FEE_OWNER_KEY } from "../../packages/psyoptions-ts/src/fees";
+import { Program } from "@project-serum/anchor";
+import { PsyAmerican } from "../../target/types/psy_american";
 
 describe("Serum Prune", () => {
-  const provider = anchor.Provider.env();
+  const program = anchor.workspace.PsyAmerican as Program<PsyAmerican>;
+  const provider = program.provider;
+
   const wallet = provider.wallet as anchor.Wallet;
-  anchor.setProvider(provider);
-  const program = anchor.workspace.PsyAmerican as anchor.Program;
   const mintAuthority = anchor.web3.Keypair.generate();
   let underlyingToken: Token, usdcToken: Token, optionToken: Token;
   // Global PsyOptions variables
@@ -192,7 +194,7 @@ describe("Serum Prune", () => {
         // const errMsg = "Cannot prune the market while it's still active";
         const errMsg =
           "Error: failed to send transaction: Transaction simulation failed: Error processing Instruction 0: custom program error: 0x146";
-        assert.equal((err as Error).toString(), errMsg);
+        assert.equal((err as AnchorError).error.errorMessage, errMsg);
       }
 
       // Assert that the order book has not changed
@@ -356,7 +358,7 @@ describe("Serum Prune", () => {
       try {
         await provider.send(tx);
       } catch (err) {
-        console.log((err as Error).toString());
+        console.log((err as AnchorError).error.errorMessage);
       }
 
       // Assert that the order book has not changed

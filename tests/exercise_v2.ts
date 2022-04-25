@@ -29,21 +29,19 @@ import {
   instructions as psyAmericanInstructions,
   parseTransactionError,
 } from "@mithraic-labs/psy-american";
-import { BN, Program } from "@project-serum/anchor";
+import { AnchorProvider, BN, Program, Wallet } from "@project-serum/anchor";
 import { PsyAmerican } from "../target/types/psy_american";
-import { NodeWallet } from "@project-serum/anchor/dist/cjs/provider";
 
 describe("exerciseOption", () => {
-  const provider = anchor.Provider.env();
   const payer = anchor.web3.Keypair.generate();
   const mintAuthority = anchor.web3.Keypair.generate();
-  anchor.setProvider(provider);
   const program = anchor.workspace.PsyAmerican as anchor.Program<PsyAmerican>;
+  const provider = program.provider;
 
   const minter = anchor.web3.Keypair.generate();
-  const minterProvider = new anchor.Provider(
+  const minterProvider = new AnchorProvider(
     provider.connection,
-    new NodeWallet(minter),
+    new Wallet(minter),
     {}
   );
   const minterProgram = new Program(
@@ -52,9 +50,9 @@ describe("exerciseOption", () => {
     minterProvider
   );
   const exerciser = anchor.web3.Keypair.generate();
-  const exerciserProvider = new anchor.Provider(
+  const exerciserProvider = new AnchorProvider(
     provider.connection,
-    new NodeWallet(exerciser),
+    new Wallet(exerciser),
     {}
   );
   const exerciserProgram = new Program(
@@ -221,7 +219,7 @@ describe("exerciseOption", () => {
             new Transaction().add(instruction)
           );
         } catch (err) {
-          console.error((err as Error).toString());
+          console.error((err as AnchorError).error.errorMessage);
           throw err;
         }
         const optionTokenAfter = await optionToken.getMintInfo();

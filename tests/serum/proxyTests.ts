@@ -15,12 +15,13 @@ import { MarketProxy, OpenOrders } from "@project-serum/serum";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { FEE_OWNER_KEY } from "../../packages/psyoptions-ts/src/fees";
 import { mintOptionsTx } from "../../packages/psyoptions-ts/src";
+import { PsyAmerican } from "../../target/types/psy_american";
+import { Program } from "@project-serum/anchor";
 
 describe("proxyTests", () => {
-  const provider = anchor.Provider.env();
+  const program = anchor.workspace.PsyAmerican as Program<PsyAmerican>;
+  const provider = program.provider;
   const wallet = provider.wallet as anchor.Wallet;
-  anchor.setProvider(provider);
-  const program = anchor.workspace.PsyAmerican as anchor.Program;
   let underlyingToken: Token, usdcToken: Token, optionToken: Token;
 
   // Global DEX accounts and clients shared across all tests.

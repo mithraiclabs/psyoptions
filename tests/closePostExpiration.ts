@@ -19,13 +19,14 @@ import {
 } from "../utils/helpers";
 import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
 import { mintOptionsTx } from "../packages/psyoptions-ts/src";
+import { AnchorError, Program } from "@project-serum/anchor";
+import { PsyAmerican } from "../target/types/psy_american";
 
 describe("closePostExpiration", () => {
-  const provider = anchor.Provider.env();
   const payer = anchor.web3.Keypair.generate();
   const mintAuthority = anchor.web3.Keypair.generate();
-  anchor.setProvider(provider);
-  const program = anchor.workspace.PsyAmerican as anchor.Program;
+  const program = anchor.workspace.PsyAmerican as Program<PsyAmerican>;
+  const provider = program.provider;
 
   const minter = anchor.web3.Keypair.generate();
   const exerciser = anchor.web3.Keypair.generate();
@@ -172,7 +173,7 @@ describe("closePostExpiration", () => {
             minterUnderlyingAccount.publicKey
           );
         } catch (err) {
-          console.error((err as Error).toString());
+          console.error((err as AnchorError).error.errorMessage);
           throw err;
         }
         const writerMintAfter = await writerToken.getMintInfo();
@@ -220,7 +221,7 @@ describe("closePostExpiration", () => {
         } catch (err) {
           const errorMsg =
             "Underlying pool account does not match the value on the OptionMarket";
-          assert.equal((err as Error).toString(), errorMsg);
+          assert.equal((err as AnchorError).error.errorMessage, errorMsg);
         }
       });
     });
@@ -250,7 +251,7 @@ describe("closePostExpiration", () => {
         } catch (err) {
           const errorMsg =
             "WriterToken mint does not match the value on the OptionMarket";
-          assert.equal((err as Error).toString(), errorMsg);
+          assert.equal((err as AnchorError).error.errorMessage, errorMsg);
         }
       });
     });
@@ -281,7 +282,7 @@ describe("closePostExpiration", () => {
         } catch (err) {
           const errorMsg =
             "Underlying destination mint must match underlying asset mint address";
-          assert.equal((err as Error).toString(), errorMsg);
+          assert.equal((err as AnchorError).error.errorMessage, errorMsg);
         }
       });
     });
@@ -378,7 +379,7 @@ describe("closePostExpiration", () => {
         assert.ok(false);
       } catch (err) {
         const errorMsg = "OptionMarket has not expired, can't close";
-        assert.equal((err as Error).toString(), errorMsg);
+        assert.equal((err as AnchorError).error.errorMessage, errorMsg);
       }
     });
   });

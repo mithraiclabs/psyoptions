@@ -1,5 +1,5 @@
 import * as anchor from "@project-serum/anchor";
-import { BN, Provider } from "@project-serum/anchor";
+import { BN, Program, Provider } from "@project-serum/anchor";
 import { serumUtils } from "@mithraic-labs/psy-american";
 import {
   DexInstructions,
@@ -25,6 +25,7 @@ import {
 import * as serumCmn from "@project-serum/common";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
+import { PsyAmerican } from "../target/types/psy_american";
 
 const MARKET_MAKER = new Keypair();
 export const DEX_PID = new PublicKey(
@@ -296,7 +297,7 @@ export class Validation implements Middleware {
 
 export const initSerum = async (
   provider: anchor.Provider,
-  program: anchor.Program,
+  program: Program<PsyAmerican>,
   optionMarket: OptionMarketV2,
   pcMint: PublicKey,
   eventQueue: PublicKey,

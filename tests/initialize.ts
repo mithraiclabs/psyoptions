@@ -1,9 +1,11 @@
 import * as anchor from "@project-serum/anchor";
+import { AnchorError, Program } from "@project-serum/anchor";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { AccountMeta, TransactionInstruction } from "@solana/web3.js";
 import assert from "assert";
 
 import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
+import { PsyAmerican } from "../target/types/psy_american";
 import {
   initNewTokenMint,
   initOptionMarket,
@@ -12,11 +14,10 @@ import {
 
 describe("initializeMarket", () => {
   // Configure the client to use the local cluster.
-  const provider = anchor.Provider.env();
   const payer = anchor.web3.Keypair.generate();
   const mintAuthority = anchor.web3.Keypair.generate();
-  anchor.setProvider(provider);
-  const program = anchor.workspace.PsyAmerican as anchor.Program;
+  const program = anchor.workspace.PsyAmerican as Program<PsyAmerican>;
+  const provider = program.provider;
 
   let quoteToken: Token;
   let underlyingToken: Token;
@@ -62,7 +63,7 @@ describe("initializeMarket", () => {
           instructions
         );
       } catch (err) {
-        console.error((err as Error).toString());
+        console.error((err as AnchorError).error.errorMessage);
         throw err;
       }
       // Fetch the account for the newly created OptionMarket
@@ -128,7 +129,7 @@ describe("initializeMarket", () => {
         assert.ok(false);
       } catch (err) {
         const errMsg = "Expiration must be in the future";
-        assert.equal((err as Error).toString(), errMsg);
+        assert.equal((err as AnchorError).error.errorMessage, errMsg);
       }
     });
   });
@@ -158,7 +159,7 @@ describe("initializeMarket", () => {
       } catch (err) {
         const errMsg =
           "Quote amount and underlying amount per contract must be > 0";
-        assert.equal((err as Error).toString(), errMsg);
+        assert.equal((err as AnchorError).error.errorMessage, errMsg);
       }
     });
   });
@@ -188,7 +189,7 @@ describe("initializeMarket", () => {
       } catch (err) {
         const errMsg =
           "Quote amount and underlying amount per contract must be > 0";
-        assert.equal((err as Error).toString(), errMsg);
+        assert.equal((err as AnchorError).error.errorMessage, errMsg);
       }
     });
   });
@@ -218,7 +219,7 @@ describe("initializeMarket", () => {
           assert.ok(false);
         } catch (err) {
           const errMsg = "Mint fee account must be owned by the FEE_OWNER";
-          assert.equal((err as Error).toString(), errMsg);
+          assert.equal((err as AnchorError).error.errorMessage, errMsg);
         }
       });
     });
@@ -258,7 +259,7 @@ describe("initializeMarket", () => {
         } catch (err) {
           const errMsg =
             "Mint fee token must be the same as the underlying asset";
-          assert.equal((err as Error).toString(), errMsg);
+          assert.equal((err as AnchorError).error.errorMessage, errMsg);
         }
       });
     });
@@ -288,7 +289,7 @@ describe("initializeMarket", () => {
           assert.ok(false);
         } catch (err) {
           const errMsg = "Exercise fee account must be owned by the FEE_OWNER";
-          assert.equal((err as Error).toString(), errMsg);
+          assert.equal((err as AnchorError).error.errorMessage, errMsg);
         }
       });
     });
@@ -328,7 +329,7 @@ describe("initializeMarket", () => {
         } catch (err) {
           const errMsg =
             "Exercise fee token must be the same as the quote asset";
-          assert.equal((err as Error).toString(), errMsg);
+          assert.equal((err as AnchorError).error.errorMessage, errMsg);
         }
       });
     });

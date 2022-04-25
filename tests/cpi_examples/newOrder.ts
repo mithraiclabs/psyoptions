@@ -22,6 +22,9 @@ import {
   marketLoader,
   openOrdersSeed,
 } from "../../utils/serum";
+import { Program } from "@project-serum/anchor";
+import { CpiExamples } from "../../target/types/cpi_examples";
+import { PsyAmerican } from "../../target/types/psy_american";
 
 const Side = {
   Bid: { bid: {} },
@@ -40,11 +43,12 @@ const SelfTradeBehavior = {
 
 const textEncoder = new TextEncoder();
 describe("cpi_examples newOrder", () => {
-  const provider = anchor.Provider.env();
+  const program = anchor.workspace.CpiExamples as Program<CpiExamples>;
+  const provider = program.provider;
+  const americanOptionsProgram = anchor.workspace
+    .PsyAmerican as Program<PsyAmerican>;
+
   const wallet = provider.wallet as anchor.Wallet;
-  anchor.setProvider(provider);
-  const program = anchor.workspace.CpiExamples as anchor.Program;
-  const americanOptionsProgram = anchor.workspace.PsyAmerican as anchor.Program;
   const mintAuthority = anchor.web3.Keypair.generate();
   let underlyingToken: Token, usdcToken: Token, optionToken: Token;
   // Global PsyOptions variables
