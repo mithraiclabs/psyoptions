@@ -22,7 +22,6 @@ import {
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
-import * as serumCmn from "@project-serum/common";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
 import { PsyAmerican } from "../target/types/psy_american";
@@ -47,7 +46,7 @@ type Orders = number[][];
 export const marketLoader =
   (
     provider: anchor.Provider,
-    program: anchor.Program,
+    program: Program<PsyAmerican>,
     optionMarketKey: PublicKey,
     marketAuthorityBump: number
   ) =>
@@ -74,7 +73,7 @@ export const marketLoader =
 export const initMarket = async (
   provider: Provider,
   /** The PsyOptions anchor.Program */
-  program: anchor.Program,
+  program: Program<PsyAmerican>,
   marketLoader: MarketLoader,
   optionMarket: OptionMarketV2,
   pcMint: PublicKey
@@ -106,7 +105,7 @@ async function setupMarket({
   optionMarket,
 }: {
   provider: anchor.Provider;
-  program: anchor.Program;
+  program: Program<PsyAmerican>;
   optionMarket: OptionMarketV2;
   baseMint: PublicKey;
   quoteMint: PublicKey;
@@ -145,7 +144,7 @@ const listMarket = async ({
   optionMarket,
 }: {
   provider: anchor.Provider;
-  program: anchor.Program;
+  program: Program<PsyAmerican>;
   quoteMint: PublicKey;
   dexProgramId: PublicKey;
   feeRateBps: number;
@@ -183,6 +182,7 @@ export const createFirstSetOfAccounts = async ({
   wallet: anchor.Wallet;
   dexProgramId: PublicKey;
 }) => {
+  console.log("**** wallet", wallet);
   const eventQueue = new Keypair();
   const bids = new Keypair();
   const asks = new Keypair();
@@ -219,7 +219,7 @@ export const createFirstSetOfAccounts = async ({
     },
   ];
   for (let tx of transactions) {
-    await anchor.getProvider().send(tx.transaction, tx.signers);
+    await connection.sendTransaction(tx.transaction, [wallet, ...tx.signers]);
   }
 
   return { eventQueue, bids, asks };
@@ -346,7 +346,7 @@ export const initSerum = async (
     pcDustThreshold,
     {
       accounts: {
-        userAuthority: (provider.wallet as anchor.Wallet).payer.publicKey,
+        userAuthority: wallet.payer.publicKey,
         optionMarket: optionMarket.key,
         serumMarket: serumMarketKey,
         dexProgram: DEX_PID,
@@ -364,14 +364,14 @@ export const initSerum = async (
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       },
-      signers: [(provider.wallet as anchor.Wallet).payer],
+      signers: [wallet.payer],
     }
   );
   return { serumMarketKey, vaultOwner, marketAuthority, marketAuthorityBump };
 };
 
 export const getMarketAndAuthorityInfo = async (
-  program: anchor.Program,
+  program: Program<PsyAmerican>,
   optionMarket: OptionMarketV2,
   dexProgramId: anchor.web3.PublicKey,
   serumQuoteAsset: PublicKey
@@ -395,3 +395,55 @@ export const getMarketAndAuthorityInfo = async (
 
   return { serumMarketKey, marketAuthority, marketAuthorityBump };
 };
+
+export async function createMintAndVault(
+  provider: Provider,
+  amount: BN,
+  owner?: PublicKey,
+  decimals?: number
+): Promise<[PublicKey, PublicKey]> {
+  // @ts-ignore
+  const wallet = provider.wallet as unknown as anchor.Wallet;
+  if (owner === undefined) {
+    owner = wallet.publicKey;
+  }
+  const mint = new Keypair();
+  const vault = new Keypair();
+  const tx = new Transaction();
+  tx.add(
+    SystemProgram.createAccount({
+      fromPubkey: wallet.publicKey,
+      newAccountPubkey: mint.publicKey,
+      space: 82,
+      lamports: await provider.connection.getMinimumBalanceForRentExemption(82),
+      programId: TokenInstructions.TOKEN_PROGRAM_ID,
+    }),
+    TokenInstructions.initializeMint({
+      mint: mint.publicKey,
+      decimals: decimals ?? 0,
+      mintAuthority: wallet.publicKey,
+    }),
+    SystemProgram.createAccount({
+      fromPubkey: wallet.publicKey,
+      newAccountPubkey: vault.publicKey,
+      space: 165,
+      lamports: await provider.connection.getMinimumBalanceForRentExemption(
+        165
+      ),
+      programId: TokenInstructions.TOKEN_PROGRAM_ID,
+    }),
+    TokenInstructions.initializeAccount({
+      account: vault.publicKey,
+      mint: mint.publicKey,
+      owner,
+    }),
+    TokenInstructions.mintTo({
+      mint: mint.publicKey,
+      destination: vault.publicKey,
+      amount,
+      mintAuthority: wallet.publicKey,
+    })
+  );
+  await provider.sendAndConfirm!(tx, [mint, vault]);
+  return [mint.publicKey, vault.publicKey];
+}

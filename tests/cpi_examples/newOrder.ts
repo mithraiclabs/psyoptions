@@ -1,28 +1,20 @@
 import * as anchor from "@project-serum/anchor";
 import { MarketProxy, OpenOrders } from "@project-serum/serum";
 import { MintInfo, Token, TOKEN_PROGRAM_ID, u64 } from "@solana/spl-token";
-import * as serumCmn from "@project-serum/common";
-import {
-  AccountInfo,
-  AccountMeta,
-  Keypair,
-  PublicKey,
-  SystemProgram,
-  SYSVAR_RENT_PUBKEY,
-  Transaction,
-} from "@solana/web3.js";
+import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 import { assert } from "chai";
 import { FEE_OWNER_KEY } from "../../packages/psyoptions-ts/src/fees";
 import { OptionMarketV2 } from "../../packages/psyoptions-ts/src/types";
 import { initOptionMarket, initSetup } from "../../utils/helpers";
 import {
+  createMintAndVault,
   DEX_PID,
   getMarketAndAuthorityInfo,
   initMarket,
   marketLoader,
   openOrdersSeed,
 } from "../../utils/serum";
-import { Program } from "@project-serum/anchor";
+import { Program, web3 } from "@project-serum/anchor";
 import { CpiExamples } from "../../target/types/cpi_examples";
 import { PsyAmerican } from "../../target/types/psy_american";
 
@@ -48,7 +40,16 @@ describe("cpi_examples newOrder", () => {
   const americanOptionsProgram = anchor.workspace
     .PsyAmerican as Program<PsyAmerican>;
 
-  const wallet = provider.wallet as anchor.Wallet;
+  const payer = web3.Keypair.fromSecretKey(
+    Buffer.from(
+      JSON.parse(
+        require("fs").readFileSync(process.env.ANCHOR_WALLET, {
+          encoding: "utf-8",
+        })
+      )
+    )
+  );
+  const wallet = payer;
   const mintAuthority = anchor.web3.Keypair.generate();
   let underlyingToken: Token, usdcToken: Token, optionToken: Token;
   // Global PsyOptions variables
@@ -74,19 +75,19 @@ describe("cpi_examples newOrder", () => {
       instructions,
     } = await initSetup(
       provider,
-      wallet.payer,
+      wallet,
       mintAuthority,
       americanOptionsProgram
     );
     optionMarket = newOptionMarket;
     await initOptionMarket(
       americanOptionsProgram,
-      wallet.payer,
+      wallet,
       optionMarket,
       remainingAccounts,
       instructions
     );
-    [usdcMint] = await serumCmn.createMintAndVault(
+    [usdcMint] = await createMintAndVault(
       provider,
       new anchor.BN("1000000000000000000"),
       undefined,
@@ -112,19 +113,19 @@ describe("cpi_examples newOrder", () => {
       provider.connection,
       optionMarket.underlyingAssetMint,
       TOKEN_PROGRAM_ID,
-      wallet.payer
+      wallet
     );
     optionToken = new Token(
       provider.connection,
       optionMarket.optionMint,
       TOKEN_PROGRAM_ID,
-      wallet.payer
+      wallet
     );
     usdcToken = new Token(
       provider.connection,
       usdcMint,
       TOKEN_PROGRAM_ID,
-      wallet.payer
+      wallet
     );
     referral = await usdcToken.createAssociatedTokenAccount(FEE_OWNER_KEY);
   });
@@ -144,7 +145,7 @@ describe("cpi_examples newOrder", () => {
       try {
         await program.rpc.initNewOrderVault({
           accounts: {
-            authority: provider.wallet.publicKey,
+            authority: wallet.publicKey,
             usdcMint: usdcMint,
             vault,
             vaultAuthority,
@@ -171,7 +172,7 @@ describe("cpi_examples newOrder", () => {
       usdcMintInfo = await usdcToken.getMintInfo();
       await usdcToken.mintTo(
         vault,
-        provider.wallet.publicKey,
+        wallet.publicKey,
         [],
         new u64(10_000_000 * usdcMintInfo.decimals)
       );
@@ -226,7 +227,7 @@ describe("cpi_examples newOrder", () => {
           ), // max_native_pc_qty_including_fees - no idea what exactly this is
           {
             accounts: {
-              userAuthority: provider.wallet.publicKey,
+              userAuthority: wallet.publicKey,
               psyAmericanProgram: americanOptionsProgram.programId,
               dexProgram: DEX_PID,
               openOrders,
@@ -311,7 +312,7 @@ describe("cpi_examples newOrder", () => {
             ), // max_native_pc_qty_including_fees
             {
               accounts: {
-                userAuthority: provider.wallet.publicKey,
+                userAuthority: wallet.publicKey,
                 psyAmericanProgram: americanOptionsProgram.programId,
                 dexProgram: DEX_PID,
                 openOrders,

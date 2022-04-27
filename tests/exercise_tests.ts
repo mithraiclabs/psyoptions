@@ -28,7 +28,12 @@ import {
   OptionMarketWithKey,
   instructions as psyAmericanInstructions,
 } from "@mithraic-labs/psy-american";
-import { AnchorProvider, BN, Program } from "@project-serum/anchor";
+import {
+  AnchorError,
+  AnchorProvider,
+  BN,
+  Program,
+} from "@project-serum/anchor";
 import { PsyAmerican } from "../target/types/psy_american";
 
 describe("exerciseOption", () => {
@@ -36,6 +41,8 @@ describe("exerciseOption", () => {
   const mintAuthority = anchor.web3.Keypair.generate();
   const program = anchor.workspace.PsyAmerican as Program<PsyAmerican>;
   const provider = program.provider;
+  // @ts-ignore
+  const wallet = provider.wallet as unknown as anchor.Wallet;
 
   const minter = anchor.web3.Keypair.generate();
   const minterProvider = new AnchorProvider(
@@ -141,7 +148,9 @@ describe("exerciseOption", () => {
           new anchor.BN(100),
           optionMarket
         );
-      await provider.send(new Transaction().add(mintOptionsIx), [minter]);
+      await provider.sendAndConfirm!(new Transaction().add(mintOptionsIx), [
+        minter,
+      ]);
       // Create an exerciser
       ({
         optionAccount: exerciserOptionAcct,
@@ -564,9 +573,10 @@ describe("exerciseOption", () => {
           new anchor.BN(100),
           optionMarket
         );
-      await program.provider.send(new Transaction().add(mintOptionsIx), [
-        minter,
-      ]);
+      await program.provider.sendAndConfirm!(
+        new Transaction().add(mintOptionsIx),
+        [minter]
+      );
       // Create an exerciser
       ({
         optionAccount: exerciserOptionAcct,
@@ -679,9 +689,10 @@ describe("exerciseOption", () => {
           new anchor.BN(100),
           optionMarket
         );
-      await program.provider.send(new Transaction().add(mintOptionsIx), [
-        minter,
-      ]);
+      await program.provider.sendAndConfirm!(
+        new Transaction().add(mintOptionsIx),
+        [minter]
+      );
       // Create an exerciser
       ({
         optionAccount: exerciserOptionAcct,

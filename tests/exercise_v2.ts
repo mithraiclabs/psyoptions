@@ -29,7 +29,13 @@ import {
   instructions as psyAmericanInstructions,
   parseTransactionError,
 } from "@mithraic-labs/psy-american";
-import { AnchorProvider, BN, Program, Wallet } from "@project-serum/anchor";
+import {
+  AnchorError,
+  AnchorProvider,
+  BN,
+  Program,
+  Wallet,
+} from "@project-serum/anchor";
 import { PsyAmerican } from "../target/types/psy_american";
 
 describe("exerciseOption", () => {
@@ -37,6 +43,8 @@ describe("exerciseOption", () => {
   const mintAuthority = anchor.web3.Keypair.generate();
   const program = anchor.workspace.PsyAmerican as anchor.Program<PsyAmerican>;
   const provider = program.provider;
+  // @ts-ignore
+  const wallet = provider.wallet as unknown as anchor.Wallet;
 
   const minter = anchor.web3.Keypair.generate();
   const minterProvider = new AnchorProvider(
@@ -152,9 +160,10 @@ describe("exerciseOption", () => {
           new anchor.BN(100),
           optionMarket
         );
-      await program.provider.send(new Transaction().add(mintOptionsIx), [
-        minter,
-      ]);
+      await program.provider.sendAndConfirm!(
+        new Transaction().add(mintOptionsIx),
+        [minter]
+      );
       // Create an exerciser
       ({
         optionAccount: exerciserOptionAcct,
@@ -215,7 +224,7 @@ describe("exerciseOption", () => {
               exerciserUnderlyingAcct.publicKey,
               exerciserQuoteAcct.publicKey
             );
-          await exerciserProgram.provider.send(
+          await exerciserProgram.provider.sendAndConfirm!(
             new Transaction().add(instruction)
           );
         } catch (err) {
@@ -287,12 +296,13 @@ describe("exerciseOption", () => {
               exerciserUnderlyingAcct.publicKey,
               exerciserQuoteAcct.publicKey
             );
-          await exerciserProgram.provider.send(
+          await exerciserProgram.provider.sendAndConfirm!(
             new Transaction().add(instruction)
           );
           assert.ok(false);
         } catch (err) {
           const programError = parseTransactionError(err);
+          console.log("*** programError", programError);
           const errMsg =
             "Quote pool account does not match the value on the OptionMarket";
           assert.equal(programError.msg, errMsg);
@@ -325,7 +335,7 @@ describe("exerciseOption", () => {
               exerciserUnderlyingAcct.publicKey,
               exerciserQuoteAcct.publicKey
             );
-          await exerciserProgram.provider.send(
+          await exerciserProgram.provider.sendAndConfirm!(
             new Transaction().add(instruction)
           );
           assert.ok(false);
@@ -360,7 +370,7 @@ describe("exerciseOption", () => {
               badUnderlyingDest.publicKey,
               exerciserQuoteAcct.publicKey
             );
-          await exerciserProgram.provider.send(
+          await exerciserProgram.provider.sendAndConfirm!(
             new Transaction().add(instruction)
           );
           assert.ok(false);
@@ -399,7 +409,7 @@ describe("exerciseOption", () => {
               exerciserUnderlyingAcct.publicKey,
               exerciserQuoteAcct.publicKey
             );
-          await exerciserProgram.provider.send(
+          await exerciserProgram.provider.sendAndConfirm!(
             new Transaction().add(instruction)
           );
           assert.ok(false);
@@ -466,9 +476,10 @@ describe("exerciseOption", () => {
           new anchor.BN(100),
           optionMarket
         );
-      await program.provider.send(new Transaction().add(mintOptionsIx), [
-        minter,
-      ]);
+      await program.provider.sendAndConfirm!(
+        new Transaction().add(mintOptionsIx),
+        [minter]
+      );
       // Create an exerciser
       ({
         optionAccount: exerciserOptionAcct,
@@ -511,7 +522,7 @@ describe("exerciseOption", () => {
             exerciserUnderlyingAcct.publicKey,
             exerciserQuoteAcct.publicKey
           );
-        await exerciserProgram.provider.send(
+        await exerciserProgram.provider.sendAndConfirm!(
           new Transaction().add(instruction)
         );
         assert.ok(false);

@@ -1,8 +1,8 @@
 import * as anchor from "@project-serum/anchor";
 import assert from "assert";
 import { AccountInfo, Keypair, PublicKey, Transaction } from "@solana/web3.js";
-import * as serumCmn from "@project-serum/common";
 import {
+  createMintAndVault,
   DEX_PID,
   getMarketAndAuthorityInfo,
   initMarket,
@@ -56,7 +56,7 @@ describe("proxyTests", () => {
       remainingAccounts,
       instructions
     );
-    [usdcMint, usdcAccount] = await serumCmn.createMintAndVault(
+    [usdcMint, usdcAccount] = await createMintAndVault(
       provider,
       new anchor.BN("1000000000000000000"),
       undefined,
@@ -141,7 +141,7 @@ describe("proxyTests", () => {
       dummy.publicKey
     );
     tx.add(ix);
-    await provider.send(tx);
+    await provider.send!(tx);
 
     const account = (await provider.connection.getAccountInfo(
       openOrdersKey
@@ -190,7 +190,7 @@ describe("proxyTests", () => {
         selfTradeBehavior: "abortTransaction",
       })
     );
-    await provider.send(tx);
+    await provider.send!(tx);
 
     // Validate that the new order is in the open orders
     openOrders = OpenOrders.load(provider.connection, openOrdersKey, DEX_PID);
@@ -221,7 +221,7 @@ describe("proxyTests", () => {
         new anchor.BN(999)
       )
     );
-    await provider.send(tx);
+    await provider.send!(tx);
 
     // Then.
     const afterOoAccount = await OpenOrders.load(
@@ -249,7 +249,7 @@ describe("proxyTests", () => {
       tx.add(
         marketProxy.market.makeConsumeEventsInstruction([eq[0].openOrders], 1)
       );
-      await provider.send(tx);
+      await provider.send!(tx);
       eq = await marketProxy.market.loadEventQueue(provider.connection);
     }
   });
@@ -269,7 +269,7 @@ describe("proxyTests", () => {
         referral
       )
     );
-    await provider.send(tx);
+    await provider.send!(tx);
 
     // Then.
     const afterUSdcTokenAcct = await usdcToken.getAccountInfo(usdcAccount);
@@ -294,7 +294,7 @@ describe("proxyTests", () => {
         provider.wallet.publicKey
       )
     );
-    await provider.send(tx);
+    await provider.send!(tx);
 
     // Then.
     const afterAccount = await program.provider.connection.getAccountInfo(

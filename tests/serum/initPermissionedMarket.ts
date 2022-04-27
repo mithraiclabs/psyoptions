@@ -21,6 +21,8 @@ describe("permissioned-markets", () => {
   const payer = anchor.web3.Keypair.generate();
   const program = anchor.workspace.PsyAmerican as Program<PsyAmerican>;
   const provider = program.provider;
+  // @ts-ignore
+  const wallet = provider.wallet as unknown as anchor.Wallet;
   let usdcMint: Keypair;
   // Global PsyOptions accounts
   let optionMarket: OptionMarketV2;
@@ -32,8 +34,8 @@ describe("permissioned-markets", () => {
     );
     const { mintAccount } = await initNewTokenMint(
       provider.connection,
-      (provider.wallet as anchor.Wallet).payer.publicKey,
-      (provider.wallet as anchor.Wallet).payer
+      wallet.payer.publicKey,
+      wallet.payer
     );
     usdcMint = mintAccount;
   });
@@ -45,24 +47,19 @@ describe("permissioned-markets", () => {
         optionMarket: newOptionMarket,
         remainingAccounts,
         instructions,
-      } = await initSetup(
-        provider,
-        (provider.wallet as anchor.Wallet).payer,
-        mintAuthority,
-        program
-      );
+      } = await initSetup(provider, wallet.payer, mintAuthority, program);
       optionMarket = newOptionMarket;
       console.log("** optionMarket", optionMarket);
       await initOptionMarket(
         program,
-        (provider.wallet as anchor.Wallet).payer,
+        wallet.payer,
         optionMarket,
         remainingAccounts,
         instructions
       );
       ({ bids, asks, eventQueue } = await createFirstSetOfAccounts({
         connection: provider.connection,
-        wallet: provider.wallet as anchor.Wallet,
+        wallet,
         dexProgramId: DEX_PID,
       }));
     });
