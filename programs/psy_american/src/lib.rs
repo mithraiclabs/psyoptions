@@ -85,7 +85,7 @@ pub mod psy_american {
                     let cpi_accounts = Transfer {
                         from: ctx.accounts.underlying_asset_src.to_account_info(),
                         to: account.clone(),
-                        authority: ctx.accounts.user_authority.clone(),
+                        authority: ctx.accounts.user_authority.to_account_info().clone(),
                     };
                     let cpi_token_program = ctx.accounts.token_program.clone();
                     let cpi_ctx = CpiContext::new(cpi_token_program.to_account_info(), cpi_accounts);
@@ -100,9 +100,9 @@ pub mod psy_american {
             invoke(
                 &system_instruction::transfer(&ctx.accounts.user_authority.key, &fees::fee_owner_key::ID, total_fee),
             &[
-                ctx.accounts.user_authority.clone(),
+                ctx.accounts.user_authority.to_account_info().clone(),
                 ctx.accounts.fee_owner.clone(),
-                ctx.accounts.system_program.clone(),
+                ctx.accounts.system_program.to_account_info().clone(),
             ],
             )?;
         }
@@ -111,7 +111,7 @@ pub mod psy_american {
         let cpi_accounts = Transfer {
             from: ctx.accounts.underlying_asset_src.to_account_info(),
             to: ctx.accounts.underlying_asset_pool.to_account_info(),
-            authority: ctx.accounts.user_authority.clone(),
+            authority: ctx.accounts.user_authority.to_account_info().clone(),
         };
         let cpi_token_program = ctx.accounts.token_program.clone();
         let cpi_ctx = CpiContext::new(cpi_token_program.to_account_info(), cpi_accounts);
@@ -159,7 +159,7 @@ pub mod psy_american {
         let cpi_accounts = Transfer {
             from: ctx.accounts.underlying_asset_src.to_account_info(),
             to: ctx.accounts.underlying_asset_pool.to_account_info(),
-            authority: ctx.accounts.user_authority.clone(),
+            authority: ctx.accounts.user_authority.to_account_info().clone(),
         };
         let cpi_token_program = ctx.accounts.token_program.clone();
         let cpi_ctx = CpiContext::new(cpi_token_program.to_account_info(), cpi_accounts);
@@ -254,7 +254,7 @@ pub mod psy_american {
                     let cpi_accounts = Transfer {
                         from: ctx.accounts.quote_asset_src.to_account_info(),
                         to: account.clone(),
-                        authority: ctx.accounts.user_authority.clone(),
+                        authority: ctx.accounts.user_authority.to_account_info().clone(),
                     };
                     let cpi_token_program = ctx.accounts.token_program.clone();
                     let cpi_ctx = CpiContext::new(cpi_token_program.to_account_info(), cpi_accounts);
@@ -269,9 +269,9 @@ pub mod psy_american {
             invoke(
                 &system_instruction::transfer(&ctx.accounts.user_authority.key, &fees::fee_owner_key::ID, total_fee),
             &[
-                ctx.accounts.user_authority.clone(),
+                ctx.accounts.user_authority.to_account_info().clone(),
                 ctx.accounts.fee_owner.clone(),
-                ctx.accounts.system_program.clone(),
+                ctx.accounts.system_program.to_account_info().clone(),
             ],
             )?;
         }
@@ -626,8 +626,8 @@ fn validate_exercise_fee_acct<'c, 'info>(
     bump_seed: u8
 )]
 pub struct InitializeMarket<'info> {
-    #[account(mut, signer)]
-    pub authority: AccountInfo<'info>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
     pub underlying_asset_mint: Box<Account<'info, Mint>>,
     pub quote_asset_mint: Box<Account<'info, Mint>>,
     #[account(init,
@@ -676,11 +676,14 @@ pub struct InitializeMarket<'info> {
         space = 8 + std::mem::size_of::<OptionMarket>() + 300
     )]
     pub option_market: Box<Account<'info, OptionMarket>>,
+    /// The V1 fee owner
+    /// CHECK: Handled
     pub fee_owner: AccountInfo<'info>,
     pub token_program: Program<'info, Token>,
+    /// CHECK: Unnecesary account, but left for backwards compatibility
     pub associated_token_program: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
     pub clock: Sysvar<'info, Clock>,
 }
 impl<'info> InitializeMarket<'info> {
@@ -708,8 +711,9 @@ impl<'info> InitializeMarket<'info> {
 #[derive(Accounts)]
 pub struct MintOption<'info> {
     /// The user authority must be the authority that has ownership of the `underlying_asset_src`
-    #[account(mut, signer)]
-    pub user_authority: AccountInfo<'info>,
+    #[account(mut)]
+    pub user_authority: Signer<'info>,
+    /// CHECK: Handled
     pub underlying_asset_mint: AccountInfo<'info>,
     #[account(mut)]
     pub underlying_asset_pool: Box<Account<'info, TokenAccount>>,
@@ -724,15 +728,17 @@ pub struct MintOption<'info> {
     #[account(mut)]
     pub minted_writer_token_dest: Box<Account<'info, TokenAccount>>,
     pub option_market: Box<Account<'info, OptionMarket>>,
+    /// CHECK: Handled
     #[account(mut)]
     pub fee_owner: AccountInfo<'info>,
 
 
     pub token_program: Program<'info, Token>,
+    /// CHECK: Unnecessary account, but left for backwards compatibility
     pub associated_token_program: AccountInfo<'info>,
     pub clock: Sysvar<'info, Clock>,
     pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
 }
 impl<'info> MintOption<'info> {
     fn accounts(ctx: &Context<MintOption<'info>>) -> Result<()> {
@@ -775,8 +781,8 @@ impl<'info> MintOption<'info> {
 #[derive(Accounts)]
 pub struct MintOptionV2<'info> {
     /// The user authority must be the authority that has ownership of the `underlying_asset_src`
-    #[account(mut, signer)]
-    pub user_authority: AccountInfo<'info>,
+    pub user_authority: Signer<'info>,
+    /// CHECK: Handled
     pub underlying_asset_mint: AccountInfo<'info>,
     #[account(mut)]
     pub underlying_asset_pool: Box<Account<'info, TokenAccount>>,
@@ -825,9 +831,9 @@ impl<'info> MintOptionV2<'info> {
 #[derive(Accounts)]
 pub struct ExerciseOption<'info> {
     /// The user_authority must be the authority that has ownership of the `quote_asset_src` account
-    #[account(mut, signer)]
-    pub user_authority: AccountInfo<'info>,
+    pub user_authority: Signer<'info>,
     /// The owner of the `exerciser_option_token_src` account
+    /// CHECK: Handled
     #[account(mut, signer)]
     pub option_authority: AccountInfo<'info>,
     pub option_market: Box<Account<'info, OptionMarket>>,
@@ -843,11 +849,12 @@ pub struct ExerciseOption<'info> {
     pub quote_asset_pool: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
     pub quote_asset_src: Box<Account<'info, TokenAccount>>,
+    /// CHECK: Handled
     #[account(mut)]
     pub fee_owner: AccountInfo<'info>,
 
     pub token_program: Program<'info, Token>,
-    pub system_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
     pub clock: Sysvar<'info, Clock>,
 }
 impl<'info> ExerciseOption<'info> {
@@ -896,10 +903,8 @@ impl<'info> ExerciseOption<'info> {
 #[derive(Accounts)]
 pub struct ExerciseOptionV2<'info> {
     /// The user_authority must be the authority that has ownership of the `quote_asset_src` account
-    #[account(mut)]
     pub user_authority: Signer<'info>,
     /// The owner of the `exerciser_option_token_src` account
-    #[account(mut)]
     pub option_authority: Signer<'info>,
     pub option_market: Box<Account<'info, OptionMarket>>,
     #[account(mut)]
@@ -952,8 +957,7 @@ impl<'info> ExerciseOptionV2<'info> {
 
 #[derive(Accounts)]
 pub struct ClosePostExp<'info> {
-    #[account(signer)]
-    pub user_authority: AccountInfo<'info>,
+    pub user_authority: Signer<'info>,
     pub option_market: Box<Account<'info, OptionMarket>>,
     #[account(mut)]
     pub writer_token_mint: Box<Account<'info, Mint>>,
@@ -998,8 +1002,7 @@ impl<'info> ClosePostExp<'info> {
 
 #[derive(Accounts)]
 pub struct CloseOptionPosition<'info> {
-    #[account(signer)]
-    pub user_authority: AccountInfo<'info>,
+    pub user_authority: Signer<'info>,
     pub option_market: Box<Account<'info, OptionMarket>>,
     #[account(mut)]
     pub writer_token_mint: Box<Account<'info, Mint>>,
@@ -1040,8 +1043,7 @@ impl<'info> CloseOptionPosition<'info> {
 
 #[derive(Accounts)]
 pub struct BurnWriterForQuote<'info> {
-    #[account(signer)]
-    pub user_authority: AccountInfo<'info>,
+    pub user_authority: Signer<'info>,
     pub option_market: Box<Account<'info, OptionMarket>>,
     #[account(mut)]
     pub writer_token_mint: Box<Account<'info, Mint>>,
@@ -1082,11 +1084,12 @@ impl<'info> BurnWriterForQuote<'info> {
 #[derive(Accounts)]
 #[instruction(market_space: u64, vault_signer_nonce: u64, coin_lot_size: u64, pc_lot_size: u64, pc_dust_threshold: u64)]
 pub struct InitSerumMarket<'info> {
-    #[account(mut, signer)]
-    pub user_authority: AccountInfo<'info>,
+    #[account(mut)]
+    pub user_authority: Signer<'info>,
     // General market accounts
     #[account(mut)]
     pub option_market: Box<Account<'info, OptionMarket>>,
+    /// CHECK: Handled
     #[account(init,
         seeds = [&option_market.key().to_bytes()[..], &pc_mint.key().to_bytes()[..], b"serumMarket"],
         bump,
@@ -1096,13 +1099,14 @@ pub struct InitSerumMarket<'info> {
     )]
     pub serum_market: AccountInfo<'info>,
     // system accounts
-    pub system_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub dex_program: Program<'info, anchor_spl::dex::Dex>,
     pub rent: Sysvar<'info, Rent>,
     pub pc_mint: Box<Account<'info, Mint>>,
     pub option_mint: Box<Account<'info, Mint>>,
     // INIT SERUM MARKET ACCOUNTS
+    /// CHECK: Handled by Serum
     #[account(init,
         seeds = [&option_market.key().to_bytes()[..], &pc_mint.key().to_bytes()[..], b"requestQueue"],
         bump,
@@ -1111,10 +1115,13 @@ pub struct InitSerumMarket<'info> {
         owner = *dex_program.key
     )]
     request_queue: AccountInfo<'info>,
+    /// CHECK: Handled by Serum
     #[account(mut)]
     pub event_queue: AccountInfo<'info>,
+    /// CHECK: Handled by Serum
     #[account(mut)]
     pub bids: AccountInfo<'info>,
+    /// CHECK: Handled by Serum
     #[account(mut)]
     pub asks: AccountInfo<'info>,
     #[account(init,
@@ -1133,7 +1140,9 @@ pub struct InitSerumMarket<'info> {
         token::authority = vault_signer,
     )]
     pub pc_vault: Box<Account<'info, TokenAccount>>,
+    /// CHECK: Handled by Serum
     pub vault_signer: AccountInfo<'info>,
+    /// CHECK: Handled by Serum
     pub market_authority: AccountInfo<'info>,
 }
 impl<'info> InitSerumMarket<'info> {

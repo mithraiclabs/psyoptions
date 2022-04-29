@@ -1,5 +1,11 @@
 import * as anchor from "@project-serum/anchor";
-import { BN, Program, Provider } from "@project-serum/anchor";
+import {
+  AnchorProvider,
+  BN,
+  Program,
+  Provider,
+  web3,
+} from "@project-serum/anchor";
 import { serumUtils } from "@mithraic-labs/psy-american";
 import {
   DexInstructions,
@@ -14,7 +20,6 @@ import {
   TokenInstructions,
 } from "@project-serum/serum";
 import {
-  Connection,
   Keypair,
   PublicKey,
   SystemProgram,
@@ -104,7 +109,7 @@ async function setupMarket({
   marketLoader,
   optionMarket,
 }: {
-  provider: anchor.Provider;
+  provider: Provider;
   program: Program<PsyAmerican>;
   optionMarket: OptionMarketV2;
   baseMint: PublicKey;
@@ -143,17 +148,18 @@ const listMarket = async ({
   feeRateBps,
   optionMarket,
 }: {
-  provider: anchor.Provider;
+  provider: Provider;
   program: Program<PsyAmerican>;
   quoteMint: PublicKey;
   dexProgramId: PublicKey;
   feeRateBps: number;
   optionMarket: OptionMarketV2;
 }) => {
-  const { connection, wallet } = provider;
+  // @ts-ignore: TODO: Remove when anchor PR released
+  const { wallet } = provider;
 
   const { bids, asks, eventQueue } = await createFirstSetOfAccounts({
-    connection: connection,
+    provider,
     wallet: wallet as anchor.Wallet,
     dexProgramId,
   });
@@ -174,15 +180,15 @@ const listMarket = async ({
 };
 
 export const createFirstSetOfAccounts = async ({
-  connection,
+  provider,
   wallet,
   dexProgramId,
 }: {
-  connection: Connection;
+  provider: Provider;
   wallet: anchor.Wallet;
   dexProgramId: PublicKey;
 }) => {
-  console.log("**** wallet", wallet);
+  const { connection } = provider;
   const eventQueue = new Keypair();
   const bids = new Keypair();
   const asks = new Keypair();
@@ -218,8 +224,12 @@ export const createFirstSetOfAccounts = async ({
       signers: [eventQueue, bids, asks],
     },
   ];
+
   for (let tx of transactions) {
-    await connection.sendTransaction(tx.transaction, [wallet, ...tx.signers]);
+    await provider.sendAndConfirm!(tx.transaction, [
+      wallet.payer,
+      ...tx.signers,
+    ]);
   }
 
   return { eventQueue, bids, asks };
@@ -228,7 +238,7 @@ export const createFirstSetOfAccounts = async ({
 export const getVaultOwnerAndNonce = async (
   marketPublicKey: PublicKey,
   dexProgramId = DEX_PID
-) => {
+): Promise<[PublicKey, BN]> => {
   const nonce = new BN(0);
   while (nonce.toNumber() < 255) {
     try {
@@ -305,6 +315,8 @@ export const initSerum = async (
   asks: PublicKey,
   dexProgramId: PublicKey
 ) => {
+  // @ts-ignore
+  const wallet = provider.wallet as unknown as anchor.Wallet;
   const [requestQueue, _requestQueueBump] = await serumUtils.deriveRequestQueue(
     program,
     optionMarket.key,
@@ -339,7 +351,7 @@ export const initSerum = async (
   const pcLotSize = new anchor.BN(100);
   const pcDustThreshold = new anchor.BN(100);
   await program.rpc.initSerumMarket(
-    new anchor.BN(MARKET_STATE_LAYOUT_V3.span),
+    new BN(MARKET_STATE_LAYOUT_V3.span),
     vaultSignerNonce,
     coinLotSize,
     pcLotSize,

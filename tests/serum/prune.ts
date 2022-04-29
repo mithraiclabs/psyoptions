@@ -19,6 +19,7 @@ import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { FEE_OWNER_KEY } from "../../packages/psyoptions-ts/src/fees";
 import { AnchorError, Program } from "@project-serum/anchor";
 import { PsyAmerican } from "../../target/types/psy_american";
+import { parseTransactionError } from "@mithraic-labs/psy-american";
 
 describe("Serum Prune", () => {
   const program = anchor.workspace.PsyAmerican as Program<PsyAmerican>;
@@ -120,7 +121,7 @@ describe("Serum Prune", () => {
           dummy.publicKey
         )
       );
-      await provider.send!(tx);
+      await provider.sendAndConfirm!(tx);
       // place a bunch of bids on the order book
       const tx2 = new anchor.web3.Transaction();
       tx2.add(
@@ -162,7 +163,7 @@ describe("Serum Prune", () => {
           selfTradeBehavior: "abortTransaction",
         })
       );
-      await provider.send!(tx2);
+      await provider.sendAndConfirm!(tx2);
     });
     it("should error trying to prune", async () => {
       let openOrders = OpenOrders.load(
@@ -189,13 +190,12 @@ describe("Serum Prune", () => {
         await marketProxy.instruction.prune(openOrdersKey, marketAuthority)
       );
       try {
-        await provider.send!(tx);
+        await provider.sendAndConfirm!(tx);
         assert.ok(false);
       } catch (err) {
-        // const errMsg = "Cannot prune the market while it's still active";
-        const errMsg =
-          "Error: failed to send transaction: Transaction simulation failed: Error processing Instruction 0: custom program error: 0x146";
-        assert.equal((err as AnchorError).error.errorMessage, errMsg);
+        const programError = parseTransactionError(err);
+        const errMsg = "Cannot prune the market while it's still active";
+        assert.equal(programError.msg, errMsg);
       }
 
       // Assert that the order book has not changed
@@ -286,7 +286,7 @@ describe("Serum Prune", () => {
           dummy.publicKey
         )
       );
-      await provider.send!(tx);
+      await provider.sendAndConfirm!(tx);
       // place a bunch of bids on the order book
       const tx2 = new anchor.web3.Transaction();
       tx2.add(
@@ -328,7 +328,7 @@ describe("Serum Prune", () => {
           selfTradeBehavior: "abortTransaction",
         })
       );
-      await provider.send!(tx2);
+      await provider.sendAndConfirm!(tx2);
       // Make sure the option market is expired
       wait(1_000);
     });
@@ -357,7 +357,7 @@ describe("Serum Prune", () => {
         await marketProxy.instruction.prune(openOrdersKey, marketAuthority)
       );
       try {
-        await provider.send!(tx);
+        await provider.sendAndConfirm!(tx);
       } catch (err) {
         console.log((err as AnchorError).error.errorMessage);
       }

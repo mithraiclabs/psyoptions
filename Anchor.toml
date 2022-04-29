@@ -16,7 +16,7 @@ address = "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin"
 program = "tests/deps/serum_dex.so"
 
 [scripts]
-test = "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/**/exercise_v2.ts"
+test = "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 
 [programs.mainnet]
 psy_american = "R2y9ip6mxmWUj4pt54jP2hz2dgvMozy9VTSwMWE7evs"

@@ -49,7 +49,6 @@ describe("permissioned-markets", () => {
         instructions,
       } = await initSetup(provider, wallet.payer, mintAuthority, program);
       optionMarket = newOptionMarket;
-      console.log("** optionMarket", optionMarket);
       await initOptionMarket(
         program,
         wallet.payer,
@@ -58,7 +57,7 @@ describe("permissioned-markets", () => {
         instructions
       );
       ({ bids, asks, eventQueue } = await createFirstSetOfAccounts({
-        connection: provider.connection,
+        provider,
         wallet,
         dexProgramId: DEX_PID,
       }));
