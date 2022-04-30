@@ -16,7 +16,7 @@
   "author": "mithraiclabs",
   "license": "ISC",
   "devDependencies": {
-    "@mithraic-labs/psy-american": "^0.2.1-rc1",
+    "@mithraic-labs/psy-american": "^0.2.1-rc2",
     "@project-serum/anchor": "^0.24.2",
     "@project-serum/serum": "^0.13.57",
     "@types/chai": "^4.2.21",

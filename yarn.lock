@@ -46,10 +46,10 @@
     "@ethersproject/logger" "^5.5.0"
     hash.js "1.1.7"
 
-"@mithraic-labs/psy-american@^0.2.1-rc1":
-  version "0.2.1-rc1"
-  resolved "https://registry.yarnpkg.com/@mithraic-labs/psy-american/-/psy-american-0.2.1-rc1.tgz#2ae92abee73f4d4887ca6992ce5783951dc8349c"
-  integrity sha512-2xKjE70HaL97XmIk/kEnUJ6rMsR72RwP08xVZfYYNUMcKk61UF8lIvsbBjNEyrA9hMmSQWprzzdKqUbBa9AZWA==
+"@mithraic-labs/psy-american@^0.2.1-rc2":
+  version "0.2.1-rc2"
+  resolved "https://registry.yarnpkg.com/@mithraic-labs/psy-american/-/psy-american-0.2.1-rc2.tgz#ce755e24be331ad0e1de1a64eb24f2ef711f37fe"
+  integrity sha512-Xh+Sko8ml894EVE39O+DOK8tJftxaP73QqEu80/0Sqlkk1XbOUeO7vGyWrwiqvP+K12KPRsdcDq72m/T9lCtiw==
   dependencies:
     "@project-serum/anchor" "^0.24.2"
     "@project-serum/serum" "^0.13.60"
