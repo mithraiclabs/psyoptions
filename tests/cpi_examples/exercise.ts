@@ -1,4 +1,5 @@
 import * as anchor from "@project-serum/anchor";
+import { Program } from "@project-serum/anchor";
 import {
   AccountInfo,
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -22,14 +23,16 @@ import {
 } from "../../packages/psyoptions-ts/src/fees";
 
 import { OptionMarketV2 } from "../../packages/psyoptions-ts/src/types";
+import { CpiExamples } from "../../target/types/cpi_examples";
+import { PsyAmerican } from "../../target/types/psy_american";
 import { createMinter, initOptionMarket, initSetup } from "../../utils/helpers";
 
 describe("cpi_examples exercise", () => {
-  const provider = anchor.Provider.env();
   const payer = anchor.web3.Keypair.generate();
-  anchor.setProvider(provider);
-  const program = anchor.workspace.CpiExamples as anchor.Program;
-  const americanOptionsProgram = anchor.workspace.PsyAmerican as anchor.Program;
+  const program = anchor.workspace.CpiExamples as Program<CpiExamples>;
+  const provider = program.provider;
+  const americanOptionsProgram = anchor.workspace
+    .PsyAmerican as Program<PsyAmerican>;
   let optionMarket: OptionMarketV2;
   let vaultAccount: AccountInfo;
   const mintAuthority = anchor.web3.Keypair.generate();

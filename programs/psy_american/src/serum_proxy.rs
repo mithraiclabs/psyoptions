@@ -1,7 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::dex::{
-    Context, MarketMiddleware
-};
+use psyfi_serum_dex_permissioned::{Context, MarketMiddleware};
 use solana_program::clock::Clock;
 
 use crate::{OptionMarket, errors};
@@ -17,7 +15,7 @@ impl Validation {
     }
 }
 impl MarketMiddleware for Validation {
-    fn instruction(&mut self, data: &mut &[u8]) -> ProgramResult {
+    fn instruction(&mut self, data: &mut &[u8]) -> Result<()> {
         // Strip the Validation discriminator
         let disc = data[0];
         *data = &data[1..];
@@ -29,7 +27,7 @@ impl MarketMiddleware for Validation {
         Ok(())
     }
 
-    fn prune(&self, ctx: &mut Context, _limit: u16) -> ProgramResult {
+    fn prune(&self, ctx: &mut Context, _limit: &mut u16) -> Result<()> {
         // Validate that the OptionMarket has expired
         // deserialize the OptionMarket
         let option_market_account = ctx.accounts[0].clone();
@@ -52,7 +50,7 @@ impl MarketMiddleware for Validation {
         Ok(())
     }
 
-    fn fallback(&self, _ctx: &mut Context) -> ProgramResult {
+    fn fallback(&self, _ctx: &mut Context) -> Result<()> {
         Ok(())
     }
 }

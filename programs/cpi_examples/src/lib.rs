@@ -1,13 +1,18 @@
 
 use anchor_lang::prelude::*;
 use anchor_lang::InstructionData;
-use anchor_spl::token::{self, Mint, TokenAccount, Transfer};
+use anchor_spl::dex::Dex;
+use anchor_spl::token::{self, Mint, TokenAccount, Token, Transfer};
 use anchor_spl::dex::serum_dex;
 use anchor_spl::dex::serum_dex::{instruction::SelfTradeBehavior as SerumSelfTradeBehavior, matching::{OrderType as SerumOrderType, Side as SerumSide}};
 use psy_american::cpi::accounts::{ExerciseOption, MintOptionV2};
 use psy_american::OptionMarket;
 use std::num::NonZeroU64;
 use solana_program::msg;
+
+pub mod errors;
+
+use errors as CpiExampleErrors;
 
 declare_id!("Fk8QcXcNpf5chR5RcviUjgaLVtULgvovGXUXGPMwLioF");
 
@@ -70,7 +75,7 @@ pub mod cpi_examples {
         quote_amount_per_contract: u64,
         expiration_unix_timestamp: i64,
         bump_seed: u8
-    ) -> ProgramResult {
+    ) -> Result<()> {
         let cpi_program = ctx.accounts.psy_american_program.clone();
         let init_market_args = psy_american::instruction::InitializeMarket {
             underlying_amount_per_contract,
@@ -129,22 +134,22 @@ pub mod cpi_examples {
             data: init_market_args.data()
         };
 
-        solana_program::program::invoke(&ix, &account_infos)
+        anchor_lang::solana_program::program::invoke(&ix, &account_infos).map_err(|_x| CpiExampleErrors::ErrorCode::DexIxError.into())
     }
 
-    pub fn initialize(ctx: Context<Initialize>, amount: u64) -> ProgramResult {
+    pub fn initialize(ctx: Context<Initialize>, amount: u64) -> Result<()> {
         let cpi_accounts = Transfer {
             from: ctx.accounts.option_source.to_account_info(),
             to: ctx.accounts.vault.to_account_info(),
             authority: ctx.accounts.authority.clone(),
         };
         let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new(cpi_token_program, cpi_accounts);
+        let cpi_ctx = CpiContext::new(cpi_token_program.to_account_info(), cpi_accounts);
         token::transfer(cpi_ctx, amount)?;
         Ok(())
     }
 
-    pub fn exercise<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, Exercise<'info>>, vault_authority_bump: u8) -> ProgramResult {
+    pub fn exercise<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, Exercise<'info>>, vault_authority_bump: u8) -> Result<()> {
         msg!("before CPI");
         let cpi_program = ctx.accounts.psy_american_program.clone();
         let cpi_accounts = ExerciseOption {
@@ -175,11 +180,11 @@ pub mod cpi_examples {
         psy_american::cpi::exercise_option(cpi_ctx, ctx.accounts.exerciser_option_token_src.amount)
     }
 
-    pub fn init_mint_vault(_ctx: Context<InitMintVault>) -> ProgramResult {
+    pub fn init_mint_vault(_ctx: Context<InitMintVault>) -> Result<()> {
         Ok(())
     }
 
-    pub fn mint<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, MintCtx<'info>>, size: u64, vault_authority_bump: u8) -> ProgramResult {
+    pub fn mint<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, MintCtx<'info>>, size: u64, vault_authority_bump: u8) -> Result<()> {
         let cpi_program = ctx.accounts.psy_american_program.clone();
         let cpi_accounts = MintOptionV2 {
             // The authority that has control over the underlying assets. In this case it's the 
@@ -216,7 +221,7 @@ pub mod cpi_examples {
         psy_american::cpi::mint_option_v2(cpi_ctx, size)
     }
 
-    pub fn init_new_order_vault(_ctx: Context<InitNewOrderVault>) -> ProgramResult {
+    pub fn init_new_order_vault(_ctx: Context<InitNewOrderVault>) -> Result<()> {
         Ok(())
     }
     pub fn place_order(
@@ -232,7 +237,7 @@ pub mod cpi_examples {
         self_trade_behavior: SelfTradeBehavior,
         limit: u16,
         max_native_pc_qty_including_fees: u64
-    ) -> ProgramResult {
+    ) -> Result<()> {
         // **optionally** create the open orders program with CPI to PsyOptions
         let cpi_program = ctx.accounts.psy_american_program.clone();
         if ctx.accounts.open_orders.data_is_empty() {
@@ -259,7 +264,7 @@ pub mod cpi_examples {
                 ctx.accounts.vault_authority.key,
                 ctx.accounts.market.key,
                 Some(ctx.accounts.psy_market_authority.key),
-            )?;
+            ).map_err(|_x| CpiExampleErrors::ErrorCode::DexIxError)?;
             ix.program_id = *cpi_program.key;
             // TODO: Wrap the necessary Psy American middleware updates to the instruction. 
             //  Note: only the OpenOrdersPda manipulates this instruction
@@ -331,7 +336,7 @@ pub mod cpi_examples {
             self_trade_behavior.into(),
             limit,
             NonZeroU64::new(max_native_pc_qty_including_fees).unwrap()
-        )?;
+        ).map_err(|_x| CpiExampleErrors::ErrorCode::DexIxError)?;
         new_order_ix.program_id = *cpi_program.key;
         // insert data for the OpenOrdersPDA middleware
         new_order_ix.data.insert(0, 1 as u8);
@@ -374,27 +379,35 @@ pub mod cpi_examples {
 pub struct InitOptionMarket<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
+    /// CHECK: TODO
     pub psy_american_program: AccountInfo<'info>,
     /////// Init OptionMarket accounts
     pub underlying_asset_mint: Box<Account<'info, Mint>>,
     pub quote_asset_mint: Box<Account<'info, Mint>>,
 
     #[account(mut)]
+    /// CHECK: TODO
     pub option_mint: AccountInfo<'info>,
     #[account(mut)]
+    /// CHECK: TODO
     pub writer_token_mint: AccountInfo<'info>,
     #[account(mut)]
+    /// CHECK: TODO
     pub quote_asset_pool: AccountInfo<'info>,
     #[account(mut)]
+    /// CHECK: TODO
     pub underlying_asset_pool: AccountInfo<'info>,
     #[account(mut)]
+    /// CHECK: TODO
     pub option_market: AccountInfo<'info>,
+    /// CHECK: TODO
     pub fee_owner: AccountInfo<'info>,
 
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
+    /// CHECK: TODO
     pub associated_token_program: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
     pub clock: Sysvar<'info, Clock>,
 }
 
@@ -402,9 +415,11 @@ pub struct InitOptionMarket<'info> {
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(mut, signer)]
+    /// CHECK: TODO
     pub authority: AccountInfo<'info>,
     #[account(mut)]
     pub option_source: Box<Account<'info, TokenAccount>>,
+    /// CHECK: TODO
     pub option_mint: AccountInfo<'info>,
     #[account(init,
         seeds = [&option_mint.key().to_bytes()[..], b"vault"],
@@ -414,18 +429,22 @@ pub struct Initialize<'info> {
         token::authority = vault_authority,
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
+    /// CHECK: TODO
     pub vault_authority: AccountInfo<'info>,
-    pub token_program: AccountInfo<'info>,
-    rent: Sysvar<'info, Rent>,
-    system_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct Exercise<'info> {
     #[account(mut, signer)]
+    /// CHECK: TODO
     pub authority: AccountInfo<'info>,
+    /// CHECK: TODO
     pub psy_american_program: AccountInfo<'info>,
     #[account(mut)]
+    /// CHECK: TODO
     pub vault_authority: AccountInfo<'info>,
     // Exercise CPI accounts
     option_market: Box<Account<'info, OptionMarket>>,
@@ -442,10 +461,11 @@ pub struct Exercise<'info> {
     #[account(mut)]
     quote_asset_src: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
+    /// CHECK: TODO
     fee_owner: AccountInfo<'info>,
 
-    token_program: AccountInfo<'info>,
-    system_program: AccountInfo<'info>,
+    token_program: Program<'info, Token>,
+    system_program: Program<'info, System>,
     clock: Sysvar<'info, Clock>,
 }
 
@@ -453,6 +473,7 @@ pub struct Exercise<'info> {
 #[derive(Accounts)]
 pub struct InitMintVault<'info> {
     #[account(mut, signer)]
+    /// CHECK: TODO
     pub authority: AccountInfo<'info>,
     pub underlying_asset: Box<Account<'info, Mint>>,
     #[account(init,
@@ -463,26 +484,31 @@ pub struct InitMintVault<'info> {
         token::authority = vault_authority,
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
+    /// CHECK: TODO
     pub vault_authority: AccountInfo<'info>,
 
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
     pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct MintCtx<'info> {
     #[account(mut, signer)]
+    /// CHECK: TODO
     pub authority: AccountInfo<'info>,
+    /// CHECK: TODO
     pub psy_american_program: AccountInfo<'info>,
     /// The vault where the underlying assets are held. This is the PsyAmerican 
     /// `underlying_asset_src`
     #[account(mut)]
     pub vault: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
+    /// CHECK: TODO
     pub vault_authority: AccountInfo<'info>,
 
     /// Mint CPI acounts
+    /// CHECK: TODO
     pub underlying_asset_mint: AccountInfo<'info>,
     #[account(mut)]
     pub underlying_asset_pool: Box<Account<'info, TokenAccount>>,
@@ -496,18 +522,21 @@ pub struct MintCtx<'info> {
     pub minted_writer_token_dest: Box<Account<'info, TokenAccount>>,
     pub option_market: Box<Account<'info, OptionMarket>>,
     #[account(mut)]
+    /// CHECK: TODO
     pub fee_owner: AccountInfo<'info>,
 
 
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
+    /// CHECK: TODO
     pub associated_token_program: AccountInfo<'info>,
     pub clock: Sysvar<'info, Clock>,
     pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct InitNewOrderVault<'info> {
+    #[account(mut)]
     authority: Signer<'info>,
     usdc_mint: Box<Account<'info, Mint>>,
     #[account(init,
@@ -518,51 +547,63 @@ pub struct InitNewOrderVault<'info> {
         token::authority = vault_authority,
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
+    /// CHECK: TODO
     pub vault_authority: AccountInfo<'info>,
 
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
     pub rent: Sysvar<'info, Rent>,
-    pub system_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct PlaceOrder<'info> {
     /// The user who signed and sent the TX from the client
-    user_authority: Signer<'info>,
+    pub user_authority: Signer<'info>,
     /// The PsyOptions American program ID
-    psy_american_program: AccountInfo<'info>,
+    /// CHECK: TODO
+    pub psy_american_program: AccountInfo<'info>,
     /// The Serum DEX program ID
-    dex_program: AccountInfo<'info>,
+    pub dex_program: Program<'info, Dex>,
     /// The vault's OpenOrders account
     #[account(mut)]
-    open_orders: AccountInfo<'info>,
+    /// CHECK: TODO
+    pub open_orders: AccountInfo<'info>,
     /// The Serum Market
     #[account(mut)]
-    market: AccountInfo<'info>,
+    /// CHECK: TODO
+    pub market: AccountInfo<'info>,
     /// The Serum Market market authority
-    psy_market_authority: AccountInfo<'info>,
+    /// CHECK: TODO
+    pub psy_market_authority: AccountInfo<'info>,
     /// The USDC vault account
     #[account(mut)]
-    vault: Box<Account<'info, TokenAccount>>,
+    pub vault: Box<Account<'info, TokenAccount>>,
     /// The vault authority that also has authority over the OpenOrders account
+    /// CHECK: TODO
     #[account(mut)]
-    vault_authority: AccountInfo<'info>,
+    pub vault_authority: AccountInfo<'info>,
 
     //// other new_order accounts
+    /// CHECK: TODO
     #[account(mut)]
-    request_queue: AccountInfo<'info>,
+    pub request_queue: AccountInfo<'info>,
+    /// CHECK: TODO
     #[account(mut)]
-    event_queue: AccountInfo<'info>,
+    pub event_queue: AccountInfo<'info>,
+    /// CHECK: TODO
     #[account(mut)]
-    market_bids: AccountInfo<'info>,
+    pub market_bids: AccountInfo<'info>,
+    /// CHECK: TODO
     #[account(mut)]
-    market_asks: AccountInfo<'info>,
+    pub market_asks: AccountInfo<'info>,
+    /// CHECK: TODO
     #[account(mut)]
-    coin_vault: AccountInfo<'info>,
+    pub coin_vault: AccountInfo<'info>,
+    /// CHECK: TODO
     #[account(mut)]
-    pc_vault: AccountInfo<'info>,
+    pub pc_vault: AccountInfo<'info>,
 
-    system_program: AccountInfo<'info>,
-    token_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>,
     pub rent: Sysvar<'info, Rent>,
 }

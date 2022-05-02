@@ -1,4 +1,5 @@
 import * as anchor from "@project-serum/anchor";
+import { Program } from "@project-serum/anchor";
 import { Token, TOKEN_PROGRAM_ID, u64 } from "@solana/spl-token";
 import {
   AccountMeta,
@@ -11,14 +12,16 @@ import assert from "assert";
 import { mintOptionsTx } from "../../packages/psyoptions-ts/src";
 
 import { OptionMarketV2 } from "../../packages/psyoptions-ts/src/types";
+import { CpiExamples } from "../../target/types/cpi_examples";
+import { PsyAmerican } from "../../target/types/psy_american";
 import { createMinter, initOptionMarket, initSetup } from "../../utils/helpers";
 
 describe("cpi_examples deposit", () => {
-  const provider = anchor.Provider.env();
   const payer = anchor.web3.Keypair.generate();
-  anchor.setProvider(provider);
-  const program = anchor.workspace.CpiExamples as anchor.Program;
-  const americanOptionsProgram = anchor.workspace.PsyAmerican as anchor.Program;
+  const program = anchor.workspace.CpiExamples as Program<CpiExamples>;
+  const provider = program.provider;
+  const americanOptionsProgram = anchor.workspace
+    .PsyAmerican as Program<PsyAmerican>;
   let optionMarket: OptionMarketV2;
   const mintAuthority = anchor.web3.Keypair.generate();
 
@@ -53,7 +56,7 @@ describe("cpi_examples deposit", () => {
       underlyingToken: _underlyingToken,
     } = await initSetup(
       provider,
-      (provider.wallet as anchor.Wallet).payer,
+      provider.wallet.payer,
       mintAuthority,
       americanOptionsProgram
     );

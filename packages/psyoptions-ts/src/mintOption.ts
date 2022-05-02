@@ -16,11 +16,13 @@ import {
 import { feeAmountPerContract, FEE_OWNER_KEY } from './fees';
 import { uint64 } from './layout';
 import { OptionMarketV2 } from './types';
+import { Program } from '@project-serum/anchor';
+import { PsyAmerican } from './psy_american';
 
 export const MINT_COVERED_CALL_LAYOUT = struct([uint64('size')]);
 
 export const mintOptionsTx = async (
-  program: anchor.Program,
+  program: Program<PsyAmerican>,
   minter: Keypair,
   minterOptionAcct: Keypair,
   minterWriterAcct: Keypair,

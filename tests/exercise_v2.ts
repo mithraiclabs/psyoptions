@@ -29,21 +29,27 @@ import {
   instructions as psyAmericanInstructions,
   parseTransactionError,
 } from "@mithraic-labs/psy-american";
-import { BN, Program } from "@project-serum/anchor";
+import {
+  AnchorError,
+  AnchorProvider,
+  BN,
+  Program,
+  Wallet,
+} from "@project-serum/anchor";
 import { PsyAmerican } from "../target/types/psy_american";
-import { NodeWallet } from "@project-serum/anchor/dist/cjs/provider";
 
 describe("exerciseOption", () => {
-  const provider = anchor.Provider.env();
   const payer = anchor.web3.Keypair.generate();
   const mintAuthority = anchor.web3.Keypair.generate();
-  anchor.setProvider(provider);
   const program = anchor.workspace.PsyAmerican as anchor.Program<PsyAmerican>;
+  const provider = program.provider;
+  // @ts-ignore
+  const wallet = provider.wallet as unknown as anchor.Wallet;
 
   const minter = anchor.web3.Keypair.generate();
-  const minterProvider = new anchor.Provider(
+  const minterProvider = new AnchorProvider(
     provider.connection,
-    new NodeWallet(minter),
+    new Wallet(minter),
     {}
   );
   const minterProgram = new Program(
@@ -52,9 +58,9 @@ describe("exerciseOption", () => {
     minterProvider
   );
   const exerciser = anchor.web3.Keypair.generate();
-  const exerciserProvider = new anchor.Provider(
+  const exerciserProvider = new AnchorProvider(
     provider.connection,
-    new NodeWallet(exerciser),
+    new Wallet(exerciser),
     {}
   );
   const exerciserProgram = new Program(
@@ -154,9 +160,10 @@ describe("exerciseOption", () => {
           new anchor.BN(100),
           optionMarket
         );
-      await program.provider.send(new Transaction().add(mintOptionsIx), [
-        minter,
-      ]);
+      await program.provider.sendAndConfirm!(
+        new Transaction().add(mintOptionsIx),
+        [minter]
+      );
       // Create an exerciser
       ({
         optionAccount: exerciserOptionAcct,
@@ -217,11 +224,11 @@ describe("exerciseOption", () => {
               exerciserUnderlyingAcct.publicKey,
               exerciserQuoteAcct.publicKey
             );
-          await exerciserProgram.provider.send(
+          await exerciserProgram.provider.sendAndConfirm!(
             new Transaction().add(instruction)
           );
         } catch (err) {
-          console.error((err as Error).toString());
+          console.error((err as AnchorError).error.errorMessage);
           throw err;
         }
         const optionTokenAfter = await optionToken.getMintInfo();
@@ -289,12 +296,13 @@ describe("exerciseOption", () => {
               exerciserUnderlyingAcct.publicKey,
               exerciserQuoteAcct.publicKey
             );
-          await exerciserProgram.provider.send(
+          await exerciserProgram.provider.sendAndConfirm!(
             new Transaction().add(instruction)
           );
           assert.ok(false);
         } catch (err) {
           const programError = parseTransactionError(err);
+          console.log("*** programError", programError);
           const errMsg =
             "Quote pool account does not match the value on the OptionMarket";
           assert.equal(programError.msg, errMsg);
@@ -327,7 +335,7 @@ describe("exerciseOption", () => {
               exerciserUnderlyingAcct.publicKey,
               exerciserQuoteAcct.publicKey
             );
-          await exerciserProgram.provider.send(
+          await exerciserProgram.provider.sendAndConfirm!(
             new Transaction().add(instruction)
           );
           assert.ok(false);
@@ -362,7 +370,7 @@ describe("exerciseOption", () => {
               badUnderlyingDest.publicKey,
               exerciserQuoteAcct.publicKey
             );
-          await exerciserProgram.provider.send(
+          await exerciserProgram.provider.sendAndConfirm!(
             new Transaction().add(instruction)
           );
           assert.ok(false);
@@ -401,7 +409,7 @@ describe("exerciseOption", () => {
               exerciserUnderlyingAcct.publicKey,
               exerciserQuoteAcct.publicKey
             );
-          await exerciserProgram.provider.send(
+          await exerciserProgram.provider.sendAndConfirm!(
             new Transaction().add(instruction)
           );
           assert.ok(false);
@@ -468,9 +476,10 @@ describe("exerciseOption", () => {
           new anchor.BN(100),
           optionMarket
         );
-      await program.provider.send(new Transaction().add(mintOptionsIx), [
-        minter,
-      ]);
+      await program.provider.sendAndConfirm!(
+        new Transaction().add(mintOptionsIx),
+        [minter]
+      );
       // Create an exerciser
       ({
         optionAccount: exerciserOptionAcct,
@@ -513,7 +522,7 @@ describe("exerciseOption", () => {
             exerciserUnderlyingAcct.publicKey,
             exerciserQuoteAcct.publicKey
           );
-        await exerciserProgram.provider.send(
+        await exerciserProgram.provider.sendAndConfirm!(
           new Transaction().add(instruction)
         );
         assert.ok(false);

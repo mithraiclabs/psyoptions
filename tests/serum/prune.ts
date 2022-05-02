@@ -4,10 +4,10 @@
  */
 import { assert, expect } from "chai";
 import * as anchor from "@project-serum/anchor";
-import * as serumCmn from "@project-serum/common";
 import { initOptionMarket, initSetup, wait } from "../../utils/helpers";
 import { OptionMarketV2 } from "../../packages/psyoptions-ts/src/types";
 import {
+  createMintAndVault,
   DEX_PID,
   getMarketAndAuthorityInfo,
   initMarket,
@@ -17,12 +17,16 @@ import {
 import { MarketProxy, OpenOrders } from "@project-serum/serum";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { FEE_OWNER_KEY } from "../../packages/psyoptions-ts/src/fees";
+import { AnchorError, Program } from "@project-serum/anchor";
+import { PsyAmerican } from "../../target/types/psy_american";
+import { parseTransactionError } from "@mithraic-labs/psy-american";
 
 describe("Serum Prune", () => {
-  const provider = anchor.Provider.env();
-  const wallet = provider.wallet as anchor.Wallet;
-  anchor.setProvider(provider);
-  const program = anchor.workspace.PsyAmerican as anchor.Program;
+  const program = anchor.workspace.PsyAmerican as Program<PsyAmerican>;
+  const provider = program.provider;
+  // @ts-ignore
+  const wallet = provider.wallet as unknown as anchor.Wallet;
+
   const mintAuthority = anchor.web3.Keypair.generate();
   let underlyingToken: Token, usdcToken: Token, optionToken: Token;
   // Global PsyOptions variables
@@ -54,7 +58,7 @@ describe("Serum Prune", () => {
         remainingAccounts,
         instructions
       );
-      [usdcMint, usdcAccount] = await serumCmn.createMintAndVault(
+      [usdcMint, usdcAccount] = await createMintAndVault(
         provider,
         new anchor.BN("1000000000000000000"),
         undefined,
@@ -96,7 +100,7 @@ describe("Serum Prune", () => {
       );
       referral = await usdcToken.createAssociatedTokenAccount(FEE_OWNER_KEY);
       // Create an OpenOrders account for a user
-      openOrdersOwner = program.provider.wallet.publicKey;
+      openOrdersOwner = wallet.publicKey;
       [openOrdersKey, openOrdersBump] =
         await anchor.web3.PublicKey.findProgramAddress(
           [
@@ -117,12 +121,12 @@ describe("Serum Prune", () => {
           dummy.publicKey
         )
       );
-      await provider.send(tx);
+      await provider.sendAndConfirm!(tx);
       // place a bunch of bids on the order book
       const tx2 = new anchor.web3.Transaction();
       tx2.add(
         marketProxy.instruction.newOrderV3({
-          owner: program.provider.wallet.publicKey,
+          owner: wallet.publicKey,
           payer: usdcAccount,
           side: "buy",
           price: 1,
@@ -135,7 +139,7 @@ describe("Serum Prune", () => {
       );
       tx2.add(
         marketProxy.instruction.newOrderV3({
-          owner: program.provider.wallet.publicKey,
+          owner: wallet.publicKey,
           payer: usdcAccount,
           side: "buy",
           price: 2,
@@ -148,7 +152,7 @@ describe("Serum Prune", () => {
       );
       tx2.add(
         marketProxy.instruction.newOrderV3({
-          owner: program.provider.wallet.publicKey,
+          owner: wallet.publicKey,
           payer: usdcAccount,
           side: "buy",
           price: 3,
@@ -159,7 +163,7 @@ describe("Serum Prune", () => {
           selfTradeBehavior: "abortTransaction",
         })
       );
-      await provider.send(tx2);
+      await provider.sendAndConfirm!(tx2);
     });
     it("should error trying to prune", async () => {
       let openOrders = OpenOrders.load(
@@ -186,13 +190,12 @@ describe("Serum Prune", () => {
         await marketProxy.instruction.prune(openOrdersKey, marketAuthority)
       );
       try {
-        await provider.send(tx);
+        await provider.sendAndConfirm!(tx);
         assert.ok(false);
       } catch (err) {
-        // const errMsg = "Cannot prune the market while it's still active";
-        const errMsg =
-          "Error: failed to send transaction: Transaction simulation failed: Error processing Instruction 0: custom program error: 0x146";
-        assert.equal((err as Error).toString(), errMsg);
+        const programError = parseTransactionError(err);
+        const errMsg = "Cannot prune the market while it's still active";
+        assert.equal(programError.msg, errMsg);
       }
 
       // Assert that the order book has not changed
@@ -220,7 +223,7 @@ describe("Serum Prune", () => {
         remainingAccounts,
         instructions
       );
-      [usdcMint, usdcAccount] = await serumCmn.createMintAndVault(
+      [usdcMint, usdcAccount] = await createMintAndVault(
         provider,
         new anchor.BN("1000000000000000000"),
         undefined,
@@ -262,7 +265,7 @@ describe("Serum Prune", () => {
       );
       referral = await usdcToken.createAssociatedTokenAccount(FEE_OWNER_KEY);
       // Create an OpenOrders account for a user
-      openOrdersOwner = program.provider.wallet.publicKey;
+      openOrdersOwner = wallet.publicKey;
       [openOrdersKey, openOrdersBump] =
         await anchor.web3.PublicKey.findProgramAddress(
           [
@@ -283,12 +286,12 @@ describe("Serum Prune", () => {
           dummy.publicKey
         )
       );
-      await provider.send(tx);
+      await provider.sendAndConfirm!(tx);
       // place a bunch of bids on the order book
       const tx2 = new anchor.web3.Transaction();
       tx2.add(
         marketProxy.instruction.newOrderV3({
-          owner: program.provider.wallet.publicKey,
+          owner: wallet.publicKey,
           payer: usdcAccount,
           side: "buy",
           price: 1,
@@ -301,7 +304,7 @@ describe("Serum Prune", () => {
       );
       tx2.add(
         marketProxy.instruction.newOrderV3({
-          owner: program.provider.wallet.publicKey,
+          owner: wallet.publicKey,
           payer: usdcAccount,
           side: "buy",
           price: 2,
@@ -314,7 +317,7 @@ describe("Serum Prune", () => {
       );
       tx2.add(
         marketProxy.instruction.newOrderV3({
-          owner: program.provider.wallet.publicKey,
+          owner: wallet.publicKey,
           payer: usdcAccount,
           side: "buy",
           price: 3,
@@ -325,7 +328,7 @@ describe("Serum Prune", () => {
           selfTradeBehavior: "abortTransaction",
         })
       );
-      await provider.send(tx2);
+      await provider.sendAndConfirm!(tx2);
       // Make sure the option market is expired
       wait(1_000);
     });
@@ -354,9 +357,9 @@ describe("Serum Prune", () => {
         await marketProxy.instruction.prune(openOrdersKey, marketAuthority)
       );
       try {
-        await provider.send(tx);
+        await provider.sendAndConfirm!(tx);
       } catch (err) {
-        console.log((err as Error).toString());
+        console.log((err as AnchorError).error.errorMessage);
       }
 
       // Assert that the order book has not changed

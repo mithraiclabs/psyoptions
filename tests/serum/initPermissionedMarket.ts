@@ -13,13 +13,16 @@ import {
   DEX_PID,
   initSerum,
 } from "../../utils/serum";
+import { AnchorError, Program } from "@project-serum/anchor";
+import { PsyAmerican } from "../../target/types/psy_american";
 
 describe("permissioned-markets", () => {
   // Anchor client setup.
-  const provider = anchor.Provider.env();
   const payer = anchor.web3.Keypair.generate();
-  anchor.setProvider(provider);
-  const program = anchor.workspace.PsyAmerican as anchor.Program;
+  const program = anchor.workspace.PsyAmerican as Program<PsyAmerican>;
+  const provider = program.provider;
+  // @ts-ignore
+  const wallet = provider.wallet as unknown as anchor.Wallet;
   let usdcMint: Keypair;
   // Global PsyOptions accounts
   let optionMarket: OptionMarketV2;
@@ -31,8 +34,8 @@ describe("permissioned-markets", () => {
     );
     const { mintAccount } = await initNewTokenMint(
       provider.connection,
-      (provider.wallet as anchor.Wallet).payer.publicKey,
-      (provider.wallet as anchor.Wallet).payer
+      wallet.payer.publicKey,
+      wallet.payer
     );
     usdcMint = mintAccount;
   });
@@ -44,24 +47,18 @@ describe("permissioned-markets", () => {
         optionMarket: newOptionMarket,
         remainingAccounts,
         instructions,
-      } = await initSetup(
-        provider,
-        (provider.wallet as anchor.Wallet).payer,
-        mintAuthority,
-        program
-      );
+      } = await initSetup(provider, wallet.payer, mintAuthority, program);
       optionMarket = newOptionMarket;
-      console.log("** optionMarket", optionMarket);
       await initOptionMarket(
         program,
-        (provider.wallet as anchor.Wallet).payer,
+        wallet.payer,
         optionMarket,
         remainingAccounts,
         instructions
       );
       ({ bids, asks, eventQueue } = await createFirstSetOfAccounts({
-        connection: provider.connection,
-        wallet: provider.wallet as anchor.Wallet,
+        provider,
+        wallet,
         dexProgramId: DEX_PID,
       }));
     });
@@ -125,7 +122,7 @@ describe("permissioned-markets", () => {
           assert.ok(false);
         } catch (err) {
           const errMsg = "Coin mint must match option mint";
-          assert.equal((err as Error).toString(), errMsg);
+          assert.equal((err as AnchorError).error.errorMessage, errMsg);
         }
       });
     });

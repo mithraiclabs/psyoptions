@@ -16,13 +16,14 @@ import {
   wait,
 } from "../utils/helpers";
 import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
+import { AnchorError, Program } from "@project-serum/anchor";
+import { PsyAmerican } from "../target/types/psy_american";
 
 describe("mintOption", () => {
-  const provider = anchor.Provider.env();
   const payer = anchor.web3.Keypair.generate();
   const mintAuthority = anchor.web3.Keypair.generate();
-  anchor.setProvider(provider);
-  const program = anchor.workspace.PsyAmerican as anchor.Program;
+  const program = anchor.workspace.PsyAmerican as Program<PsyAmerican>;
+  const provider = program.provider;
 
   const minter = anchor.web3.Keypair.generate();
 
@@ -131,7 +132,7 @@ describe("mintOption", () => {
       try {
         await mintOptionsTx();
       } catch (err) {
-        console.error((err as Error).toString());
+        console.error((err as AnchorError).error.errorMessage);
         throw err;
       }
       const mintInfo = await optionToken.getMintInfo();
@@ -142,7 +143,7 @@ describe("mintOption", () => {
       try {
         await mintOptionsTx();
       } catch (err) {
-        console.error((err as Error).toString());
+        console.error((err as AnchorError).error.errorMessage);
         throw err;
       }
       const writerToken = new Token(
@@ -168,7 +169,7 @@ describe("mintOption", () => {
       try {
         await mintOptionsTx();
       } catch (err) {
-        console.error((err as Error).toString());
+        console.error((err as AnchorError).error.errorMessage);
         throw err;
       }
       const expectedUnderlyingTransfered = size.mul(
@@ -244,7 +245,7 @@ describe("mintOption", () => {
         assert.ok(false);
       } catch (err) {
         const errMsg = "OptionMarket is expired, can't mint";
-        assert.equal((err as Error).toString(), errMsg);
+        assert.equal((err as AnchorError).error.errorMessage, errMsg);
       }
     });
   });
@@ -299,7 +300,7 @@ describe("mintOption", () => {
       } catch (err) {
         const errMsg =
           "Underlying pool account does not match the value on the OptionMarket";
-        assert.equal((err as Error).toString(), errMsg);
+        assert.equal((err as AnchorError).error.errorMessage, errMsg);
       }
     });
   });
@@ -353,7 +354,7 @@ describe("mintOption", () => {
       } catch (err) {
         const errMsg =
           "OptionToken mint does not match the value on the OptionMarket";
-        assert.equal((err as Error).toString(), errMsg);
+        assert.equal((err as AnchorError).error.errorMessage, errMsg);
       }
     });
   });
@@ -407,7 +408,7 @@ describe("mintOption", () => {
       } catch (err) {
         const errMsg =
           "WriterToken mint does not match the value on the OptionMarket";
-        assert.equal((err as Error).toString(), errMsg);
+        assert.equal((err as AnchorError).error.errorMessage, errMsg);
       }
     });
   });
@@ -456,7 +457,7 @@ describe("mintOption", () => {
         assert.ok(false);
       } catch (err) {
         const errMsg = "The size argument must be > 0";
-        assert.equal((err as Error).toString(), errMsg);
+        assert.equal((err as AnchorError).error.errorMessage, errMsg);
       }
     });
   });

@@ -1,8 +1,8 @@
 import * as anchor from "@project-serum/anchor";
 import assert from "assert";
 import { AccountInfo, Keypair, PublicKey, Transaction } from "@solana/web3.js";
-import * as serumCmn from "@project-serum/common";
 import {
+  createMintAndVault,
   DEX_PID,
   getMarketAndAuthorityInfo,
   initMarket,
@@ -15,12 +15,14 @@ import { MarketProxy, OpenOrders } from "@project-serum/serum";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { FEE_OWNER_KEY } from "../../packages/psyoptions-ts/src/fees";
 import { mintOptionsTx } from "../../packages/psyoptions-ts/src";
+import { PsyAmerican } from "../../target/types/psy_american";
+import { Program } from "@project-serum/anchor";
 
 describe("proxyTests", () => {
-  const provider = anchor.Provider.env();
+  const program = anchor.workspace.PsyAmerican as Program<PsyAmerican>;
+  const provider = program.provider;
+  // @ts-ignore: TODO: Remove when anchor PR released
   const wallet = provider.wallet as anchor.Wallet;
-  anchor.setProvider(provider);
-  const program = anchor.workspace.PsyAmerican as anchor.Program;
   let underlyingToken: Token, usdcToken: Token, optionToken: Token;
 
   // Global DEX accounts and clients shared across all tests.
@@ -55,7 +57,7 @@ describe("proxyTests", () => {
       remainingAccounts,
       instructions
     );
-    [usdcMint, usdcAccount] = await serumCmn.createMintAndVault(
+    [usdcMint, usdcAccount] = await createMintAndVault(
       provider,
       new anchor.BN("1000000000000000000"),
       undefined,
@@ -79,7 +81,7 @@ describe("proxyTests", () => {
         openOrdersSeed,
         DEX_PID.toBuffer(),
         marketProxy.market.address.toBuffer(),
-        program.provider.wallet.publicKey.toBuffer(),
+        wallet.publicKey.toBuffer(),
       ],
       program.programId
     );
@@ -131,7 +133,7 @@ describe("proxyTests", () => {
   it("Creates an open orders account", async () => {
     const tx = new Transaction();
     const dummy = new Keypair();
-    const owner = program.provider.wallet.publicKey;
+    const owner = wallet.publicKey;
 
     const ix = await marketProxy.instruction.initOpenOrders(
       owner,
@@ -140,7 +142,7 @@ describe("proxyTests", () => {
       dummy.publicKey
     );
     tx.add(ix);
-    await provider.send(tx);
+    await provider.sendAndConfirm!(tx);
 
     const account = (await provider.connection.getAccountInfo(
       openOrdersKey
@@ -178,7 +180,7 @@ describe("proxyTests", () => {
     const tx = new Transaction();
     tx.add(
       marketProxy.instruction.newOrderV3({
-        owner: program.provider.wallet.publicKey,
+        owner: wallet.publicKey,
         payer: usdcAccount,
         side: "buy",
         price,
@@ -189,7 +191,7 @@ describe("proxyTests", () => {
         selfTradeBehavior: "abortTransaction",
       })
     );
-    await provider.send(tx);
+    await provider.sendAndConfirm!(tx);
 
     // Validate that the new order is in the open orders
     openOrders = OpenOrders.load(provider.connection, openOrdersKey, DEX_PID);
@@ -215,12 +217,12 @@ describe("proxyTests", () => {
     const tx = new Transaction();
     tx.add(
       await marketProxy.instruction.cancelOrderByClientId(
-        program.provider.wallet.publicKey,
+        wallet.publicKey,
         openOrdersKey,
         new anchor.BN(999)
       )
     );
-    await provider.send(tx);
+    await provider.sendAndConfirm!(tx);
 
     // Then.
     const afterOoAccount = await OpenOrders.load(
@@ -248,7 +250,7 @@ describe("proxyTests", () => {
       tx.add(
         marketProxy.market.makeConsumeEventsInstruction([eq[0].openOrders], 1)
       );
-      await provider.send(tx);
+      await provider.sendAndConfirm!(tx);
       eq = await marketProxy.market.loadEventQueue(provider.connection);
     }
   });
@@ -262,13 +264,13 @@ describe("proxyTests", () => {
     tx.add(
       await marketProxy.instruction.settleFunds(
         openOrdersKey,
-        provider.wallet.publicKey,
+        wallet.publicKey,
         optionAccount.publicKey,
         usdcAccount,
         referral
       )
     );
-    await provider.send(tx);
+    await provider.sendAndConfirm!(tx);
 
     // Then.
     const afterUSdcTokenAcct = await usdcToken.getAccountInfo(usdcAccount);
@@ -281,7 +283,7 @@ describe("proxyTests", () => {
   it("Closes an open orders account", async () => {
     // Given.
     const beforeAccount = await program.provider.connection.getAccountInfo(
-      program.provider.wallet.publicKey
+      wallet.publicKey
     );
 
     // When.
@@ -289,15 +291,15 @@ describe("proxyTests", () => {
     tx.add(
       marketProxy.instruction.closeOpenOrders(
         openOrdersKey,
-        provider.wallet.publicKey,
-        provider.wallet.publicKey
+        wallet.publicKey,
+        wallet.publicKey
       )
     );
-    await provider.send(tx);
+    await provider.sendAndConfirm!(tx);
 
     // Then.
     const afterAccount = await program.provider.connection.getAccountInfo(
-      program.provider.wallet.publicKey
+      wallet.publicKey
     );
     const closedAccount = await program.provider.connection.getAccountInfo(
       openOrdersKey

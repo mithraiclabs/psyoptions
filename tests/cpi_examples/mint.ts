@@ -1,4 +1,5 @@
 import * as anchor from "@project-serum/anchor";
+import { Program } from "@project-serum/anchor";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   Token,
@@ -15,6 +16,8 @@ import {
   FEE_OWNER_KEY,
 } from "../../packages/psyoptions-ts/src/fees";
 import { OptionMarketV2 } from "../../packages/psyoptions-ts/src/types";
+import { CpiExamples } from "../../target/types/cpi_examples";
+import { PsyAmerican } from "../../target/types/psy_american";
 import { createMinter, initOptionMarket, initSetup } from "../../utils/helpers";
 
 const textEncoder = new TextEncoder();
@@ -27,13 +30,13 @@ let vault: anchor.web3.PublicKey,
   _vaultBump: number,
   vaultAuthorityBump: number;
 describe("cpi_examples mint", () => {
-  const provider = anchor.Provider.env();
   const payer = anchor.web3.Keypair.generate();
   const user = anchor.web3.Keypair.generate();
   const mintAuthority = anchor.web3.Keypair.generate();
-  anchor.setProvider(provider);
-  const program = anchor.workspace.CpiExamples as anchor.Program;
-  const americanOptionsProgram = anchor.workspace.PsyAmerican as anchor.Program;
+  const program = anchor.workspace.CpiExamples as Program<CpiExamples>;
+  const provider = program.provider;
+  const americanOptionsProgram = anchor.workspace
+    .PsyAmerican as Program<PsyAmerican>;
   before(async () => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(payer.publicKey, 10_000_000_000),

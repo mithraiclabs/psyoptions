@@ -1,5 +1,5 @@
 import * as anchor from "@project-serum/anchor";
-import { BN, Provider } from "@project-serum/anchor";
+import { BN, Program, Provider } from "@project-serum/anchor";
 import {
   AccountLayout,
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -629,7 +629,7 @@ export const exerciseOptionTx = async (
 };
 
 export const closePostExpiration = async (
-  program: anchor.Program,
+  program: Program<PsyAmerican>,
   optionHolder: Keypair,
   size: anchor.BN,
   optionMarket: PublicKey,
@@ -654,7 +654,7 @@ export const closePostExpiration = async (
 };
 
 export const closeOptionPosition = async (
-  program: anchor.Program,
+  program: Program<PsyAmerican>,
   minter: Keypair,
   size: anchor.BN,
   optionMarket: PublicKey,
@@ -682,7 +682,7 @@ export const closeOptionPosition = async (
 };
 
 export const burnWriterForQuote = async (
-  program: anchor.Program,
+  program: Program<PsyAmerican>,
   writer: Keypair,
   size: anchor.BN,
   optionMarket: PublicKey,

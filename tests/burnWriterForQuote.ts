@@ -21,15 +21,16 @@ import {
 } from "../utils/helpers";
 import { OptionMarketV2 } from "../packages/psyoptions-ts/src/types";
 import { mintOptionsTx } from "../packages/psyoptions-ts/src";
+import { AnchorError, Program } from "@project-serum/anchor";
+import { PsyAmerican } from "../target/types/psy_american";
 
 // TODO: exercise a token so there are quote assets in the pool
 
 describe("burnWriterForQuote", () => {
-  const provider = anchor.Provider.env();
   const payer = anchor.web3.Keypair.generate();
   const mintAuthority = anchor.web3.Keypair.generate();
-  anchor.setProvider(provider);
-  const program = anchor.workspace.PsyAmerican as anchor.Program;
+  const program = anchor.workspace.PsyAmerican as Program<PsyAmerican>;
+  const provider = program.provider;
 
   const minter = anchor.web3.Keypair.generate();
   const exerciser = anchor.web3.Keypair.generate();
@@ -160,7 +161,7 @@ describe("burnWriterForQuote", () => {
           assert.ok(false);
         } catch (err) {
           const errMsg = "Not enough assets in the quote asset pool";
-          assert.equal((err as Error).toString(), errMsg);
+          assert.equal((err as AnchorError).error.errorMessage, errMsg);
         }
       });
     });
@@ -237,7 +238,7 @@ describe("burnWriterForQuote", () => {
               minterQuoteAccount.publicKey
             );
           } catch (err) {
-            console.error((err as Error).toString());
+            console.error((err as AnchorError).error.errorMessage);
             throw err;
           }
           const writerMintAfter = await writerToken.getMintInfo();
@@ -285,7 +286,7 @@ describe("burnWriterForQuote", () => {
           } catch (err) {
             const errMsg =
               "Quote pool account does not match the value on the OptionMarket";
-            assert.equal((err as Error).toString(), errMsg);
+            assert.equal((err as AnchorError).error.errorMessage, errMsg);
           }
         });
       });
@@ -315,7 +316,7 @@ describe("burnWriterForQuote", () => {
           } catch (err) {
             const errMsg =
               "WriterToken mint does not match the value on the OptionMarket";
-            assert.equal((err as Error).toString(), errMsg);
+            assert.equal((err as AnchorError).error.errorMessage, errMsg);
           }
         });
       });
