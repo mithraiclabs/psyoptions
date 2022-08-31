@@ -1,4 +1,4 @@
-anchor_version = "0.18.2"
+anchor_version = "0.24.2"
 
 [programs.localnet]
 psy_american = "R2y9ip6mxmWUj4pt54jP2hz2dgvMozy9VTSwMWE7evs"
