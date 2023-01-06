@@ -1,8 +1,9 @@
 [package]
 name = "psy_american"
-version = "0.2.6"
+version = "0.2.7"
 description = "Created with Anchor"
 edition = "2018"
+license = "Apache-2.0"
 
 [lib]
 crate-type = ["cdylib", "lib"]
