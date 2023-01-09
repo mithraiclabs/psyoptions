@@ -36,5 +36,9 @@ Bug bounty program details coming soon
 
 - [psy_american](https://github.com/mithraiclabs/psyoptions/tree/master/programs/psy_american)
 
+### Closed Source Programs
+
+- [Tokenized Euros](https://explorer.solana.com/address/FASQhaZQT53W9eT9wWnPoBFw8xzZDey9TbMmJj6jCQTs)
+
 If you discover a critical security issue in an out-of-scope program, your finding
 may still be valuable.
