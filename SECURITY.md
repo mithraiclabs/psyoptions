@@ -28,7 +28,7 @@ security issue in this email. **Only provide such details in the advisory**.
 
 ## Security Bug Bounties
 
-Bug bounty program details coming soon
+For details on bug bounty classifications, scope and payouts, please refer to this [document](https://docs.psyoptions.io/psy-dao-bug-bounty).
 
 <a name="scope"></a>
 
@@ -36,9 +36,11 @@ Bug bounty program details coming soon
 
 - [psy_american](https://github.com/mithraiclabs/psyoptions/tree/master/programs/psy_american)
 
-### Closed Source Programs
+**Closed Source Programs**
 
 - [Tokenized Euros](https://explorer.solana.com/address/FASQhaZQT53W9eT9wWnPoBFw8xzZDey9TbMmJj6jCQTs)
+- [European Vaults](https://explorer.solana.com/address/PSYFiYqguvMXwpDooGdYV6mju92YEbFobbvW617VNcq)
+- [PsyLend](https://explorer.solana.com/address/PLENDj46Y4hhqitNV2WqLqGLrWKAaH2xJHm2UyHgJLY)
 
 If you discover a critical security issue in an out-of-scope program, your finding
 may still be valuable.
