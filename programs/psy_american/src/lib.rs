@@ -3,8 +3,7 @@ pub mod fees;
 pub mod serum_proxy;
 
 use anchor_lang::{AccountsExit, Key, prelude::*};
-use anchor_spl::token::{self, Burn, Mint, MintTo, TokenAccount, Transfer, Token};
-use anchor_spl::dex::{initialize_market as init_serum_market_instruction, InitializeMarket as SerumInitMarket};
+use anchor_spl::token::{self, Burn, Mint, TokenAccount, Transfer, Token};
 use spl_token::state::Account as SPLTokenAccount;
 use solana_program::{program::invoke, program_error::ProgramError, program_pack::Pack, system_instruction, system_program};
 use psyfi_serum_dex_permissioned::{MarketProxy, OpenOrdersPda, ReferralFees};
@@ -19,184 +18,22 @@ pub mod psy_american {
     /// Initialize a new PsyOptions market
     pub fn initialize_market(
         ctx: Context<InitializeMarket>, 
-        underlying_amount_per_contract: u64,
-        quote_amount_per_contract: u64,
-        expiration_unix_timestamp: i64,
-        bump_seed: u8
+        _underlying_amount_per_contract: u64,
+        _quote_amount_per_contract: u64,
+        _expiration_unix_timestamp: i64,
+        _bump_seed: u8
     ) -> Result<()> {
-        // (nice to have) Validate the expiration is in the future
-        if expiration_unix_timestamp < ctx.accounts.clock.unix_timestamp {
-            return Err(errors::ErrorCode::ExpirationIsInThePast.into())
-        }
-        // check that underlying_amount_per_contract and quote_amount_per_contract are not 0
-        if underlying_amount_per_contract <= 0 || quote_amount_per_contract <= 0 {
-            return Err(errors::ErrorCode::QuoteOrUnderlyingAmountCannotBe0.into())
-        }
-
-        let fee_accounts = validate_fee_accounts(
-            &ctx.remaining_accounts, 
-            &ctx.accounts.underlying_asset_mint.key(),
-            &ctx.accounts.quote_asset_mint.key(),
-            underlying_amount_per_contract,
-            quote_amount_per_contract
-        )?;
-
-        // write the data to the OptionMarket account
-        let option_market = &mut ctx.accounts.option_market;
-        option_market.option_mint = *ctx.accounts.option_mint.to_account_info().key;
-        option_market.writer_token_mint = *ctx.accounts.writer_token_mint.to_account_info().key;
-        option_market.underlying_asset_mint = *ctx.accounts.underlying_asset_mint.to_account_info().key;
-        option_market.quote_asset_mint = *ctx.accounts.quote_asset_mint.to_account_info().key;
-        option_market.underlying_amount_per_contract = underlying_amount_per_contract;
-        option_market.quote_amount_per_contract = quote_amount_per_contract;
-        option_market.expiration_unix_timestamp = expiration_unix_timestamp;
-        option_market.underlying_asset_pool = *ctx.accounts.underlying_asset_pool.to_account_info().key;
-        option_market.quote_asset_pool = *ctx.accounts.quote_asset_pool.to_account_info().key;
-        option_market.mint_fee_account = fee_accounts.mint_fee_key;
-        option_market.exercise_fee_account = fee_accounts.exercise_fee_key;
-        option_market.expired = false;
-
-        match ctx.bumps.get("option_market") {
-            Some(bump) => {
-                option_market.bump_seed = *bump;
-            }
-            None => {
-                msg!("Wrong bump key. Available keys are {:?}", ctx.bumps.keys());
-                panic!("Wrong bump key")
-            }
-        }
-
-        Ok(())
+        Err(errors::ErrorCode::InvalidInstruction.into())
     }
 
     #[access_control(MintOption::unexpired_market(&ctx) MintOption::accounts(&ctx) validate_size(size))]
     pub fn mint_option<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, MintOption<'info>>, size: u64) -> Result<()> {
-        let option_market = &ctx.accounts.option_market;
-        let mint_fee_account = validate_mint_fee_acct(
-            option_market,
-            ctx.remaining_accounts
-        )?;
-
-        // Take a mint fee
-        let mint_fee_amount_per_contract = fees::fee_amount(option_market.underlying_amount_per_contract);
-        if mint_fee_amount_per_contract > 0 {
-            match mint_fee_account {
-                Some(account) => {
-                    let cpi_accounts = Transfer {
-                        from: ctx.accounts.underlying_asset_src.to_account_info(),
-                        to: account.clone(),
-                        authority: ctx.accounts.user_authority.to_account_info().clone(),
-                    };
-                    let cpi_token_program = ctx.accounts.token_program.clone();
-                    let cpi_ctx = CpiContext::new(cpi_token_program.to_account_info(), cpi_accounts);
-                    let total_fee = mint_fee_amount_per_contract.checked_mul(size).ok_or(errors::ErrorCode::NumberOverflow)?;
-                    token::transfer(cpi_ctx, total_fee)?;
-                },
-                None => {}
-            }
-        } else {
-            // Handle NFT case with SOL fee
-            let total_fee = fees::NFT_MINT_LAMPORTS.checked_mul(size).ok_or(errors::ErrorCode::NumberOverflow)?;
-            invoke(
-                &system_instruction::transfer(&ctx.accounts.user_authority.key, &fees::fee_owner_key::ID, total_fee),
-            &[
-                ctx.accounts.user_authority.to_account_info().clone(),
-                ctx.accounts.fee_owner.clone(),
-                ctx.accounts.system_program.to_account_info().clone(),
-            ],
-            )?;
-        }
-
-        // Transfer the underlying assets to the underlying assets pool
-        let cpi_accounts = Transfer {
-            from: ctx.accounts.underlying_asset_src.to_account_info(),
-            to: ctx.accounts.underlying_asset_pool.to_account_info(),
-            authority: ctx.accounts.user_authority.to_account_info().clone(),
-        };
-        let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new(cpi_token_program.to_account_info(), cpi_accounts);
-        let underlying_transfer_amount = option_market.underlying_amount_per_contract.checked_mul(size).unwrap();
-        token::transfer(cpi_ctx, underlying_transfer_amount)?;
-
-        let seeds = &[
-            option_market.underlying_asset_mint.as_ref(),
-            option_market.quote_asset_mint.as_ref(),
-            &option_market.underlying_amount_per_contract.to_le_bytes(),
-            &option_market.quote_amount_per_contract.to_le_bytes(),
-            &option_market.expiration_unix_timestamp.to_le_bytes(),
-            &[option_market.bump_seed]
-        ];
-        let signer = &[&seeds[..]];
-
-        // Mint a new OptionToken(s)
-        let cpi_accounts = MintTo {
-            mint: ctx.accounts.option_mint.to_account_info(),
-            to: ctx.accounts.minted_option_dest.to_account_info(),
-            authority: ctx.accounts.option_market.to_account_info(),
-        };
-        let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program.to_account_info(), cpi_accounts, signer);
-        token::mint_to(cpi_ctx, size)?;
-
-        // Mint a new WriterToken(s)
-        let cpi_accounts = MintTo {
-            mint: ctx.accounts.writer_token_mint.to_account_info(),
-            to: ctx.accounts.minted_writer_token_dest.to_account_info(),
-            authority: ctx.accounts.option_market.to_account_info(),
-        };
-        let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program.to_account_info(), cpi_accounts, signer);
-        token::mint_to(cpi_ctx, size)?;
-
-        Ok(())
+        Err(errors::ErrorCode::InvalidInstruction.into())
     }
 
     #[access_control(MintOptionV2::unexpired_market(&ctx) MintOptionV2::accounts(&ctx) validate_size(size))]
     pub fn mint_option_v2<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, MintOptionV2<'info>>, size: u64) -> Result<()> {
-        let option_market = &ctx.accounts.option_market;
-
-        // Transfer the underlying assets to the underlying assets pool
-        let cpi_accounts = Transfer {
-            from: ctx.accounts.underlying_asset_src.to_account_info(),
-            to: ctx.accounts.underlying_asset_pool.to_account_info(),
-            authority: ctx.accounts.user_authority.to_account_info().clone(),
-        };
-        let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new(cpi_token_program.to_account_info(), cpi_accounts);
-        let underlying_transfer_amount = option_market.underlying_amount_per_contract.checked_mul(size).unwrap();
-        token::transfer(cpi_ctx, underlying_transfer_amount)?;
-
-        let seeds = &[
-            option_market.underlying_asset_mint.as_ref(),
-            option_market.quote_asset_mint.as_ref(),
-            &option_market.underlying_amount_per_contract.to_le_bytes(),
-            &option_market.quote_amount_per_contract.to_le_bytes(),
-            &option_market.expiration_unix_timestamp.to_le_bytes(),
-            &[option_market.bump_seed]
-        ];
-        let signer = &[&seeds[..]];
-
-        // Mint a new OptionToken(s)
-        let cpi_accounts = MintTo {
-            mint: ctx.accounts.option_mint.to_account_info(),
-            to: ctx.accounts.minted_option_dest.to_account_info(),
-            authority: ctx.accounts.option_market.to_account_info(),
-        };
-        let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program.to_account_info(), cpi_accounts, signer);
-        token::mint_to(cpi_ctx, size)?;
-
-        // Mint a new WriterToken(s)
-        let cpi_accounts = MintTo {
-            mint: ctx.accounts.writer_token_mint.to_account_info(),
-            to: ctx.accounts.minted_writer_token_dest.to_account_info(),
-            authority: ctx.accounts.option_market.to_account_info(),
-        };
-        let cpi_token_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_token_program.to_account_info(), cpi_accounts, signer);
-        token::mint_to(cpi_ctx, size)?;
-
-        Ok(())
+        Err(errors::ErrorCode::InvalidInstruction.into())
     }
 
     #[access_control(ExerciseOption::accounts(&ctx) ExerciseOption::unexpired_market(&ctx))]
@@ -457,33 +294,8 @@ pub mod psy_american {
     }
 
     #[access_control(InitSerumMarket::accounts(&ctx))]
-    pub fn init_serum_market(ctx: Context<InitSerumMarket>, _market_space: u64, vault_signer_nonce: u64, coin_lot_size: u64, pc_lot_size: u64, pc_dust_threshold: u64) -> Result<()> {
-        let init_market_ctx = SerumInitMarket {
-            market: ctx.accounts.serum_market.to_account_info(),
-            coin_mint: ctx.accounts.option_mint.to_account_info(),
-            pc_mint: ctx.accounts.pc_mint.to_account_info(),
-            coin_vault: ctx.accounts.coin_vault.to_account_info(),
-            pc_vault: ctx.accounts.pc_vault.to_account_info(),
-            bids: ctx.accounts.bids.to_account_info(),
-            asks: ctx.accounts.asks.to_account_info(),
-            req_q: ctx.accounts.request_queue.to_account_info(),
-            event_q: ctx.accounts.event_queue.to_account_info(),
-            rent: ctx.accounts.rent.to_account_info(),
-        };
-        let mut cpi_ctx = CpiContext::new(ctx.accounts.dex_program.to_account_info(), init_market_ctx);
-        cpi_ctx
-            .remaining_accounts
-            .push(ctx.accounts.market_authority.to_account_info());
-        cpi_ctx
-            .remaining_accounts
-            .push(ctx.accounts.market_authority.to_account_info());
-        init_serum_market_instruction(
-            cpi_ctx,
-            coin_lot_size,
-            pc_lot_size,
-            vault_signer_nonce,
-            pc_dust_threshold,
-        )
+    pub fn init_serum_market(ctx: Context<InitSerumMarket>, _market_space: u64, _vault_signer_nonce: u64, _coin_lot_size: u64, _pc_lot_size: u64, _pc_dust_threshold: u64) -> Result<()> {
+        return Err(errors::ErrorCode::InvalidInstruction.into());
     }
 
     pub fn entry(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> Result<()> {
@@ -508,7 +320,7 @@ fn validate_size(size: u64) -> Result<()> {
     Ok(())
 }
 
-fn validate_fee_accounts<'info>(
+fn _validate_fee_accounts<'info>(
     remaining_accounts: &[AccountInfo],
     underlying_asset_mint: &Pubkey,
     quote_asset_mint: &Pubkey,
@@ -559,7 +371,7 @@ fn validate_fee_accounts<'info>(
     Ok(fee_accounts)
 }
 
-fn validate_mint_fee_acct<'c, 'info>(
+fn _validate_mint_fee_acct<'c, 'info>(
     option_market: &OptionMarket,
     remaining_accounts: &'c [AccountInfo<'info>]
 ) -> Result<Option<&'c AccountInfo<'info>>> {
