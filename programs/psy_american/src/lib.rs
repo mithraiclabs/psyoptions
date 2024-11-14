@@ -24,6 +24,7 @@ pub mod psy_american {
         expiration_unix_timestamp: i64,
         bump_seed: u8
     ) -> Result<()> {
+        panic!("Blocked instruction");
         // (nice to have) Validate the expiration is in the future
         if expiration_unix_timestamp < ctx.accounts.clock.unix_timestamp {
             return Err(errors::ErrorCode::ExpirationIsInThePast.into())
@@ -71,6 +72,7 @@ pub mod psy_american {
 
     #[access_control(MintOption::unexpired_market(&ctx) MintOption::accounts(&ctx) validate_size(size))]
     pub fn mint_option<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, MintOption<'info>>, size: u64) -> Result<()> {
+        panic!("Blocked instruction");
         let option_market = &ctx.accounts.option_market;
         let mint_fee_account = validate_mint_fee_acct(
             option_market,
@@ -153,6 +155,7 @@ pub mod psy_american {
 
     #[access_control(MintOptionV2::unexpired_market(&ctx) MintOptionV2::accounts(&ctx) validate_size(size))]
     pub fn mint_option_v2<'a, 'b, 'c, 'info>(ctx: Context<'a, 'b, 'c, 'info, MintOptionV2<'info>>, size: u64) -> Result<()> {
+        panic!("Blocked instruction");
         let option_market = &ctx.accounts.option_market;
 
         // Transfer the underlying assets to the underlying assets pool
@@ -458,6 +461,7 @@ pub mod psy_american {
 
     #[access_control(InitSerumMarket::accounts(&ctx))]
     pub fn init_serum_market(ctx: Context<InitSerumMarket>, _market_space: u64, vault_signer_nonce: u64, coin_lot_size: u64, pc_lot_size: u64, pc_dust_threshold: u64) -> Result<()> {
+        panic!("Blocked instruction");
         let init_market_ctx = SerumInitMarket {
             market: ctx.accounts.serum_market.to_account_info(),
             coin_mint: ctx.accounts.option_mint.to_account_info(),
